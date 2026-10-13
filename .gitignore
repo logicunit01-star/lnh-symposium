@@ -1,0 +1,10 @@
+node_modules
+.next
+.env
+*.log
+public/uploads
+.data
+.vercel
+
+.vercel
+.env*
