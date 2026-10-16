@@ -3,6 +3,7 @@ import { Clock, MapPin, Users, Award } from "lucide-react";
 import type { ProgrammeSession } from "@/lib/queries";
 import { cn, fmtDate, fmtTime, pkr, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
+import { AddToCart } from "@/components/cart/CartDrawer";
 
 export const TYPE_STYLE: Record<string, string> = {
   KEYNOTE: "bg-lnh-red/15 text-lnh-rose border-lnh-red/30",
@@ -18,7 +19,7 @@ export function SessionCard({ s, taken, early, showDate, cta }: { s: ProgrammeSe
   const left = s.capacity != null ? Math.max(0, s.capacity - (taken ?? 0)) : null;
   const fee = early && s.earlyFee != null ? s.earlyFee : s.fee;
   return (
-    <article className="card card-hover group relative flex h-full flex-col overflow-hidden p-6 sm:p-7">
+    <article className="hud group relative flex h-full flex-col overflow-hidden p-6 transition duration-500 hover:-translate-y-1 sm:p-7">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lnh-sky/60 to-transparent opacity-0 transition group-hover:opacity-100" />
       <div className="flex flex-wrap items-center gap-2">
         <span className={cn("rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest", TYPE_STYLE[s.type])}>{SESSION_TYPE_LABEL[s.type]}</span>
@@ -50,10 +51,10 @@ export function SessionCard({ s, taken, early, showDate, cta }: { s: ProgrammeSe
           ))}
         </div>
       )}
-      {(s.fee > 0 || cta) && (
+      {(s.fee > 0 || cta || s.registrable) && (
         <div className="mt-auto flex items-center justify-between gap-4 pt-6">
           {s.fee > 0 ? <div><p className="text-[10px] uppercase tracking-widest text-slate-500">Fee</p><p className="font-display text-lg font-bold text-white">{pkr(fee)}{early && s.earlyFee != null && s.earlyFee < s.fee && <span className="ml-2 text-xs font-normal text-slate-500 line-through">{pkr(s.fee)}</span>}</p></div> : <span />}
-          {cta && left !== 0 && <Link href={cta.href} className="btn-primary btn-sm">{cta.label}</Link>}
+          {s.registrable ? <AddToCart disabled={left === 0} item={{ id: s.id, title: s.title, kind: s.type === "WORKSHOP" ? "WORKSHOP" : "SESSION", fee, when: fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" }), tag: s.department ?? s.track }} /> : cta && <Link href={cta.href} className="btn-primary btn-sm">{cta.label}</Link>}
         </div>
       )}
     </article>

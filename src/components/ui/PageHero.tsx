@@ -1,7 +1,10 @@
+import { NeuralField } from "./NeuralField";
+
 export function PageHero({ eyebrow, title, sub, children }: { eyebrow: string; title: React.ReactNode; sub?: string; children?: React.ReactNode }) {
   return (
     <section className="noise relative overflow-hidden pb-16 pt-40 sm:pt-44">
-      <div className="grid-lines absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
+      <div className="circuit absolute inset-0 opacity-80 [mask-image:radial-gradient(ellipse_at_top,black,transparent_75%)]" />
+      <NeuralField density={0.55} />
       <div className="orb -left-20 -top-20 h-[420px] w-[420px] bg-lnh-blue/30" />
       <div className="orb right-0 top-10 h-[320px] w-[320px] bg-lnh-red/20 [animation-delay:-5s]" />
       <div className="container-x relative">

@@ -21,6 +21,10 @@ export const event = pgTable("event", {
   edition: text("edition").notNull().default("9th"),
   name: text("name").notNull(),
   theme: text("theme").notNull(),
+  mainTheme: text("main_theme").notNull().default("Shaping the new era of healthcare: AI-Robotics and Digitization"),
+  eventDays: jsonb("event_days").$type<string[]>().notNull().default([]), // ISO dates, e.g. ["2027-01-20","2027-01-30","2027-01-31"]
+  regPrefix: text("reg_prefix").notNull().default("SYM"),
+  processingFeePct: real("processing_fee_pct").notNull().default(0),
   tagline: text("tagline").notNull().default(""),
   startDate: timestamp("start_date", { withTimezone: true }).notNull(),
   endDate: timestamp("end_date", { withTimezone: true }).notNull(),
@@ -75,6 +79,7 @@ export const speakers = pgTable("speakers", {
   bio: text("bio"),
   topic: text("topic"),
   photoUrl: text("photo_url"),
+  degrees: text("degrees"),
   linkedin: text("linkedin"),
   featured: boolean("featured").notNull().default(false),
   order: integer("order").notNull().default(0),
@@ -98,7 +103,10 @@ export const sessions = pgTable("sessions", {
   title: text("title").notNull(),
   description: text("description"),
   track: text("track"),
-  day: integer("day").notNull().default(1),
+  department: text("department"),
+  format: text("format"), // Simulation, Hands-on, Lecture, Panel, Drill
+  status: text("status").notNull().default("APPROVED"), // DRAFT | SUBMITTED | UNDER_REVIEW | APPROVED | REJECTED
+  day: integer("day").notNull().default(1), // 0 = pre-conference workshop
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
   hall: text("hall"),
@@ -117,8 +125,31 @@ export const sessionSpeakers = pgTable("session_speakers", {
   role: text("role").notNull().default("Speaker"),
 }, (t) => ({ pk: primaryKey({ columns: [t.sessionId, t.speakerId] }) }));
 
+/** Visitor / participant accounts (separate from staff users). */
+export const accounts = pgTable("accounts", {
+  id: id(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  title: text("title").notNull(),
+  gender: text("gender").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone").notNull(),
+  pmdcNo: text("pmdc_no"),
+  specialty: text("specialty"),
+  designation: text("designation"),
+  institution: text("institution").notNull(),
+  address: text("address"),
+  city: text("city"),
+  failedLogins: integer("failed_logins").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  createdAt: created(),
+});
+
 export const registrations = pgTable("registrations", {
   id: id(),
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
   regNo: text("reg_no").notNull().unique(),
   accessToken: text("access_token").notNull().unique(),
   title: text("title").notNull(),
@@ -256,7 +287,9 @@ export const sessionSpeakersRelations = relations(sessionSpeakers, ({ one }) => 
   session: one(sessions, { fields: [sessionSpeakers.sessionId], references: [sessions.id] }),
   speaker: one(speakers, { fields: [sessionSpeakers.speakerId], references: [speakers.id] }),
 }));
+export const accountsRelations = relations(accounts, ({ many }) => ({ registrations: many(registrations) }));
 export const registrationsRelations = relations(registrations, ({ one, many }) => ({
+  account: one(accounts, { fields: [registrations.accountId], references: [accounts.id] }),
   category: one(feeCategory, { fields: [registrations.categoryId], references: [feeCategory.id] }),
   items: many(registrationItems),
   payments: many(payments),
@@ -281,3 +314,5 @@ export type Speaker = typeof speakers.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
 export type EventSettings = typeof event.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
+
+export type Account = typeof accounts.$inferSelect;

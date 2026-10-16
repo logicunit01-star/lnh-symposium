@@ -35,3 +35,13 @@ export const COUNTRIES = [
   "Kuwait", "Malaysia", "Nepal", "Oman", "Qatar", "Saudi Arabia", "Sri Lanka", "Turkey", "United Arab Emirates", "United Kingdom",
   "United States", "Other",
 ];
+
+/** Processing fee in PKR for a subtotal (percentage set in Event Settings; 0 by default). */
+export const processingFee = (subtotal: number, pct: number) => Math.round((subtotal * (pct || 0)) / 100);
+export const SESSION_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft", SUBMITTED: "Submitted", UNDER_REVIEW: "Under review", APPROVED: "Approved", REJECTED: "Rejected",
+};
+export const fmtTime24 = (d: Date | string) =>
+  new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(d));
+/** yyyy-mm-dd in Pakistan time */
+export const ymdPk = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(d));

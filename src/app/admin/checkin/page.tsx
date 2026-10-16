@@ -6,11 +6,12 @@ import { PageTitle, StatusBadge, Empty } from "@/components/admin/ui";
 import { fmtTime, fmtDate } from "@/lib/utils";
 import { regCheckIn, itemAttend } from "../actions";
 import { ScanInput } from "./ScanInput";
+import { regNoFromScan } from "@/lib/qr-payload";
 
 export default async function CheckIn({ searchParams }: { searchParams: { q?: string } }) {
   await requirePerm("checkin");
   const raw = (searchParams.q || "").trim();
-  const q = raw.match(/LNH\d{2}-\d{3,}/i)?.[0]?.toUpperCase() ?? raw;
+  const q = raw ? regNoFromScan(raw) : "";
   const results = q
     ? await db.query.registrations.findMany({
         where: or(eq(s.registrations.regNo, q), ilike(s.registrations.email, `%${q}%`), ilike(s.registrations.phone, `%${q}%`), ilike(s.registrations.lastName, `%${q}%`), ilike(s.registrations.firstName, `%${q}%`)),

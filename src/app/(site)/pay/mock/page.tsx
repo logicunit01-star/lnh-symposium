@@ -14,7 +14,7 @@ export default async function MockPay({ searchParams }: { searchParams: { txn?: 
   return (
     <section className="container-x flex min-h-[80vh] max-w-lg items-center pt-32">
       <div className="card w-full p-8">
-        <p className="rounded-xl bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-300">TEST MODE — simulated payment gateway. No real money is charged.</p>
+        <p className="rounded-xl bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-300">PayPro · TEST MODE — simulated payment page until LNH connects the PayPro API. No real money is charged.</p>
         <ShieldCheck className="mt-6 h-10 w-10 text-lnh-sky" />
         <h1 className="h-display mt-4 text-3xl text-white">Secure checkout</h1>
         <dl className="mt-6 space-y-2 text-sm">

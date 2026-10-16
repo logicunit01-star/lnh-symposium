@@ -42,6 +42,13 @@ npm run dev                   # http://localhost:3000   admin: http://localhost:
 
 Default admin login comes from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.env` (default `admin@lnh.edu.pk` / `ChangeMe!2026`). **Change it immediately.**
 
+## Demo content and new visitor flow (Oct 2026)
+
+- Theme: *Shaping the new era of healthcare: AI-Robotics and Digitization*. Symposium days 20, 30 and 31 Jan 2027 (Day 1 AI, Day 2 Robotics, Day 3 Digitization); pre-conference workshops 14 Dec 2026 – 12 Jan 2027. All dates are editable in **Admin → Event Settings**.
+- Visitor flow: `/workshops` (week tabs, calendar, department/format filters, seat tracker) → cart (sessions + workshops) → `/account` (sign-up with password policy, or sign-in) → `/checkout` (ledger, pass category, PayPro methods) → payment → QR pass with the JSON payload. Registration numbers: `SYM-2027-00001` (prefix configurable).
+- Only workshops with status **APPROVED** appear publicly; set status per session in Admin → Sessions.
+- **Admin → Event Settings → Reset demo content** (Super Admin) loads this demo programme and clears registrations and accounts. Use it once after deploying this version, because older databases still hold the previous demo programme.
+
 ## Put it online (Vercel + Neon, free tier)
 
 From Windows, double-click **`deploy.bat`** and follow the 5 prompts:

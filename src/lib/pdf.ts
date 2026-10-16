@@ -2,6 +2,7 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 import { fmtDate, fmtDateTime, fmtTime, pkr, appUrl } from "./utils";
+import { qrPayload } from "./qr-payload";
 
 const NAVY = rgb(0.039, 0.18, 0.43);
 const BLUE = rgb(0.082, 0.376, 0.83);
@@ -53,7 +54,7 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawRectangle({ x: 40, y: 630, width: b.widthOfTextAtSize(status, 9) + 20, height: 20, color: status === "CONFIRMED" ? rgb(0.05, 0.55, 0.3) : rgb(0.85, 0.55, 0.05) });
   page.drawText(status, { x: 50, y: 636, size: 9, font: b, color: rgb(1, 1, 1) });
 
-  const qr = await qrPng(doc, `${appUrl()}/r/${r.regNo}`);
+  const qr = await qrPng(doc, qrPayload(r));
   page.drawImage(qr, { x: W - 40 - 110, y: 600, width: 110, height: 110 });
   page.drawText("Show at registration desk", { x: W - 150, y: 590, size: 7, font: f, color: GREY });
 

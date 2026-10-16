@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter, Mail, Phone, MapPin } from "lucide-react";
 import type { EventSettings } from "@/lib/db/schema";
 import { Logo } from "./Logo";
-import { fmtDate } from "@/lib/utils";
+import { eventDaysLabel } from "@/lib/event";
 
 export function Footer({ ev }: { ev: EventSettings }) {
   const year = new Date(ev.startDate).getFullYear();
@@ -11,7 +11,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
     { href: ev.linkedin, Icon: Linkedin, label: "LinkedIn" }, { href: ev.youtube, Icon: Youtube, label: "YouTube" }, { href: ev.x, Icon: Twitter, label: "X" },
   ].filter((s) => s.href);
   const cols = [
-    { t: "Participate", l: [["Registration", "/register"], ["Abstract Submission", "/abstracts"], ["Workshops", "/workshops"], ["Check registration", "/register/status"], ["E-certificates", "/certificates"]] },
+    { t: "Participate", l: [["Registration", "/register"], ["Workshop portal", "/workshops"], ["Abstract Submission", "/abstracts"], ["My bookings", "/account/bookings"], ["E-certificates", "/certificates"]] },
     { t: "Programme", l: [["Agenda", "/agenda"], ["Speakers", "/speakers"], ["Scientific & Plenary", "/sessions"], ["Awards", "/awards"]] },
     { t: "Symposium", l: [["About", "/about"], ["Organizing Committee", "/committee"], ["Contact Us", "/contact"], ["Staff login", "/admin"]] },
   ];
@@ -22,7 +22,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
       <div className="container-x relative grid gap-12 py-16 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <Logo year={year} />
-          <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">{ev.name} — {ev.theme}. {fmtDate(ev.startDate, { day: "numeric", month: "long" })} – {fmtDate(ev.endDate)}.</p>
+          <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">{ev.name} — {ev.theme}. {ev.mainTheme}. {eventDaysLabel(ev)}.</p>
           <ul className="mt-6 space-y-2.5 text-sm text-slate-300">
             <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-lnh-sky" />{ev.venue}</li>
             <li className="flex gap-3"><Mail className="h-4 w-4 text-lnh-sky" /><a href={`mailto:${ev.contactEmail}`} className="hover:text-white">{ev.contactEmail}</a></li>
@@ -43,13 +43,13 @@ export function Footer({ ev }: { ev: EventSettings }) {
           ))}
         </div>
         <div className="lg:col-span-4">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Venue map</p>
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Campus &amp; venue map</p>
           <div className="overflow-hidden rounded-2xl border border-white/10">
             <iframe title="Liaquat National Hospital map" className="h-56 w-full grayscale-[60%] invert-[90%] hue-rotate-180" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
               src="https://www.google.com/maps?q=Liaquat+National+Hospital,+Stadium+Road,+Karachi&output=embed" />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {["Auditorium", "Hall B", "Skills Labs", "IT Lab", "Exhibition Hall"].map((h) => <span key={h} className="chip">{h}</span>)}
+            {["Main Auditorium", "Lecture Hall A", "Lecture Hall C", "Skill Lab", "Simulation Center", "Robotics & Skills Lab", "Exhibition Hall"].map((h) => <span key={h} className="chip">{h}</span>)}
           </div>
         </div>
       </div>

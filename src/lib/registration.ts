@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, schema as s } from "./db";
 import { getEvent, isEarlyBird, editionYear } from "./event";
 import { nextNumber, pad } from "./counters";
-import { randomToken, appUrl, pkr, fmtDate } from "./utils";
+import { randomToken, appUrl, pkr, fmtDate, processingFee } from "./utils";
 import { registrationPdf } from "./pdf";
 import { sendEmail, sendSms, emailLayout } from "./notify";
 
@@ -14,7 +14,7 @@ export const registrationInput = z.object({
   firstName: z.string().trim().min(1).max(60),
   lastName: z.string().trim().min(1).max(60),
   email: z.string().trim().toLowerCase().email(),
-  phone: z.string().trim().regex(/^(\+92|0092|0)?3\d{2}[- ]?\d{7}$/, "Use format 03xx-xxxxxxx"),
+  phone: z.string().trim().regex(/^(\+92|0092|0)?3\d{2}[- ]?\d{7}$/, "Use format 03XX-XXXXXXX"),
   pmdcNo: z.string().trim().max(30).optional().or(z.literal("")),
   specialty: z.string().trim().max(80).optional().or(z.literal("")),
   designation: z.string().trim().max(80).optional().or(z.literal("")),
@@ -24,16 +24,18 @@ export const registrationInput = z.object({
   categoryId: z.coerce.number().int().positive(),
   sessionIds: z.array(z.string()).max(30).default([]),
   consent: z.literal(true, { errorMap: () => ({ message: "Please accept the terms" }) }),
+  includePass: z.boolean().default(true),
 });
 export type RegistrationInput = z.infer<typeof registrationInput>;
 
 export class CapacityError extends Error {}
 
-export async function createRegistration(input: RegistrationInput) {
+export async function createRegistration(input: RegistrationInput, opts: { accountId?: string; processingFee?: boolean } = {}) {
   const ev = await getEvent();
   if (!ev.registrationOpen) throw new Error("Registration is currently closed.");
   const early = isEarlyBird(ev);
-  const year = String(editionYear(ev)).slice(-2);
+  const year = String(editionYear(ev));
+  const prefix = (ev.regPrefix || "SYM").toUpperCase();
 
   const result = await db.transaction(async (tx) => {
     const [cat] = await tx.select().from(s.feeCategory).where(and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)));
@@ -41,10 +43,10 @@ export async function createRegistration(input: RegistrationInput) {
     const ids = [...new Set(input.sessionIds)];
     // Lock selected sessions so concurrent registrations can't exceed caps.
     const sess = ids.length
-      ? await tx.select({ id: s.sessions.id, title: s.sessions.title, capacity: s.sessions.capacity, fee: s.sessions.fee, early_fee: s.sessions.earlyFee, registrable: s.sessions.registrable })
+      ? await tx.select({ id: s.sessions.id, title: s.sessions.title, capacity: s.sessions.capacity, fee: s.sessions.fee, early_fee: s.sessions.earlyFee, registrable: s.sessions.registrable, status: s.sessions.status })
           .from(s.sessions).where(inArray(s.sessions.id, ids)).for("update")
       : [];
-    if (sess.length !== ids.length || sess.some((x) => !x.registrable)) throw new Error("One or more selected sessions are not open for registration.");
+    if (sess.length !== ids.length || sess.some((x) => !x.registrable || x.status !== "APPROVED")) throw new Error("One or more selected sessions are not open for registration.");
     for (const x of sess) {
       if (x.capacity == null) continue;
       const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems)
@@ -52,14 +54,15 @@ export async function createRegistration(input: RegistrationInput) {
         .where(and(eq(s.registrationItems.sessionId, x.id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
       if (n >= x.capacity) throw new CapacityError(`"${x.title}" is full. Please deselect it to continue.`);
     }
-    const conferenceFee = early ? cat.earlyFee : cat.fee;
+    const conferenceFee = input.includePass === false ? 0 : early ? cat.earlyFee : cat.fee;
     const items = sess.map((x) => ({ sessionId: x.id, fee: early && x.early_fee != null ? x.early_fee : x.fee }));
-    const totalFee = conferenceFee + items.reduce((a, b) => a + b.fee, 0);
+    const subtotal = conferenceFee + items.reduce((a, b) => a + b.fee, 0);
+    const totalFee = subtotal + processingFee(subtotal, ev.processingFeePct);
 
-    const n = await nextNumber(`reg-${year}`, tx as any);
-    const regNo = `LNH${year}-${pad(n)}`;
+    const n = await nextNumber(`reg-${prefix}-${year}`, tx as any);
+    const regNo = `${prefix}-${year}-${pad(n, 5)}`;
     const [reg] = await tx.insert(s.registrations).values({
-      regNo, accessToken: randomToken(), title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
+      regNo, accountId: opts.accountId ?? null, accessToken: randomToken(), title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
       email: input.email, phone: input.phone, pmdcNo: input.pmdcNo || null, specialty: input.specialty || null, designation: input.designation || null,
       institution: input.institution, address: input.address || null, city: input.city || null, categoryId: cat.id,
       conferenceFee, totalFee, earlyBird: early, paymentStatus: totalFee === 0 ? "WAIVED" : "PENDING",

@@ -2,8 +2,10 @@ import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema as s } from "./db";
 
-export async function getProgramme(filter?: { types?: string[]; registrable?: boolean }) {
+/** Public programme: only committee-approved items unless includeAll is set. */
+export async function getProgramme(filter?: { types?: string[]; registrable?: boolean; includeAll?: boolean }) {
   const conds = [];
+  if (!filter?.includeAll) conds.push(eq(s.sessions.status, "APPROVED"));
   if (filter?.types) conds.push(inArray(s.sessions.type, filter.types as any));
   if (filter?.registrable != null) conds.push(eq(s.sessions.registrable, filter.registrable));
   return db.query.sessions.findMany({

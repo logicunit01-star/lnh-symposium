@@ -6,6 +6,7 @@ import { provider, BANK_DETAILS } from "@/lib/payments";
 import { appUrl, fmtDate, fmtTime, pkr } from "@/lib/utils";
 import { Alert } from "@/components/ui/Field";
 import { PayButton } from "./PayButton";
+import { qrPayload } from "@/lib/qr-payload";
 
 export const metadata = { title: "Your registration", robots: { index: false } };
 
@@ -13,7 +14,7 @@ export default async function Success({ params, searchParams }: { params: { toke
   const r = await loadRegistration({ accessToken: params.token });
   if (!r) notFound();
   const confirmed = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
-  const qr = await QRCode.toDataURL(`${appUrl()}/r/${r.regNo}`, { margin: 1, width: 240, color: { dark: "#040B1E", light: "#ffffff" } });
+  const qr = await QRCode.toDataURL(qrPayload(r), { margin: 1, width: 280, color: { dark: "#040B1E", light: "#ffffff" } });
   const prov = provider();
   return (
     <section className="relative overflow-hidden pb-10 pt-36">

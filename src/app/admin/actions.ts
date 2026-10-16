@@ -58,7 +58,8 @@ export async function saveSession(id: string | null, f: FormData) {
   const data = {
     type: str(f, "type") as any, title, description: str(f, "description"), track: str(f, "track"), day,
     startsAt: at(str(f, "start")!), endsAt: at(str(f, "end")!), hall: str(f, "hall"), capacity: num(f, "capacity"),
-    fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee"), registrable: bool(f, "registrable"), feedbackOpen: bool(f, "feedbackOpen"), cmeHours: num(f, "cmeHours"),
+    fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee"), registrable: bool(f, "registrable"),
+    department: str(f, "department"), format: str(f, "format"), status: str(f, "status") || "APPROVED", feedbackOpen: bool(f, "feedbackOpen"), cmeHours: num(f, "cmeHours"),
   };
   let sid = id;
   if (id) await db.update(s.sessions).set(data).where(eq(s.sessions.id, id));
@@ -115,6 +116,8 @@ export async function saveSettings(f: FormData) {
   const d = (k: string) => { const v = str(f, k); return v ? new Date(`${v}:00+05:00`) : null; };
   await db.update(s.event).set({
     edition: str(f, "edition")!, name: str(f, "name")!, theme: str(f, "theme")!, tagline: str(f, "tagline") || "",
+    mainTheme: str(f, "mainTheme") || "", eventDays: (str(f, "eventDays") || "").split(/[\s,]+/).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+    regPrefix: (str(f, "regPrefix") || "SYM").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6) || "SYM", processingFeePct: num(f, "processingFeePct") ?? 0,
     startDate: d("startDate")!, endDate: d("endDate")!, venue: str(f, "venue")!, virtualLink: str(f, "virtualLink"), heroVideoUrl: str(f, "heroVideoUrl"),
     registrationOpen: bool(f, "registrationOpen"), earlyBirdUntil: d("earlyBirdUntil"), abstractOpen: d("abstractOpen"), abstractDeadline: d("abstractDeadline"),
     abstractWordLimit: num(f, "abstractWordLimit") ?? 300, contactEmail: str(f, "contactEmail")!, contactPhone: str(f, "contactPhone")!,
@@ -166,4 +169,13 @@ export async function broadcast(f: FormData) {
     if (channels.includes("SMS") && sms) await sendSms(r.phone, sms.replace("{name}", r.firstName).replace("{regNo}", r.regNo));
   }
   redirect(`/admin/communications?sent=${list.length}`);
+}
+
+export async function resetDemoContent() {
+  const u = await requirePerm("settings");
+  if (u.role !== "SUPER_ADMIN") throw new Error("Only a Super Admin can reset demo content.");
+  const { seedDemoContent } = await import("@/lib/demo-content");
+  await seedDemoContent(db, { reset: true });
+  revalidatePath("/", "layout");
+  redirect("/admin/settings?reset=1");
 }

@@ -4,7 +4,7 @@ import { requirePerm } from "@/lib/auth";
 import { getEvent } from "@/lib/event";
 import { PageTitle } from "@/components/admin/ui";
 import { TZ } from "@/lib/utils";
-import { saveSettings, saveFee } from "../actions";
+import { saveSettings, saveFee, resetDemoContent } from "../actions";
 
 const dt = (d: Date | null) => {
   if (!d) return "";
@@ -13,7 +13,7 @@ const dt = (d: Date | null) => {
   return `${g("year")}-${g("month")}-${g("day")}T${g("hour").replace("24", "00")}:${g("minute")}`;
 };
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: { reset?: string } }) {
   await requirePerm("settings");
   const ev = await getEvent();
   const fees = await db.select().from(s.feeCategory).orderBy(asc(s.feeCategory.order));
@@ -23,9 +23,12 @@ export default async function Settings() {
   return (
     <>
       <PageTitle title="Event settings" sub="All dates/times are Pakistan time (PKT)." />
+      {searchParams.reset && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Demo content has been reset: new programme, workshops and speakers loaded; registrations cleared.</p>}
       <form action={saveSettings} className="a-card grid gap-4 p-6 sm:grid-cols-2">
         <F n="edition" l="Edition" v={ev.edition} /><F n="name" l="Event name" v={ev.name} />
-        <F n="theme" l="Theme" v={ev.theme} span /><F n="tagline" l="Tagline" v={ev.tagline} span />
+        <F n="theme" l="Event title / theme" v={ev.theme} span /><F n="mainTheme" l="Main theme" v={ev.mainTheme} span /><F n="tagline" l="Tagline" v={ev.tagline} span />
+        <F n="eventDays" l="Symposium days (YYYY-MM-DD, comma separated)" v={ev.eventDays.join(", ")} span />
+        <F n="regPrefix" l="Registration number prefix (e.g. SYM → SYM-2027-00001)" v={ev.regPrefix} /><F n="processingFeePct" l="Tax & processing fee (%)" t="number" v={ev.processingFeePct} />
         <F n="startDate" l="Starts" t="datetime-local" v={dt(ev.startDate)} /><F n="endDate" l="Ends" t="datetime-local" v={dt(ev.endDate)} />
         <F n="venue" l="Venue" v={ev.venue} span />
         <F n="virtualLink" l="Virtual platform link" v={ev.virtualLink} /><F n="heroVideoUrl" l="Hero background video URL (.mp4)" v={ev.heroVideoUrl} />
@@ -38,6 +41,10 @@ export default async function Settings() {
         <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} />
         <div className="sm:col-span-2"><label className="a-label">Homepage videos (YouTube URLs, one per line)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
         <div className="sm:col-span-2"><button className="a-btn-primary">Save settings</button></div>
+      </form>
+      <form action={resetDemoContent} className="a-card mt-6 flex flex-wrap items-center justify-between gap-3 border-rose-200 p-5">
+        <div><p className="font-semibold text-slate-800">Reset demo content</p><p className="text-sm text-slate-500">Loads the 2027 demo programme (AI · Robotics · Digitization days and pre-conference workshops) and event dates. Deletes all registrations, accounts, programme, speakers and committee. Super Admin only.</p></div>
+        <button className="a-btn-red">Reset demo content</button>
       </form>
       <h2 className="mb-3 mt-10 font-display text-lg font-bold">Registration categories & fees (PKR)</h2>
       <div className="a-card overflow-x-auto">

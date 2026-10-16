@@ -16,14 +16,17 @@ export async function SessionForm({ session, assigned = [] }: { session?: Sessio
     <form action={saveSession.bind(null, x?.id ?? null)} className="a-card grid gap-4 p-6 sm:grid-cols-2">
       <div className="sm:col-span-2"><label className="a-label">Title *</label><input name="title" required defaultValue={x?.title} className="a-input" /></div>
       <div><label className="a-label">Type *</label><select name="type" defaultValue={x?.type ?? "WORKSHOP"} className="a-input">{["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"].map((t) => <option key={t}>{t}</option>)}</select></div>
-      <div><label className="a-label">Track</label><select name="track" defaultValue={x?.track ?? ""} className="a-input"><option value="">—</option><option>Cost</option><option>Quality</option><option>Technology</option></select></div>
+      <div><label className="a-label">Track</label><select name="track" defaultValue={x?.track ?? ""} className="a-input"><option value="">—</option><option>AI</option><option>Robotics</option><option>Digitization</option><option>Cost</option><option>Quality</option><option>Technology</option></select></div>
       <div className="sm:col-span-2"><label className="a-label">Description</label><textarea name="description" rows={3} defaultValue={x?.description ?? ""} className="a-input" /></div>
       <div className="grid grid-cols-4 gap-3 sm:col-span-2">
-        <div><label className="a-label">Day no. *</label><input name="day" type="number" min={1} defaultValue={x?.day ?? 1} className="a-input" /></div>
+        <div><label className="a-label">Day no. (0 = workshop) *</label><input name="day" type="number" min={0} defaultValue={x?.day ?? 1} className="a-input" /></div>
         <div><label className="a-label">Date *</label><input name="date" type="date" required defaultValue={date} className="a-input" /></div>
         <div><label className="a-label">Start *</label><input name="start" type="time" required defaultValue={x ? hm(x.startsAt) : "09:00"} className="a-input" /></div>
         <div><label className="a-label">End *</label><input name="end" type="time" required defaultValue={x ? hm(x.endsAt) : "10:00"} className="a-input" /></div>
       </div>
+      <div><label className="a-label">Department</label><input name="department" defaultValue={x?.department ?? ""} className="a-input" placeholder="e.g. Critical Care" /></div>
+      <div><label className="a-label">Format</label><select name="format" defaultValue={x?.format ?? ""} className="a-input"><option value="">—</option>{["Hands-on", "Simulation", "Lecture", "Panel", "Drill"].map((t) => <option key={t}>{t}</option>)}</select></div>
+      <div><label className="a-label">Approval status</label><select name="status" defaultValue={x?.status ?? "APPROVED"} className="a-input">{["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((t) => <option key={t}>{t}</option>)}</select></div>
       <div><label className="a-label">Hall / venue</label><input name="hall" defaultValue={x?.hall ?? ""} className="a-input" /></div>
       <div><label className="a-label">Capacity (blank = unlimited)</label><input name="capacity" type="number" min={0} defaultValue={x?.capacity ?? ""} className="a-input" /></div>
       <div><label className="a-label">Fee (PKR, additional)</label><input name="fee" type="number" min={0} defaultValue={x?.fee ?? 0} className="a-input" /></div>
