@@ -5,6 +5,7 @@ import { getEvent } from "@/lib/event";
 import { PageTitle } from "@/components/admin/ui";
 import { TZ } from "@/lib/utils";
 import { saveSettings, saveFee, resetDemoContent } from "../actions";
+import { TIER_LABEL } from "@/lib/wp";
 
 const dt = (d: Date | null) => {
   if (!d) return "";
@@ -36,6 +37,10 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="registrationOpen" defaultChecked={ev.registrationOpen} /> Registration open</label>
         <F n="abstractOpen" l="Abstract submission opens" t="datetime-local" v={dt(ev.abstractOpen)} /><F n="abstractDeadline" l="Abstract deadline" t="datetime-local" v={dt(ev.abstractDeadline)} />
         <F n="abstractWordLimit" l="Abstract word limit" t="number" v={ev.abstractWordLimit} /><div />
+        <p className="sm:col-span-2 mt-2 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-wider text-slate-500">Pre-symposium workshops</p>
+        <F n="workshopStart" l="Workshop window opens" t="datetime-local" v={dt(ev.workshopStart)} /><F n="workshopEnd" l="Workshop window closes" t="datetime-local" v={dt(ev.workshopEnd)} />
+        <div className="sm:col-span-2"><label className="a-label">Theme weeks (one per line: YYYY-MM-DD start, label)</label><textarea name="themeWeeks" rows={5} defaultValue={ev.themeWeeks.map((w) => `${w.from}, ${w.label}`).join("\n")} className="a-input font-mono text-xs" /></div>
+        <F n="seatTarget" l="Seat target (committee dashboard)" t="number" v={ev.seatTarget} /><F n="usdRate" l="PKR per USD (revenue dashboard)" t="number" v={ev.usdRate} />
         <F n="contactEmail" l="Contact email" v={ev.contactEmail} /><F n="contactPhone" l="Contact phone" v={ev.contactPhone} />
         <F n="facebook" l="Facebook" v={ev.facebook} /><F n="instagram" l="Instagram" v={ev.instagram} />
         <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} />
@@ -49,7 +54,7 @@ export default async function Settings({ searchParams }: { searchParams: { reset
       <h2 className="mb-3 mt-10 font-display text-lg font-bold">Registration categories & fees (PKR)</h2>
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>Order</th><th>Code</th><th>Label</th><th>Early-bird</th><th>Regular</th><th>Note</th><th>Active</th><th /></tr></thead>
+          <thead><tr><th>Order</th><th>Code</th><th>Label</th><th>Early-bird</th><th>Regular</th><th>Revenue tier</th><th>Note</th><th>Active</th><th /></tr></thead>
           <tbody>{[...fees, null].map((f) => {
             const id = f ? `f_${f.id}` : "f_new";
             return (
@@ -59,6 +64,7 @@ export default async function Settings({ searchParams }: { searchParams: { reset
                 <td><input form={id} name="label" required defaultValue={f?.label ?? ""} placeholder={f ? "" : "New category…"} className="a-input" /></td>
                 <td><input form={id} name="earlyFee" type="number" defaultValue={f?.earlyFee ?? ""} className="a-input w-24" /></td>
                 <td><input form={id} name="fee" type="number" defaultValue={f?.fee ?? ""} className="a-input w-24" /></td>
+                <td><select form={id} name="tier" defaultValue={f?.tier ?? "GENERAL"} className="a-input w-32">{Object.entries(TIER_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
                 <td><input form={id} name="note" defaultValue={f?.note ?? ""} className="a-input" /></td>
                 <td><input form={id} name="active" type="checkbox" defaultChecked={f?.active ?? true} /></td>
                 <td><form id={id} action={saveFee.bind(null, f?.id ?? null)}><button className="a-btn-primary py-1.5 text-xs">{f ? "Save" : "Add"}</button></form></td>

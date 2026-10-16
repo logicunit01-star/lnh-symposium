@@ -123,12 +123,15 @@ export async function saveSettings(f: FormData) {
     abstractWordLimit: num(f, "abstractWordLimit") ?? 300, contactEmail: str(f, "contactEmail")!, contactPhone: str(f, "contactPhone")!,
     facebook: str(f, "facebook"), instagram: str(f, "instagram"), linkedin: str(f, "linkedin"), youtube: str(f, "youtube"), x: str(f, "x"),
     videos: (str(f, "videos") || "").split(/\s+/).filter(Boolean),
+    workshopStart: d("workshopStart"), workshopEnd: d("workshopEnd"),
+    themeWeeks: (str(f, "themeWeeks") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s*[,|]\s*(.+?)\s*$/)).filter(Boolean).map((m) => ({ from: m![1], label: m![2] })),
+    seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280,
   }).where(eq(s.event.id, 1));
   revalidatePath("/", "layout");
 }
 export async function saveFee(id: number | null, f: FormData) {
   await requirePerm("settings");
-  const data = { code: str(f, "code")!.toUpperCase(), label: str(f, "label")!, fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee") ?? 0, note: str(f, "note"), order: num(f, "order") ?? 0, active: bool(f, "active") };
+  const data = { code: str(f, "code")!.toUpperCase(), label: str(f, "label")!, fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee") ?? 0, note: str(f, "note"), order: num(f, "order") ?? 0, active: bool(f, "active"), tier: str(f, "tier") || "GENERAL" };
   if (id) await db.update(s.feeCategory).set(data).where(eq(s.feeCategory.id, id)); else await db.insert(s.feeCategory).values(data);
   revalidatePath("/admin/settings"); revalidatePath("/register");
 }
@@ -137,7 +140,7 @@ export async function saveFee(id: number | null, f: FormData) {
 export async function saveUser(id: string | null, f: FormData) {
   await requirePerm("users");
   const pw = str(f, "password");
-  const data: any = { name: str(f, "name")!, email: str(f, "email")!.toLowerCase(), role: str(f, "role") as any, active: bool(f, "active") };
+  const data: any = { name: str(f, "name")!, email: str(f, "email")!.toLowerCase(), role: str(f, "role") as any, department: str(f, "department"), active: bool(f, "active") };
   if (pw) { if (pw.length < 8) throw new Error("Password must be at least 8 characters"); data.passwordHash = await bcrypt.hash(pw, 10); }
   if (id) await db.update(s.users).set(data).where(eq(s.users.id, id));
   else { if (!pw) throw new Error("Password required for new users"); await db.insert(s.users).values(data); }

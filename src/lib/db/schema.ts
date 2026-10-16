@@ -8,7 +8,7 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const created = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 const updated = () => timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date());
 
-export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER"]);
+export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD"]);
 export const sessionTypeEnum = pgEnum("session_type", ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "FAILED", "WAIVED", "REFUNDED"]);
 export const abstractTypeEnum = pgEnum("abstract_type", ["ORAL", "POSTER"]);
@@ -44,6 +44,12 @@ export const event = pgTable("event", {
   youtube: text("youtube"),
   x: text("x"),
   videos: jsonb("videos").$type<string[]>().notNull().default([]),
+  // Workshop programme (pre-symposium)
+  workshopStart: timestamp("workshop_start", { withTimezone: true }),
+  workshopEnd: timestamp("workshop_end", { withTimezone: true }),
+  themeWeeks: jsonb("theme_weeks").$type<{ from: string; label: string }[]>().notNull().default([]),
+  seatTarget: integer("seat_target").notNull().default(3000),
+  usdRate: real("usd_rate").notNull().default(280),
   updatedAt: updated(),
 });
 
@@ -56,6 +62,7 @@ export const feeCategory = pgTable("fee_category", {
   note: text("note"),
   order: integer("order").notNull().default(0),
   active: boolean("active").notNull().default(true),
+  tier: text("tier").notNull().default("GENERAL"), // STUDENT | EMPLOYEE | GENERAL | FOREIGN (revenue dashboard)
 });
 
 export const users = pgTable("users", {
@@ -64,6 +71,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull().default("VIEWER"),
+  department: text("department"), // HOD scoping
+  phone: text("phone"),
   active: boolean("active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: created(),
@@ -96,6 +105,24 @@ export const committee = pgTable("committee_members", {
   order: integer("order").notNull().default(0),
 });
 
+/** Rooms on the LNH campus. Map position is a percentage on the campus schematic. */
+export const venues = pgTable("venues", {
+  id: id(),
+  name: text("name").notNull().unique(),
+  building: text("building").notNull(),
+  floor: text("floor"),
+  capacity: integer("capacity").notNull(),
+  onlineFacility: text("online_facility"), // e.g. "Zoom + PTZ camera"; null = none
+  equipment: text("equipment"),
+  mapX: real("map_x").notNull().default(50),
+  mapY: real("map_y").notNull().default(50),
+  directions: text("directions"),
+  active: boolean("active").notNull().default(true),
+  createdAt: created(),
+});
+
+export type EquipmentLine = { item: string; qty: number; source: string };
+
 export const sessions = pgTable("sessions", {
   id: id(),
   slug: text("slug").notNull().unique(),
@@ -116,6 +143,26 @@ export const sessions = pgTable("sessions", {
   registrable: boolean("registrable").notNull().default(false),
   feedbackOpen: boolean("feedback_open").notNull().default(true),
   cmeHours: real("cme_hours"),
+  // Workshop request (Form A) + committee workflow
+  category: text("category"), // A = Multidisciplinary, B = Departmental
+  themeWeek: integer("theme_week"),
+  contributors: text("contributors"), // contributing departments
+  venueId: text("venue_id").references(() => venues.id, { onDelete: "set null" }),
+  leadFaculty: text("lead_faculty"),
+  facultyDegrees: text("faculty_degrees"),
+  facultyContact: text("faculty_contact"),
+  facultyProfile: text("faculty_profile"), // education & experience
+  facilitators: integer("facilitators").notNull().default(0),
+  volunteers: integer("volunteers").notNull().default(0),
+  technicians: integer("technicians").notNull().default(0),
+  equipment: jsonb("equipment").$type<EquipmentLine[]>().notNull().default([]),
+  proposedById: text("proposed_by_id").references(() => users.id, { onDelete: "set null" }),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  reviewedById: text("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewNote: text("review_note"),
+  locked: boolean("locked").notNull().default(false),
+  coChairDecision: text("co_chair_decision"), // RUN | MERGE | CANCEL | PROMOTE (low-fill remediation)
   createdAt: created(),
 }, (t) => ({ dayIdx: index("sessions_day_idx").on(t.day, t.startsAt) }));
 
@@ -124,6 +171,30 @@ export const sessionSpeakers = pgTable("session_speakers", {
   speakerId: text("speaker_id").notNull().references(() => speakers.id, { onDelete: "cascade" }),
   role: text("role").notNull().default("Speaker"),
 }, (t) => ({ pk: primaryKey({ columns: [t.sessionId, t.speakerId] }) }));
+
+/** Status history for workshop requests (audit trail). */
+export const sessionReviews = pgTable("session_reviews", {
+  id: id(),
+  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  userName: text("user_name"),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  note: text("note"),
+  createdAt: created(),
+}, (t) => ({ sIdx: index("rev_session_idx").on(t.sessionId) }));
+
+/** Waitlist for full workshops (first come, first served). */
+export const waitlist = pgTable("waitlist", {
+  id: id(),
+  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  createdAt: created(),
+}, (t) => ({ uq: uniqueIndex("waitlist_uq").on(t.sessionId, t.email) }));
 
 /** Visitor / participant accounts (separate from staff users). */
 export const accounts = pgTable("accounts", {
@@ -277,7 +348,10 @@ export const counters = pgTable("counters", {
 });
 
 // ---------- relations ----------
-export const sessionsRelations = relations(sessions, ({ many }) => ({
+export const sessionsRelations = relations(sessions, ({ one, many }) => ({
+  venue: one(venues, { fields: [sessions.venueId], references: [venues.id] }),
+  reviews: many(sessionReviews),
+  waitlist: many(waitlist),
   speakers: many(sessionSpeakers),
   items: many(registrationItems),
   feedback: many(feedback),
@@ -309,6 +383,15 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
 }));
 export const feeCategoryRelations = relations(feeCategory, ({ many }) => ({ registrations: many(registrations) }));
 
+export const venuesRelations = relations(venues, ({ many }) => ({ sessions: many(sessions) }));
+export const sessionReviewsRelations = relations(sessionReviews, ({ one }) => ({
+  session: one(sessions, { fields: [sessionReviews.sessionId], references: [sessions.id] }),
+}));
+export const waitlistRelations = relations(waitlist, ({ one }) => ({
+  session: one(sessions, { fields: [waitlist.sessionId], references: [sessions.id] }),
+}));
+
+export type Venue = typeof venues.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Speaker = typeof speakers.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;

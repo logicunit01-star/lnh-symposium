@@ -16,6 +16,7 @@ const NAV: Item[] = [
       { label: "About the Symposium", href: "/about", desc: "Theme, purpose & significance" },
       { label: "Organizing Committee", href: "/committee", desc: "The people behind the event" },
       { label: "Awards", href: "/awards", desc: "Best paper & poster prizes" },
+      { label: "Venues & Campus Map", href: "/venues", desc: "Where each workshop and session happens" },
     ],
   },
   {

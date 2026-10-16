@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="admin min-h-screen">
       <Sidebar user={user} />
-      <div className="lg:pl-64"><div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{children}</div></div>
+      <div className="lg:pl-64 print:pl-0"><div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{children}</div></div>
     </div>
   );
 }

@@ -49,6 +49,16 @@ Default admin login comes from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.e
 - Only workshops with status **APPROVED** appear publicly; set status per session in Admin → Sessions.
 - **Admin → Event Settings → Reset demo content** (Super Admin) loads this demo programme and clears registrations and accounts. Use it once after deploying this version, because older databases still hold the previous demo programme.
 
+## Workshop Programme committee workflow (Oct 2026)
+
+- **Admin → Workshop Programme**: committee console with live KPIs (registrations vs 3,000-seat target, capacity fill by department, evaluation queue new vs under review, workshop income), revenue by registrant type (Student / LNH employee / General / Foreign, PKR with USD), the amber alert for approved workshops under 40% full within 7 days (Co-Chairs choose run / merge / cancel / extend marketing), and the programme matrix (date, 24h time, venue, registered, cap, status pill, View / Edit / Action) with venue-clash detection. Use *Simulate date* to preview alerts.
+- **Form A** (`/admin/workshops/new`): Workshop Directors / HODs submit title, category, theme week (auto), departments, date picker, 24-hour times, venue with live capacity / online facility / location card and campus map, seat cap (≤ room), fee, CME, lead faculty (degrees, contact, education & experience), staff and equipment lines.
+- **Approvals**: members mark *Under review*; Co-Chairs approve or reject (reason required). Approve/Reject locks the core fields; Co-Chairs can unlock for revision. Every change is logged in the request history and the proposer is emailed.
+- After approval the same record drives the public catalogue card, a **flyer PDF** (`/api/workshops/<slug>/flyer`) and the **daily requirements sheet** (printable; staff and equipment consolidated by source).
+- **Venues & map** (`/admin/venues`, public `/venues`): rooms, capacity, online facility, location and schematic campus map pins.
+- **Waitlist**: full workshops show *Join waitlist*; the committee emails the next people when seats free up.
+- Roles: `WP_CHAIR` (change + approve), `WP_MEMBER` (read + change), `HOD` (submit + see own department only; set the department in Users & Roles). Demo users `hod.criticalcare@`, `hod.nursing@`, `wp.chair@`, `wp.member@lnh.edu.pk` use the `SEED_ADMIN_PASSWORD`.
+
 ## Put it online (Vercel + Neon, free tier)
 
 From Windows, double-click **`deploy.bat`** and follow the 5 prompts:

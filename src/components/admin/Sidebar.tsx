@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned } from "lucide-react";
 import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,9 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin", label: "Overview", I: LayoutDashboard, p: "dashboard" },
   { href: "/admin/registrations", label: "Registrations", I: Users, p: "registrations" },
   { href: "/admin/checkin", label: "Check-in", I: ScanLine, p: "checkin" },
-  { href: "/admin/sessions", label: "Sessions & Workshops", I: CalendarRange, p: "sessions" },
+  { href: "/admin/workshops", label: "Workshop Programme", I: ClipboardCheck, p: "workshops" },
+  { href: "/admin/venues", label: "Venues & Map", I: MapPinned, p: "venues" },
+  { href: "/admin/sessions", label: "Sessions & Programme", I: CalendarRange, p: "sessions" },
   { href: "/admin/abstracts", label: "Abstracts", I: FileText, p: "abstracts" },
   { href: "/admin/feedback", label: "Live Feedback", I: Star, p: "feedback" },
   { href: "/admin/content", label: "Speakers & Committee", I: Mic2, p: "content" },
@@ -51,11 +53,11 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
   );
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between bg-ink px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between bg-ink px-4 py-3 lg:hidden print:hidden">
         <p className="font-display text-sm font-bold text-white">LNH Admin</p>
         <button onClick={() => setOpen(!open)} className="text-white" aria-label="Menu">{open ? <X /> : <Menu />}</button>
       </div>
-      <aside className={cn("fixed inset-y-0 left-0 z-40 w-64 bg-ink transition-transform lg:translate-x-0", open ? "translate-x-0" : "-translate-x-full")}>{nav}</aside>
+      <aside className={cn("fixed inset-y-0 left-0 z-40 w-64 bg-ink transition-transform lg:translate-x-0 print:hidden", open ? "translate-x-0" : "-translate-x-full")}>{nav}</aside>
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
     </>
   );

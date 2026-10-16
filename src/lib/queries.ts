@@ -11,7 +11,7 @@ export async function getProgramme(filter?: { types?: string[]; registrable?: bo
   return db.query.sessions.findMany({
     where: conds.length ? and(...conds) : undefined,
     orderBy: [asc(s.sessions.day), asc(s.sessions.startsAt), asc(s.sessions.title)],
-    with: { speakers: { with: { speaker: true } } },
+    with: { speakers: { with: { speaker: true } }, venue: true },
   });
 }
 export type ProgrammeSession = Awaited<ReturnType<typeof getProgramme>>[number];

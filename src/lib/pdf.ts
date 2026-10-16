@@ -1,7 +1,7 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
-import { fmtDate, fmtDateTime, fmtTime, pkr, appUrl } from "./utils";
+import { fmtDate, fmtDateTime, fmtTime, fmtTime24, pkr, appUrl } from "./utils";
 import { qrPayload } from "./qr-payload";
 
 const NAVY = rgb(0.039, 0.18, 0.43);
@@ -133,5 +133,75 @@ export async function certificatePdf(p: { name: string; certificateNo: string; e
   const qr = await qrPng(doc, verify);
   page.drawImage(qr, { x: W / 2 - 34, y: 76, width: 68, height: 68 });
   center(`Certificate No. ${p.certificateNo}  |  Verify at ${verify}`, 56, 8, f, GREY);
+  return doc.save();
+}
+
+
+/** A4 flyer generated from an approved workshop record. */
+export async function workshopFlyerPdf(w: {
+  slug: string; title: string; description: string | null; department: string | null; format: string | null; startsAt: Date; endsAt: Date;
+  hall: string | null; building?: string | null; capacity: number | null; left: number | null; fee: number; earlyFee: number | null; cmeHours: number | null;
+  leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null;
+}, ev: { name: string; mainTheme: string; contactEmail: string; contactPhone: string }) {
+  const doc = await PDFDocument.create();
+  doc.setTitle(`${w.title} - flyer`);
+  const page = doc.addPage([595, 842]);
+  const f = await doc.embedFont(StandardFonts.Helvetica);
+  const b = await doc.embedFont(StandardFonts.HelveticaBold);
+  const W = 595, M = 48;
+  const SKY = rgb(0.247, 0.722, 0.941), WHITE = rgb(1, 1, 1), DEEP = rgb(0.016, 0.043, 0.118);
+
+  // dark poster background with accent bands
+  page.drawRectangle({ x: 0, y: 0, width: W, height: 842, color: DEEP });
+  page.drawRectangle({ x: 0, y: 560, width: W, height: 282, color: NAVY });
+  for (let i = 0; i < 14; i++) page.drawLine({ start: { x: 330 + i * 22, y: 842 }, end: { x: 595, y: 842 - (265 - i * 19) }, thickness: 0.4, color: SKY, opacity: 0.25 });
+  page.drawRectangle({ x: 0, y: 556, width: W, height: 4, color: RED });
+  page.drawText("LIAQUAT NATIONAL HOSPITAL & MEDICAL COLLEGE", { x: M, y: 800, size: 8.5, font: b, color: SKY });
+  page.drawText(safe(`${ev.name}  |  PRE-SYMPOSIUM WORKSHOP`), { x: M, y: 784, size: 9, font: f, color: rgb(0.8, 0.86, 1) });
+
+  let y = 735;
+  const tag = safe(`${w.department ?? "Workshop"}${w.format ? "  |  " + w.format : ""}`).toUpperCase();
+  page.drawRectangle({ x: M, y: y - 6, width: b.widthOfTextAtSize(tag, 8.5) + 18, height: 20, color: RED });
+  page.drawText(tag, { x: M + 9, y: y, size: 8.5, font: b, color: WHITE });
+  y -= 44;
+  for (const line of wrap(safe(w.title), b, 30, W - 2 * M).slice(0, 4)) { page.drawText(line, { x: M, y, size: 30, font: b, color: WHITE }); y -= 36; }
+  if (w.themeLabel) page.drawText(safe(w.themeLabel), { x: M, y: Math.max(y, 580), size: 10, font: f, color: SKY });
+
+  // facts grid
+  y = 515;
+  const fact = (x: number, label: string, value: string, sub?: string) => {
+    page.drawText(label.toUpperCase(), { x, y, size: 7.5, font: b, color: SKY });
+    page.drawText(safe(value).slice(0, 34), { x, y: y - 18, size: 14, font: b, color: WHITE });
+    if (sub) page.drawText(safe(sub).slice(0, 44), { x, y: y - 32, size: 8.5, font: f, color: rgb(0.7, 0.76, 0.9) });
+  };
+  fact(M, "Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }));
+  fact(M + 180, "Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time");
+  fact(M + 340, "Venue", w.hall ?? "-", w.building ?? undefined);
+  y -= 70;
+  fact(M, "CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-");
+  fact(M + 180, "Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined);
+  fact(M + 340, "Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined);
+
+  y -= 62;
+  page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.5, color: rgb(0.2, 0.3, 0.5) });
+  y -= 24;
+  if (w.leadFaculty) {
+    page.drawText("LEAD FACULTY", { x: M, y, size: 7.5, font: b, color: SKY }); y -= 18;
+    page.drawText(safe(w.leadFaculty), { x: M, y, size: 15, font: b, color: WHITE }); y -= 15;
+    if (w.facultyDegrees) { page.drawText(safe(w.facultyDegrees), { x: M, y, size: 9.5, font: f, color: rgb(0.75, 0.8, 0.92) }); y -= 14; }
+    y -= 12;
+  }
+  if (w.description) for (const line of wrap(safe(w.description), f, 10.5, 330).slice(0, 8)) { page.drawText(line, { x: M, y, size: 10.5, font: f, color: rgb(0.85, 0.89, 0.97) }); y -= 15; }
+
+  // QR
+  const url = `${appUrl()}/workshops#${w.slug}`;
+  const qr = await qrPng(doc, url);
+  page.drawRectangle({ x: W - M - 140, y: 112, width: 140, height: 160, color: WHITE });
+  page.drawImage(qr, { x: W - M - 130, y: 140, width: 120, height: 120 });
+  page.drawText("SCAN TO REGISTER", { x: W - M - 70 - b.widthOfTextAtSize("SCAN TO REGISTER", 8) / 2, y: 122, size: 8, font: b, color: NAVY });
+
+  page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: NAVY });
+  page.drawText(safe(ev.mainTheme), { x: M, y: 42, size: 9, font: b, color: WHITE });
+  page.drawText(safe(`${ev.contactEmail}  |  ${ev.contactPhone}  |  ${appUrl().replace(/^https?:\/\//, "")}/workshops`), { x: M, y: 24, size: 8.5, font: f, color: rgb(0.75, 0.82, 1) });
   return doc.save();
 }

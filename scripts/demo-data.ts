@@ -10,7 +10,7 @@ const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
 async function main() {
   const cats = await db.select().from(s.feeCategory);
-  const sess = await db.select().from(s.sessions).where(eq(s.sessions.registrable, true));
+  const sess = (await db.select().from(s.sessions).where(eq(s.sessions.registrable, true))).filter((x) => x.status === "APPROVED");
   for (let i = 0; i < 120; i++) {
     const cat = pick(cats);
     const chosen = [...new Set(Array.from({ length: Math.floor(Math.random() * 3) }, () => pick(sess)))];

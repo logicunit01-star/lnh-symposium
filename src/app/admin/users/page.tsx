@@ -11,10 +11,10 @@ export default async function Users() {
   const users = await db.select().from(s.users).orderBy(asc(s.users.createdAt));
   return (
     <>
-      <PageTitle title="Users & roles" sub="Role-based access: each role only sees the sections it needs." />
+      <PageTitle title="Users & roles" sub="Role-based access: each role only sees the sections it needs. Heads of Department only see workshops of the department set here." />
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>New password</th><th>Active</th><th>Last login</th><th /></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department (HOD)</th><th>New password</th><th>Active</th><th>Last login</th><th /></tr></thead>
           <tbody>{[...users, null].map((u) => {
             const id = u ? `u_${u.id}` : "u_new";
             return (
@@ -22,6 +22,7 @@ export default async function Users() {
                 <td><input form={id} name="name" required defaultValue={u?.name ?? ""} placeholder={u ? "" : "New user…"} className="a-input" /></td>
                 <td><input form={id} name="email" type="email" required defaultValue={u?.email ?? ""} className="a-input" /></td>
                 <td><select form={id} name="role" defaultValue={u?.role ?? "VIEWER"} className="a-input">{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
+                <td><input form={id} name="department" defaultValue={u?.department ?? ""} placeholder="e.g. Critical Care" className="a-input min-w-[140px]" /></td>
                 <td><input form={id} name="password" type="password" placeholder={u ? "unchanged" : "min 8 chars"} className="a-input" autoComplete="new-password" /></td>
                 <td><input form={id} name="active" type="checkbox" defaultChecked={u?.active ?? true} /></td>
                 <td className="whitespace-nowrap text-xs text-slate-500">{u?.lastLoginAt ? fmtDateTime(u.lastLoginAt) : "—"}</td>

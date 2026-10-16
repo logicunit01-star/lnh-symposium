@@ -15,6 +15,13 @@
       "when": 1792162363624,
       "tag": "0001_workshop_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792167997814,
+      "tag": "0002_workshop_committee",
+      "breakpoints": true
     }
   ]
 }

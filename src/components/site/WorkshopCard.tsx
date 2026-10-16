@@ -2,6 +2,7 @@
 import { Award, CalendarDays, Clock, MapPin, Users } from "lucide-react";
 import type { WorkshopDTO } from "@/lib/workshops";
 import { AddToCart, RegisterNow } from "@/components/cart/CartDrawer";
+import { WaitlistButton } from "./WaitlistButton";
 import { cn, pkr } from "@/lib/utils";
 
 const DEPT_HUES = ["text-lnh-sky border-lnh-sky/40 bg-lnh-sky/10", "text-lnh-rose border-lnh-red/40 bg-lnh-red/10", "text-lnh-gold border-lnh-gold/40 bg-lnh-gold/10", "text-violet-300 border-violet-400/40 bg-violet-400/10", "text-emerald-300 border-emerald-400/40 bg-emerald-400/10"];
@@ -13,7 +14,7 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
   const item = { id: w.id, title: w.title, kind: "WORKSHOP" as const, fee: w.fee, when: w.dateLabel, tag: w.department };
   const lead = w.faculty[0];
   return (
-    <article className="hud group relative flex h-full flex-col overflow-hidden p-5 transition duration-500 hover:-translate-y-1 hover:shadow-[0_24px_60px_-24px_rgba(63,184,240,0.45)] sm:p-6">
+    <article id={w.slug} className="hud group scroll-mt-28 relative flex h-full flex-col overflow-hidden p-5 transition duration-500 hover:-translate-y-1 hover:shadow-[0_24px_60px_-24px_rgba(63,184,240,0.45)] sm:p-6">
       <span className="corner left-3 top-3 border-l border-t" /><span className="corner right-3 top-3 border-r border-t" />
       <div className="flex flex-wrap items-center gap-2">
         {w.department && <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest", deptHue(w.department))}>{w.department}</span>}
@@ -31,7 +32,7 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
       <ul className="mono mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-slate-300">
         <li className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-lnh-sky" />{w.dateLabel}</li>
         <li className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-lnh-sky" />{w.timeLabel}</li>
-        <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-lnh-sky" />{w.hall}</li>
+        <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-lnh-sky" />{w.venueId ? <a href={`/venues#${w.venueId}`} title={w.building ?? "Show on campus map"} className="underline decoration-white/20 underline-offset-2 hover:text-lnh-sky">{w.hall}</a> : w.hall}</li>
         {w.cme != null && <li className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5 text-lnh-gold" />{w.cme} CME hours</li>}
       </ul>
       {w.capacity != null && (
@@ -49,8 +50,10 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
           <p className="font-display text-lg font-bold text-white">{pkr(w.fee)}{w.regularFee > w.fee && <span className="ml-2 text-xs font-normal text-slate-500 line-through">{pkr(w.regularFee)}</span>}</p>
         </div>
         <div className="flex items-center gap-2">
-          <AddToCart item={item} disabled={full} />
-          {!compact && <RegisterNow item={item} disabled={full} />}
+          {full ? <WaitlistButton sessionId={w.id} slug={w.slug} /> : <>
+            <AddToCart item={item} />
+            {!compact && <RegisterNow item={item} />}
+          </>}
         </div>
       </div>
     </article>

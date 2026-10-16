@@ -20,7 +20,31 @@ export const EVENT_DEFAULTS = {
   earlyBirdUntil: D("2026-12-10T23:59:59+05:00"),
   abstractOpen: D("2026-10-15T00:00:00+05:00"),
   abstractDeadline: D("2026-12-04T23:59:59+05:00"),
+  workshopStart: D("2026-12-14T00:00:00+05:00"),
+  workshopEnd: D("2027-01-14T23:59:59+05:00"),
+  themeWeeks: [
+    { from: "2026-12-14", label: "Emergency, trauma and critical care" },
+    { from: "2026-12-21", label: "Women and child health" },
+    { from: "2026-12-28", label: "Medicine and diagnostics" },
+    { from: "2027-01-04", label: "Research, AI and surgical innovation" },
+    { from: "2027-01-11", label: "Primary care, nursing and preparedness" },
+  ],
+  seatTarget: 3000,
+  usdRate: 280,
 };
+
+/** Placeholder rooms — replace from Admin → Venues. mapX/mapY are % positions on the campus schematic. */
+export const VENUES = [
+  { name: "Main Auditorium", building: "Academic Block", floor: "Ground", capacity: 400, onlineFacility: "Zoom + live stream", equipment: "Stage, 3 projectors, PA, 4 wireless mics", mapX: 48, mapY: 28, directions: "Main gate → straight past the fountain; entrance on the left." },
+  { name: "Lecture Hall A", building: "Medical College", floor: "1st", capacity: 150, onlineFacility: "Zoom", equipment: "Projector, PA, lectern", mapX: 22, mapY: 38, directions: "Medical College lobby → stairs to 1st floor, east wing." },
+  { name: "Lecture Hall C", building: "Medical College", floor: "2nd", capacity: 60, onlineFacility: "Zoom", equipment: "Projector, 60 power points for laptops", mapX: 18, mapY: 52, directions: "Medical College lobby → lift to 2nd floor." },
+  { name: "Skill Lab", building: "Clinical Skills Centre", floor: "Ground", capacity: 60, onlineFacility: null, equipment: "12 stations, airway and IV trainers, ultrasound phantoms", mapX: 70, mapY: 55, directions: "Behind the Emergency block; follow CSC signs." },
+  { name: "Simulation Center", building: "Clinical Skills Centre", floor: "1st", capacity: 40, onlineFacility: "Recording + debrief room", equipment: "High-fidelity adult, paediatric and birthing simulators", mapX: 76, mapY: 46, directions: "Clinical Skills Centre → 1st floor." },
+  { name: "Robotics & Skills Lab", building: "Surgical Tower", floor: "4th", capacity: 20, onlineFacility: "Recording", equipment: "Robotic console simulator, dry-lab boxes", mapX: 62, mapY: 22, directions: "Surgical Tower lifts → 4th floor, OT corridor." },
+  { name: "IT Lab", building: "Library & IT Block", floor: "1st", capacity: 35, onlineFacility: "Zoom", equipment: "35 desktops with SPSS and Office", mapX: 32, mapY: 70, directions: "Library entrance → 1st floor." },
+  { name: "Main Foyer", building: "Academic Block", floor: "Ground", capacity: 600, onlineFacility: null, equipment: "Registration counters", mapX: 50, mapY: 38, directions: "Inside the main entrance." },
+  { name: "Exhibition Hall", building: "Academic Block", floor: "Lower ground", capacity: 300, onlineFacility: null, equipment: "40 stalls, 80 poster boards", mapX: 40, mapY: 20, directions: "Academic Block → lower ground." },
+];
 
 const SPEAKERS: { title: string; name: string; degrees: string; designation: string; institution: string; topic: string; featured: boolean }[] = [
   { title: "Prof.", name: "Ayesha Rahman", degrees: "MBBS, MPH, PhD", designation: "Dean, Health Policy", institution: "Karachi Institute of Health Sciences", topic: "Value-based care in the age of AI", featured: true },
@@ -90,6 +114,26 @@ const PROGRAMME: P[] = [
   { date: "2027-01-11", day: 0, s: "14:00", e: "17:00", type: "WORKSHOP", title: "Telemedicine Consultation Skills", hall: "IT Lab", sp: [6], dept: "Family Medicine", format: "Hands-on", reg: true, cap: 30, fee: 2000, cme: 3, status: "UNDER_REVIEW" },
 ];
 
+// Extra Form A detail for demo workshops (by title prefix).
+const WS_EXTRA: Record<string, { cat: "A" | "B"; contrib?: string; fac: number; vol: number; tech: number; eq: [string, number, string][] }> = {
+  "Critical Care Day": { cat: "A", contrib: "Anaesthesia, Emergency Medicine", fac: 6, vol: 4, tech: 2, eq: [["Ventilator (demo)", 4, "ICU loan"], ["Ultrasound machine", 3, "Radiology"], ["Lung phantom", 4, "Skill Lab"]] },
+  "Trauma Team": { cat: "A", contrib: "Emergency Medicine, Anaesthesia", fac: 4, vol: 2, tech: 1, eq: [["High-fidelity mannequin", 2, "Sim Center"], ["Rapid infuser", 1, "ED loan"]] },
+  "Obstetric Emergencies": { cat: "B", fac: 4, vol: 2, tech: 1, eq: [["Birthing simulator", 2, "Sim Center"], ["PPH kit", 6, "Purchase"]] },
+  "ECG Across Ages": { cat: "A", contrib: "Paediatrics, Anaesthesia", fac: 3, vol: 2, tech: 0, eq: [["ECG printouts (sets)", 50, "Cardiology"]] },
+  "AI Tools": { cat: "A", contrib: "Research & Biostatistics", fac: 2, vol: 2, tech: 1, eq: [["Wi-Fi access codes", 40, "IT"]] },
+  "Data Analysis with SPSS": { cat: "B", fac: 2, vol: 1, tech: 1, eq: [["SPSS licences", 30, "IT"], ["Sample datasets (USB)", 30, "Research Unit"]] },
+  "Robotic Surgery": { cat: "B", fac: 2, vol: 1, tech: 2, eq: [["Robotic console simulator", 1, "Sponsor loan"], ["Dry-lab task boxes", 6, "Skill Lab"]] },
+  "Mass Casualty": { cat: "A", contrib: "Nursing, Security, Administration", fac: 8, vol: 20, tech: 3, eq: [["Triage tags", 300, "Purchase"], ["Stretchers", 20, "Hospital stores"], ["Moulage kits", 30, "Sim Center"]] },
+  "Point-of-Care Ultrasound": { cat: "B", fac: 3, vol: 1, tech: 1, eq: [["Ultrasound machine", 3, "Radiology"]] },
+  "Telemedicine": { cat: "B", fac: 2, vol: 1, tech: 1, eq: [["Headsets", 30, "IT"]] },
+};
+
+export function themeWeekOf(dateIso: string, weeks: { from: string }[]) {
+  let w = 0;
+  weeks.forEach((x, i) => { if (dateIso >= x.from) w = i + 1; });
+  return w || null;
+}
+
 const slugify = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
 
 /** Inserts speakers, committee and programme. With reset=true, clears registrations, programme and people first. */
@@ -99,8 +143,11 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
     await db.delete(s.payments);
     await db.delete(s.registrationItems);
     await db.delete(s.registrations);
+    await db.delete(s.waitlist);
+    await db.delete(s.sessionReviews);
     await db.delete(s.sessionSpeakers);
     await db.delete(s.sessions);
+    await db.delete(s.venues);
     await db.delete(s.speakers);
     await db.delete(s.committee);
     await db.delete(s.accounts);
@@ -114,6 +161,10 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
     bio: `${x.title} ${x.name} (${x.degrees}) is ${x.designation.toLowerCase()} at ${x.institution}, working on ${x.topic.toLowerCase()}. (Placeholder bio — replace from the admin panel.)`,
   }))).returning({ id: s.speakers.id });
 
+  await db.insert(s.venues).values(VENUES).onConflictDoNothing();
+  const venueRows = await db.select({ id: s.venues.id, name: s.venues.name }).from(s.venues);
+  const venueId = (name: string) => venueRows.find((v) => v.name === name)?.id ?? null;
+
   await db.insert(s.committee).values(COMMITTEE.map(([role, name, designation, department, group], i) => ({ role, name, designation, department, group, order: i })));
 
   for (const x of PROGRAMME) {
@@ -122,7 +173,8 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
       slug: `${x.day ? "d" + x.day : "ws"}-${slugify(x.title)}`, type: x.type as any, title: x.title, description: x.desc, track: x.track,
       department: x.dept, format: x.format, status: x.status ?? "APPROVED", day: x.day,
       startsAt: at(x.s), endsAt: at(x.e), hall: x.hall, capacity: x.cap ?? null, fee: x.fee ?? 0, earlyFee: x.efee ?? null,
-      registrable: !!x.reg, cmeHours: x.cme ?? null,
+      registrable: !!x.reg, cmeHours: x.cme ?? null, venueId: venueId(x.hall),
+      ...(x.type === "WORKSHOP" ? workshopExtra(x, x.sp?.[0] != null ? SPEAKERS[x.sp[0]] : undefined) : {}),
     }).returning({ id: s.sessions.id });
     if (x.sp?.length) {
       await db.insert(s.sessionSpeakers).values(x.sp.map((i, k) => ({
@@ -133,3 +185,29 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
   }
   return true;
 }
+
+function workshopExtra(x: P, lead?: (typeof SPEAKERS)[number]) {
+  const key = Object.keys(WS_EXTRA).find((k) => x.title.startsWith(k));
+  const e = key ? WS_EXTRA[key] : undefined;
+  const status = x.status ?? "APPROVED";
+  const submitted = new Date(Date.parse(`${x.date}T09:00:00+05:00`) - 40 * 864e5);
+  return {
+    category: e?.cat ?? "B", contributors: e?.contrib ?? null,
+    themeWeek: themeWeekOf(x.date, EVENT_DEFAULTS.themeWeeks),
+    leadFaculty: lead ? `${lead.title} ${lead.name}` : null, facultyDegrees: lead?.degrees ?? null,
+    facultyContact: "0300-0000000", facultyProfile: lead ? `${lead.designation}, ${lead.institution}. (Placeholder — replace in Form A.)` : null,
+    facilitators: e?.fac ?? 2, volunteers: e?.vol ?? 1, technicians: e?.tech ?? 0,
+    equipment: (e?.eq ?? []).map(([item, qty, source]) => ({ item, qty, source })),
+    submittedAt: submitted,
+    reviewedAt: status === "APPROVED" || status === "REJECTED" ? new Date(submitted.getTime() + 6 * 864e5) : null,
+    locked: status === "APPROVED" || status === "REJECTED",
+  };
+}
+
+/** Demo staff for the workshop workflow (HOD, WP Committee chair and member). Password = SEED_ADMIN_PASSWORD. */
+export const DEMO_STAFF = [
+  { name: "Dr. Placeholder (HOD Critical Care)", email: "hod.criticalcare@lnh.edu.pk", role: "HOD", department: "Critical Care" },
+  { name: "Dr. Placeholder (HOD Nursing)", email: "hod.nursing@lnh.edu.pk", role: "HOD", department: "Nursing" },
+  { name: "Dr. Placeholder (WP Co-Chair)", email: "wp.chair@lnh.edu.pk", role: "WP_CHAIR", department: null },
+  { name: "Dr. Placeholder (WP Member)", email: "wp.member@lnh.edu.pk", role: "WP_MEMBER", department: null },
+] as const;

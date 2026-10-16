@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
-import { requirePerm } from "@/lib/auth";
+import { currentUser, requirePerm } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { PageTitle, Stat, Bars, Meter, StatusBadge } from "@/components/admin/ui";
 import { fmtDate, fmtDateTime, pkr, SESSION_TYPE_LABEL, TZ } from "@/lib/utils";
 
 export default async function Overview({ searchParams }: { searchParams: { denied?: string } }) {
+  const me = await currentUser();
+  if (me && !can(me.role, "dashboard") && can(me.role, "workshops")) redirect("/admin/workshops");
   const user = await requirePerm("dashboard");
   const ev = await getEvent();
   const active = inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"]);
