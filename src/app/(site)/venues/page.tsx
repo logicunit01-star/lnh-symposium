@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { Building2, Monitor, Users } from "lucide-react";
 import { db, schema as s } from "@/lib/db";
 import { PageHero } from "@/components/ui/PageHero";
@@ -13,11 +13,11 @@ export default async function VenuesPage() {
   const [venues, ws] = await Promise.all([
     db.select().from(s.venues).where(eq(s.venues.active, true)).orderBy(asc(s.venues.building), asc(s.venues.name)),
     db.select({ id: s.sessions.id, slug: s.sessions.slug, title: s.sessions.title, venueId: s.sessions.venueId, startsAt: s.sessions.startsAt, endsAt: s.sessions.endsAt, type: s.sessions.type })
-      .from(s.sessions).where(and(eq(s.sessions.status, "APPROVED"))).orderBy(asc(s.sessions.startsAt)),
+      .from(s.sessions).where(and(eq(s.sessions.status, "APPROVED"), sql`(not ${s.sessions.proposal} or exists (select 1 from event e where e.programme_released_at is not null))`)).orderBy(asc(s.sessions.startsAt)),
   ]);
   return (
     <>
-      <PageHero eyebrow="Find your room" title={<>Venues &amp; <span className="text-grad">campus map</span></>} sub="Every workshop and session room at Liaquat National Hospital & Medical College, Stadium Road, Karachi." />
+      <PageHero eyebrow="Find your room" title={<>Venues &amp; <span className="text-grad">campus map</span></>} sub="Every workshop and session room at Liaquat National Hospital, Stadium Road, Karachi." />
       <div className="container-x grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="hud p-3 lg:sticky lg:top-28 lg:self-start">
           <CampusMap dark pins={venues} href={(p) => `#${p.id}`} className="w-full rounded-xl" />

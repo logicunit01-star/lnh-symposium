@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const PILL: Record<string, string> = {
+  DRAFT: "bg-amber-100 text-amber-800 ring-amber-200",
   SUBMITTED: "bg-blue-100 text-blue-700 ring-blue-200",
   UNDER_REVIEW: "bg-orange-100 text-orange-700 ring-orange-200",
   APPROVED: "bg-emerald-100 text-emerald-700 ring-emerald-200",

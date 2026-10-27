@@ -22,6 +22,34 @@
       "when": 1792167997814,
       "tag": "0002_workshop_committee",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792190696738,
+      "tag": "0003_otp_onsite",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792885749527,
+      "tag": "0004_scientific_programme",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793113555512,
+      "tag": "0005_sc_v1_poster",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793116869713,
+      "tag": "0006_agenda_template_files",
+      "breakpoints": true
     }
   ]
 }

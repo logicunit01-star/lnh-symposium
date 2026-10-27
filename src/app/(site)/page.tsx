@@ -9,7 +9,6 @@ import { Reveal } from "@/components/ui/Reveal";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { Avatar } from "@/components/ui/Avatar";
 import { NeuralField } from "@/components/ui/NeuralField";
-import { HeroCore } from "@/components/ui/HeroCore";
 import { WorkshopCard } from "@/components/site/WorkshopCard";
 
 const youtubeId = (u: string) => u.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)?.[1];
@@ -55,7 +54,7 @@ export default async function Home() {
         <div className="orb -right-24 bottom-0 h-[460px] w-[460px] bg-lnh-red/25 [animation-delay:-4s]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 animate-scan bg-gradient-to-b from-transparent via-lnh-sky/[0.04] to-transparent" />
 
-        <div className="container-x relative z-10 grid items-center gap-10 py-16 lg:grid-cols-[1.25fr_1fr]">
+        <div className="container-x relative z-10 grid items-center gap-10 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div>
             <Reveal>
               <div className="flex flex-wrap items-center gap-2">
@@ -67,7 +66,7 @@ export default async function Home() {
             </Reveal>
             <Reveal delay={120}>
               <p className="mono mt-8 text-xs uppercase tracking-[0.35em] text-lnh-sky">{ev.name} · {mainA}</p>
-              <h1 className="h-display mt-4 text-[12vw] leading-[0.9] text-white sm:text-[8.5vw] lg:text-[6.4rem]">
+              <h1 className="h-display mt-4 text-[12vw] leading-[0.9] text-white sm:text-[8.5vw] lg:text-[5.2rem] xl:text-[5.6rem]">
                 <span className="block">Shaping the</span>
                 <span className="text-holo block">new era</span>
                 <span className="block">of healthcare</span>
@@ -79,7 +78,7 @@ export default async function Home() {
                   <span key={short} className="hud flex items-center gap-2 rounded-full px-4 py-2 font-display text-sm font-semibold text-white"><I className={`h-4 w-4 ${accent}`} />{short}</span>
                 ))}
               </div>
-              <p className="mt-6 max-w-xl text-lg text-slate-300"><span className="font-semibold text-white">{ev.theme}.</span> {mainB ? `${mainB}. ` : ""}{ev.tagline}</p>
+              <p className="mt-6 max-w-xl text-lg text-slate-300"><span className="font-semibold text-white">{mainB || ev.theme}.</span> {ev.tagline}</p>
             </Reveal>
             <Reveal delay={320} className="mt-9 flex flex-wrap gap-3">
               <Link href="/register" className="btn-primary px-8 py-4 text-base">Register Now <ArrowRight className="h-4 w-4" /></Link>
@@ -91,12 +90,12 @@ export default async function Home() {
               <Countdown to={days[0].toISOString()} />
             </Reveal>
           </div>
-          <Reveal delay={200} className="relative hidden lg:block">
-            <div className="relative mx-auto aspect-square w-full max-w-[560px]">
-              <HeroCore className="h-full w-full" />
-              <div className="hud mono absolute -left-4 top-10 px-4 py-3 text-[11px] text-slate-300"><p className="text-lnh-sky">AI_MODULE</p><p>Diagnostics · Decision support</p></div>
-              <div className="hud mono absolute -right-2 top-1/2 px-4 py-3 text-[11px] text-slate-300"><p className="text-lnh-rose">ROBOTICS_LAB</p><p>Surgery · Simulation</p></div>
-              <div className="hud mono absolute bottom-6 left-10 px-4 py-3 text-[11px] text-slate-300"><p className="text-white">DIGITAL_CARE</p><p>EHR · Telemedicine · Data</p></div>
+          <Reveal delay={200} className="relative">
+            <div className="relative mx-auto w-full max-w-[720px] lg:-mr-16 lg:w-[115%] xl:-mr-24">
+              <div className="pointer-events-none absolute inset-x-6 bottom-6 top-1/3 rounded-[50%] bg-lnh-sky/25 blur-3xl" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/campus-scene.webp" alt="Liaquat National Hospital, Karachi, with robotics and digital health imagery" width={1232} height={560} className="relative w-full drop-shadow-[0_30px_40px_rgba(4,11,30,.45)]" />
+              <p className="mono relative mt-2 text-center text-[10px] uppercase tracking-[0.3em] text-slate-500">Liaquat National Hospital · Stadium Road, Karachi</p>
             </div>
           </Reveal>
         </div>
@@ -118,7 +117,7 @@ export default async function Home() {
       <section className="circuit relative py-28">
         <div className="container-x">
           <SectionHead eyebrow="Three days · three frontiers" title={<>One theme. <span className="text-holo">Three frontiers.</span></>}
-            sub={`The ${ev.theme.toLowerCase().replace("healthcare conundrum: ", "healthcare conundrum — ")} — explored through the technologies reshaping how hospitals diagnose, operate and deliver care.`}
+            sub="Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care."
             action={<Link href="/about" className="btn-ghost shrink-0">Learn more <ArrowRight className="h-4 w-4" /></Link>} />
           <div className="grid gap-4 lg:grid-cols-3">
             {pillars.map(({ day, I, name, tone, accent, text }, i) => {
@@ -270,7 +269,7 @@ export default async function Home() {
                 {id ? (
                   <div className="overflow-hidden rounded-3xl border border-white/10"><iframe className="aspect-video h-full w-full" src={`https://www.youtube-nocookie.com/embed/${id}`} title={`Symposium video ${i + 1}`} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" /></div>
                 ) : (
-                  <a href={ev.youtube || "#"} target="_blank" rel="noreferrer" className="group relative grid aspect-video place-items-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-lnh-navy via-ink-700 to-[#3a0a12]">
+                  <a href={ev.youtube || "#"} target="_blank" rel="noreferrer" className="on-dark group relative grid aspect-video place-items-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-lnh-navy via-ink-700 to-[#3a0a12]">
                     <div className="circuit absolute inset-0" />
                     <span className="relative grid h-20 w-20 place-items-center rounded-full bg-white/10 ring-1 ring-white/30 backdrop-blur transition group-hover:scale-110 group-hover:bg-lnh-red"><Play className="ml-1 h-8 w-8 fill-white text-white" /></span>
                     <span className="absolute bottom-5 left-6 text-sm font-medium text-slate-300">{["Highlights reel", "Keynote recap", "Workshop moments"][i]} — video coming soon</span>

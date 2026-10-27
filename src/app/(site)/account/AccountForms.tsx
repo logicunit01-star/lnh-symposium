@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Check, Eye, EyeOff, X } from "lucide-react";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
+import { OtpVerify } from "@/components/ui/OtpVerify";
 import { cn, TITLES, SPECIALTIES } from "@/lib/utils";
 
 const RULES: [string, (p: string) => boolean][] = [
@@ -51,12 +52,16 @@ function SignUp({ next }: { next: string }) {
   const [f, setF] = useState<Record<string, string>>({ title: "Dr.", gender: "" });
   const [show, setShow] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((p) => ({ ...p, [k]: k === "phone" ? maskPhone(e.target.value) : e.target.value }));
+  const [otp, setOtp] = useState<{ otpId: string; sentTo: { email: string; phone: string }; demoCode?: string } | null>(null);
   const pw = f.password ?? "";
   const ok = RULES.every(([, t]) => t(pw));
+  if (otp) return <OtpVerify otpId={otp.otpId} sentTo={`${otp.sentTo.phone} and ${otp.sentTo.email}`} demoCode={otp.demoCode} verifyUrl="/api/account/verify"
+    title="Verify your account" onVerified={() => { window.location.href = next; }} onCancel={() => setOtp(null)} />;
   return (
     <form className="grid gap-5 sm:grid-cols-2" noValidate onSubmit={async (e) => {
       e.preventDefault();
-      if (await submit(f)) window.location.href = next;
+      const r = await submit(f);
+      if (r?.pending) setOtp(r);
     }}>
       {error && <Alert className="sm:col-span-2">{error}</Alert>}
       <Field label="Title" name="title" required error={fields.title}><select id="title" className="input" value={f.title} onChange={set("title")}>{TITLES.map((t) => <option key={t}>{t}</option>)}</select></Field>
@@ -84,8 +89,8 @@ function SignUp({ next }: { next: string }) {
           <li key={l} className={cn("flex items-center gap-1.5 text-[11px]", t(pw) ? "text-emerald-300" : "text-slate-500")}>{t(pw) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}{l}</li>))}</ul>
       </Field>
       <Field label="Confirm password" name="confirm" required error={fields.confirm}><input id="confirm" type={show ? "text" : "password"} autoComplete="new-password" className="input" value={f.confirm ?? ""} onChange={set("confirm")} /></Field>
-      <p className="text-xs text-slate-500 sm:col-span-2">Identity verification by a one-time code (SMS and email) will be enabled when the eOcean and email services are connected.</p>
-      <div className="sm:col-span-2"><button className="btn-primary w-full sm:w-auto" disabled={loading || !ok}>{loading ? "Creating account…" : "Create account & continue"}</button></div>
+      <p className="text-xs text-slate-500 sm:col-span-2">Next, we send a 6-digit code to your mobile and email to verify your account. The code expires in 5 minutes.</p>
+      <div className="sm:col-span-2"><button className="btn-primary w-full sm:w-auto" disabled={loading || !ok}>{loading ? "Sending code…" : "Create account & verify"}</button></div>
     </form>
   );
 }

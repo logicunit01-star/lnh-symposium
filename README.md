@@ -59,6 +59,27 @@ Default admin login comes from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.e
 - **Waitlist**: full workshops show *Join waitlist*; the committee emails the next people when seats free up.
 - Roles: `WP_CHAIR` (change + approve), `WP_MEMBER` (read + change), `HOD` (submit + see own department only; set the department in Users & Roles). Demo users `hod.criticalcare@`, `hod.nursing@`, `wp.chair@`, `wp.member@lnh.edu.pk` use the `SEED_ADMIN_PASSWORD`.
 
+## Scientific programme and abstracts v2 (LNH forms, 23 Oct 2026)
+
+- **Dates and rooms:** symposium days 29, 30 and 31 Jan 2027; fixed session slots (Fri/Sat 08:30–10:30, 13:45–15:30, 15:45–17:30; Sun 09:00–11:00, 11:15–13:00, 13:15–15:30 optional); 16 real rooms in Convention Center, College of Nursing, BSMT, LNMC and Radiology. Slots, review windows, lock date and agenda templates are in Event Settings.
+- **Departments:** 52-speciality master list. Admin → Departments creates one login per speciality (passcode shown once, CSV download); that login opens the department portal (abstract review, session agenda, workshop requests) and sees only its own records.
+- **Abstracts:** signed-in authors (email-verified) submit oral / poster / either, speciality, presenting author, up to 6 co-authors, title ≤ 35 words, structured sections ≤ 300 words, 3–5 keywords, declaration. Automatic ID `ABS-2027-NNNN`, confirmation email, duplicate-title check.
+- **Review:** Phase 1, each department scores (5 criteria) and decides Accept as oral / poster, Reject or Back to secretariat inside its window, then sends decisions and keeps read-only lists. The Scientific Committee checks quality, finalises, and reassigns returned abstracts to another department, which gets a Phase 2 window. Decisions are emailed in bulk.
+- **Scientific sessions:** departments submit the Scientific Sessions' Program Details form (session type, preferred slots, audience, chair, co-chair, LNH moderator, panelists, speakers, oral presenters linked by abstract ID). The committee allots slot and room (room double-booking refused, capacity warning), sees people clashes, approves, and releases the programme. Departments edit until the lock date; after it, the SC Chair authorises a 48-hour secretariat edit. The provisional schedule stays committee-only until release.
+- **Invitations:** one click emails every chair, co-chair, moderator, panelist, speaker, oral presenter and accepted poster with session, date, time and venue; recipients accept or decline at `/invite/<token>`. Tracker: not sent, no response, accepted, declined, reminders, failed, withdrawn.
+- **e-Abstract book:** `/abstracts/book`, searchable, published on release (committee can preview).
+- Demo logins (password = `SEED_ADMIN_PASSWORD`): `hod.cardiology@`, `hod.anesthesia@`, `hod.nursing@`, `sc.chair@`, `sc.member@`, `secretariat@`, `marketing@`, `food@lnh.edu.pk`.
+
+## SC requirements V1.0 and poster update (26 Oct 2026)
+
+- **50 specialities:** physiotherapy, speech therapy and occupational therapy are one session ("Physiotherapy / Speech therapy / Occupational therapy"); migration 0005 merges existing records and logins.
+- **Plenary and debate:** fixed committee sessions on Day 1 and Day 2, 11:00–13:00 (slots tagged `plenary` / `debate` in Event Settings). Scientific Programme → "+ Plenary / debate" records keynote speaker(s), panelists and moderator; chair and co-chair are optional. Departments cannot pick these slots, and speciality sessions cannot be allotted into them.
+- **Abstract grid:** accepted abstracts get a venue (from the venue master) and a free placement field (poster board, slot, remarks), inline in the grid or on the abstract page. Poster invitations use them. SC Chair can open the venue master.
+- **Marketing (flyer review only):** role `MARKETING`, page Admin → Flyer Review. Each approved workshop's flyer waits for Marketing; approve (emails the requester the link) or request changes with a note (shown to the WP committee, who resend it). The public flyer link works only after approval; staff can preview before.
+- **Food department (read only):** role `CATERING`, page Admin → Catering Headcounts: delegates per symposium day, speakers per day, and per-workshop participants plus workshop team, with daily totals. Printable.
+- **Flyer template:** `src/lib/pdf.ts` `workshopFlyerPdf` follows the 9th LNH Symposium poster (gradient, LNH logo, title art, dates, theme, campus artwork, Poppins). Assets in `assets/flyer/`.
+- **Light mode:** public site toggle (sun/moon in the nav, also in the mobile menu); remembered per browser; admin stays as is. Colours are CSS variables in `src/app/globals.css`.
+
 ## Put it online (Vercel + Neon, free tier)
 
 From Windows, double-click **`deploy.bat`** and follow the 5 prompts:
@@ -144,8 +165,8 @@ Edit in `src/lib/permissions.ts`.
 Settlement is idempotent: it marks the registration **PAID** and sends the confirmation email (with PDF) + SMS.
 
 ## Branding
-- Colours: `tailwind.config.ts`. The palette approximates LNH's navy/blue/red — replace with exact values from the LNH brand guide.
-- Logo: `src/components/site/Logo.tsx` currently renders a wordmark; put the official logo in `/public` and swap in an `<img>`.
+- Colours: `tailwind.config.ts` + CSS variables in `src/app/globals.css` (dark default and light theme).
+- Logo and hospital name: official LNH logo from the 9th Symposium poster in `public/brand/` (dark and light variants, mark, campus artwork, poster); naming in `src/lib/brand.ts`.
 - Fonts: Sora (display) + Inter (body), self-hosted via `@fontsource` (no Google Fonts call at build time).
 
 ## Project structure

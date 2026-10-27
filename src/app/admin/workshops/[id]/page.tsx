@@ -10,8 +10,8 @@ import { CATEGORY_LABEL, DECISION_LABEL, LOW_FILL, wpWorkshops } from "@/lib/wp"
 import { PageTitle } from "@/components/admin/ui";
 import { Bar, WpStatus, pct } from "@/components/admin/wp";
 import { CampusMap } from "@/components/CampusMap";
-import { fmtDate, fmtDateTime, pkr } from "@/lib/utils";
-import { decideLowFill, deleteWorkshop, notifyWaitlist, reviewWorkshop, unlockWorkshop } from "../actions";
+import { cn, fmtDate, fmtDateTime, pkr } from "@/lib/utils";
+import { decideLowFill, deleteWorkshop, notifyWaitlist, resubmitFlyer, reviewWorkshop, unlockWorkshop } from "../actions";
 
 export default async function WorkshopDetail({ params, searchParams }: { params: { id: string }; searchParams: { saved?: string; err?: string; locked?: string } }) {
   const u = await requirePerm("workshops");
@@ -41,7 +41,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
       <PageTitle title={w.title} sub={`${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${weekLabel ? ` (${weekLabel})` : ""}` : ""}`}
         actions={<>
           {canEdit && <Link href={`/admin/workshops/${w.id}/edit`} className="a-btn-ghost"><Pencil className="h-4 w-4" />Edit</Link>}
-          {w.status === "APPROVED" && <a href={`/api/workshops/${w.slug}/flyer`} className="a-btn-ghost"><Download className="h-4 w-4" />Flyer PDF</a>}
+          {w.status === "APPROVED" && <a href={`/api/workshops/${w.slug}/flyer`} className="a-btn-ghost"><Download className="h-4 w-4" />{w.flyerStatus === "APPROVED" ? "Flyer PDF" : "Flyer preview"}</a>}
           {w.status === "APPROVED" && <Link href={`/workshops#${w.slug}`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Catalogue</Link>}
           {can(u.role, "sessions") && <Link href={`/admin/sessions/${w.id}`} className="a-btn-primary"><Users className="h-4 w-4" />Participants</Link>}
         </>} />
@@ -50,12 +50,19 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
       {searchParams.locked && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">This request is locked after the committee decision, or you cannot edit it.</p>}
       {searchParams.err === "note" && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">Give the reason when rejecting a request.</p>}
 
+      {w.status === "APPROVED" && w.flyerStatus === "CHANGES" && (
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <p><b>Marketing asked for flyer changes</b>{w.flyerReviewedBy ? ` (${w.flyerReviewedBy})` : ""}: {w.flyerNote}</p>
+          {canReview && <form action={resubmitFlyer.bind(null, w.id)} className="mt-2"><button className="a-btn-ghost py-1.5 text-xs">Changes made, send flyer for review again</button></form>}
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <div className="a-card p-5">
             <div className="flex flex-wrap items-center gap-3">
               <WpStatus s={w.status} locked={w.locked} />
               {w.locked && <span className="flex items-center gap-1 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />Core fields locked {w.reviewedAt ? `since ${fmtDateTime(w.reviewedAt)}` : ""}</span>}
+              {w.status === "APPROVED" && <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", w.flyerStatus === "APPROVED" ? "bg-emerald-100 text-emerald-800" : w.flyerStatus === "CHANGES" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800")}>Flyer: {w.flyerStatus === "APPROVED" ? "approved by Marketing" : w.flyerStatus === "CHANGES" ? "changes requested" : "awaiting Marketing review"}</span>}
               {row.clash && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Venue/time clash</span>}
               {w.coChairDecision && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Co-Chair decision: {DECISION_LABEL[w.coChairDecision]}</span>}
             </div>

@@ -2,7 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; --font-display: "Sora Variable"; --font-sans: "Inter Variable"; }
+:root {
+  color-scheme: dark; --font-display: "Sora Variable"; --font-sans: "Inter Variable";
+  /* palette (RGB triplets) — dark theme defaults; admin always uses these */
+  --c-white: 255 255 255;
+  --c-ink: 4 11 30; --c-ink-800: 8 20 49; --c-ink-700: 13 29 69; --c-ink-600: 19 40 92;
+  --c-slate-100: 241 245 249; --c-slate-200: 226 232 240; --c-slate-300: 203 213 225;
+  --c-slate-400: 148 163 184; --c-slate-500: 100 116 139; --c-slate-600: 71 85 105;
+  --c-sky: 63 184 240; --c-rose: 255 77 94; --c-gold: 245 185 66;
+}
+
+/* ---------- public site: light theme (toggle in the nav; stored per visitor) ---------- */
+html[data-theme="light"] .site {
+  color-scheme: light;
+  --c-white: 10 27 61;            /* "white" text becomes LNH navy */
+  --c-ink: 244 248 252; --c-ink-800: 255 255 255; --c-ink-700: 234 241 250; --c-ink-600: 219 230 244;
+  --c-slate-100: 15 23 42; --c-slate-200: 30 41 59; --c-slate-300: 51 65 85;
+  --c-slate-400: 71 85 105; --c-slate-500: 100 116 139; --c-slate-600: 148 163 184;
+  --c-sky: 3 120 186; --c-rose: 214 31 61; --c-gold: 168 108 14;
+}
+/* solid accent / dark surfaces keep their dark-theme palette in both themes (white text, dark ink) */
+html[data-theme="light"] .site :is([class~="bg-lnh-red"], [class~="bg-lnh-blue"], [class~="bg-lnh-navy"], [class~="bg-lnh-rose"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="from-lnh-red"], [class~="from-lnh-navy"], [class~="from-lnh-blue"], [class~="from-lnh-sky"], [class~="from-lnh-rose"], [class~="btn-primary"], [class~="btn-blue"], .on-dark),
+html[data-theme="light"] .site :is([class~="hover:bg-lnh-red"], [class~="hover:bg-lnh-blue"]):hover {
+  --c-white: 255 255 255;
+  --c-ink: 4 11 30; --c-ink-800: 8 20 49; --c-ink-700: 13 29 69; --c-ink-600: 19 40 92;
+  --c-slate-100: 241 245 249; --c-slate-200: 226 232 240; --c-slate-300: 203 213 225;
+  --c-slate-400: 148 163 184; --c-slate-500: 100 116 139; --c-slate-600: 71 85 105;
+  --c-sky: 63 184 240; --c-rose: 255 77 94; --c-gold: 245 185 66;
+}
+html[data-theme="light"] .site iframe { filter: none !important; }
+/* pale status tints used as text on dark need a deeper shade on light backgrounds */
+html[data-theme="light"] .site :is(.text-emerald-300, .text-emerald-400) { color: rgb(4 120 87); }
+html[data-theme="light"] .site :is(.text-amber-300, .text-amber-400, .text-yellow-300) { color: rgb(180 83 9); }
+html[data-theme="light"] .site :is(.text-rose-300, .text-red-300, .text-red-400) { color: rgb(190 18 60); }
+html[data-theme="light"] .site :is(.text-violet-300, .text-purple-300, .text-indigo-300) { color: rgb(91 33 182); }
+html[data-theme="light"] .site :is(.text-sky-300, .text-cyan-300, .text-blue-300) { color: rgb(3 105 161); }
+html[data-theme="light"] body:has(.site) { background: rgb(244 248 252); }
+html[data-theme="light"] .site .grid-lines { background-image: linear-gradient(rgba(10,27,61,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(10,27,61,.05) 1px, transparent 1px); }
+html[data-theme="light"] .site .noise::after { opacity: .025; }
+html[data-theme="light"] .site .orb { opacity: .45; }
+html[data-theme="light"] .site .card, html[data-theme="light"] .site .hud { box-shadow: 0 10px 30px -18px rgba(10,46,110,.25); }
+html[data-theme="light"] .site .card { background-color: rgb(255 255 255 / .75); }
+html[data-theme="light"] .site .hud { background-image: linear-gradient(to bottom, rgba(255,255,255,.9), rgba(255,255,255,.65)); }
+.site { @apply bg-ink text-slate-100; }
+html[data-theme="light"] .site .theme-dark-only { display: none !important; }
+.theme-light-only:not(html[data-theme="light"] .site .theme-light-only) { display: none !important; }
 html { scroll-behavior: smooth; overflow-x: clip; }
 body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
 ::selection { background: #D2192E; color: #fff; }
@@ -16,8 +60,8 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
   .text-grad-red { @apply bg-gradient-to-r from-lnh-rose via-lnh-red to-lnh-gold bg-clip-text text-transparent; }
 
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-lnh-sky disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-lnh-red text-white shadow-[0_10px_40px_-10px_#D2192E] hover:bg-lnh-rose hover:shadow-[0_10px_50px_-6px_#FF4D5E]; }
-  .btn-blue { @apply btn bg-lnh-blue text-white shadow-[0_10px_40px_-10px_#1560D4] hover:bg-[#2a76ea]; }
+  .btn-primary { @apply btn bg-lnh-red text-snow shadow-[0_10px_40px_-10px_#D2192E] hover:bg-lnh-rose hover:shadow-[0_10px_50px_-6px_#FF4D5E]; }
+  .btn-blue { @apply btn bg-lnh-blue text-snow shadow-[0_10px_40px_-10px_#1560D4] hover:bg-[#2a76ea]; }
   .btn-ghost { @apply btn border border-white/20 bg-white/5 text-white backdrop-blur hover:border-white/50 hover:bg-white/10; }
   .btn-light { @apply btn bg-white text-ink hover:bg-slate-200; }
   .btn-sm { @apply px-4 py-2 text-xs; }
@@ -34,7 +78,7 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
   .hud::before { content: ""; @apply pointer-events-none absolute inset-0 rounded-3xl; padding: 1px; background: linear-gradient(135deg, rgba(63,184,240,.55), transparent 35%, transparent 65%, rgba(210,25,46,.45)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
   .corner { @apply pointer-events-none absolute h-4 w-4 border-lnh-sky/70; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .text-holo { @apply bg-clip-text text-transparent; background-image: linear-gradient(100deg, #fff 0%, #3FB8F0 30%, #fff 45%, #1560D4 60%, #FF4D5E 85%, #fff 100%); background-size: 200% 100%; @apply animate-shimmer; }
+  .text-holo { @apply bg-clip-text text-transparent; background-image: linear-gradient(100deg, rgb(var(--c-white)) 0%, rgb(var(--c-sky)) 30%, rgb(var(--c-white)) 45%, #1560D4 60%, #FF4D5E 85%, rgb(var(--c-white)) 100%); background-size: 200% 100%; @apply animate-shimmer; }
 
   /* forms (public, dark) */
   .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400; }

@@ -80,19 +80,6 @@ export async function deleteSession(id: string) {
   revalidatePath("/admin/sessions"); redirect("/admin/sessions");
 }
 
-// ---------------- abstracts ----------------
-export async function reviewAbstract(id: string, f: FormData) {
-  const u = await requirePerm("abstracts.review");
-  const status = str(f, "status") as any;
-  const notify = bool(f, "notify");
-  const [a] = await db.update(s.abstracts).set({ status, score: num(f, "score"), reviewerNotes: str(f, "reviewerNotes"), reviewerId: str(f, "reviewerId") ?? u.sub }).where(eq(s.abstracts.id, id)).returning();
-  if (notify && ["ACCEPTED", "REJECTED", "REVISION"].includes(status)) {
-    const msg = { ACCEPTED: "We are pleased to inform you that your abstract has been <b>accepted</b>", REJECTED: "We regret to inform you that your abstract could not be accepted", REVISION: "The scientific committee has requested a <b>revision</b> of your abstract" }[status as "ACCEPTED"];
-    await sendEmail(a.email, `Abstract ${a.refNo} — decision`, emailLayout("Abstract decision", `<p>Dear ${a.title} ${a.firstName} ${a.lastName},</p><p>${msg} (<b>${a.refNo}</b> — “${a.abstractTitle}”).</p>${status === "ACCEPTED" ? `<p>Accepted as: <b>${a.type === "ORAL" ? "Oral presentation" : "Poster"}</b>. Please ensure the presenting author registers for the symposium.</p>` : ""}`));
-    await sendSms(a.mobile, `LNH Symposium: A decision on abstract ${a.refNo} has been emailed to you.`);
-  }
-  revalidatePath(`/admin/abstracts/${id}`); revalidatePath("/admin/abstracts");
-}
 
 // ---------------- content ----------------
 export async function saveSpeaker(id: string | null, f: FormData) {
@@ -112,7 +99,16 @@ export async function deleteMember(id: string) { await requirePerm("content"); a
 
 // ---------------- settings ----------------
 export async function saveSettings(f: FormData) {
-  await requirePerm("settings");
+  const me = await requirePerm("settings");
+  for (const [k, v] of [...f.entries()]) {
+    if (k.startsWith("tplfile_del_") && v === "on") await db.delete(s.agendaTemplateFiles).where(eq(s.agendaTemplateFiles.format, k.slice(12)));
+    if (k.startsWith("tplfile_") && !k.startsWith("tplfile_del_") && typeof v === "object" && v && (v as File).size > 0) {
+      const file = v as File;
+      if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name} is larger than 5 MB.`);
+      const row = { format: k.slice(8), fileName: file.name.slice(0, 160), mime: file.type || "application/octet-stream", size: file.size, data: Buffer.from(await file.arrayBuffer()).toString("base64"), uploadedBy: me.name, uploadedAt: new Date() };
+      await db.insert(s.agendaTemplateFiles).values(row).onConflictDoUpdate({ target: s.agendaTemplateFiles.format, set: row });
+    }
+  }
   const d = (k: string) => { const v = str(f, k); return v ? new Date(`${v}:00+05:00`) : null; };
   await db.update(s.event).set({
     edition: str(f, "edition")!, name: str(f, "name")!, theme: str(f, "theme")!, tagline: str(f, "tagline") || "",
@@ -126,6 +122,12 @@ export async function saveSettings(f: FormData) {
     workshopStart: d("workshopStart"), workshopEnd: d("workshopEnd"),
     themeWeeks: (str(f, "themeWeeks") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s*[,|]\s*(.+?)\s*$/)).filter(Boolean).map((m) => ({ from: m![1], label: m![2] })),
     seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280,
+    sessionSlots: (str(f, "sessionSlots") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})((?:\s+(?:optional|plenary|debate))*)\s*$/i)).filter(Boolean)
+      .map((m) => { const tags = (m![4] || "").toLowerCase(); return { key: `${m![1]}|${m![2]}`, day: m![1], start: m![2], end: m![3], optional: tags.includes("optional"), ...(tags.includes("plenary") ? { special: "PLENARY" as const } : tags.includes("debate") ? { special: "DEBATE" as const } : {}) }; })
+      .sort((a, b) => a.key.localeCompare(b.key)),
+    abstractP1Open: d("abstractP1Open"), abstractP1Close: d("abstractP1Close"), abstractP2Open: d("abstractP2Open"), abstractP2Close: d("abstractP2Close"),
+    sciLockAt: d("sciLockAt"),
+    agendaTemplates: Object.fromEntries([...f.entries()].filter(([k]) => k.startsWith("tpl_")).map(([k, v]) => [k.slice(4), String(v)])),
   }).where(eq(s.event.id, 1));
   revalidatePath("/", "layout");
 }

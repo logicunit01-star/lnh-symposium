@@ -2,18 +2,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed } from "lucide-react";
 import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin", label: "Overview", I: LayoutDashboard, p: "dashboard" },
   { href: "/admin/registrations", label: "Registrations", I: Users, p: "registrations" },
+  { href: "/admin/onsite", label: "Onsite Desk", I: UserPlus, p: "registrations.edit" },
   { href: "/admin/checkin", label: "Check-in", I: ScanLine, p: "checkin" },
   { href: "/admin/workshops", label: "Workshop Programme", I: ClipboardCheck, p: "workshops" },
   { href: "/admin/venues", label: "Venues & Map", I: MapPinned, p: "venues" },
   { href: "/admin/sessions", label: "Sessions & Programme", I: CalendarRange, p: "sessions" },
+  { href: "/admin/dept", label: "My Department", I: Building2, p: "dept.abstracts" },
+  { href: "/admin/dept/abstracts", label: "Abstract Review", I: FileText, p: "dept.abstracts" },
+  { href: "/admin/dept/sessions", label: "Session Agenda", I: Presentation, p: "dept.sessions" },
   { href: "/admin/abstracts", label: "Abstracts", I: FileText, p: "abstracts" },
+  { href: "/admin/programme", label: "Scientific Programme", I: LayoutGrid, p: "programme" },
+  { href: "/admin/invitations", label: "Invitations", I: Send, p: "invitations" },
+  { href: "/admin/departments", label: "Departments", I: Building2, p: "departments" },
+  { href: "/admin/flyers", label: "Flyer Review", I: ImageIcon, p: "flyers" },
+  { href: "/admin/catering", label: "Catering Headcounts", I: UtensilsCrossed, p: "catering" },
   { href: "/admin/feedback", label: "Live Feedback", I: Star, p: "feedback" },
   { href: "/admin/content", label: "Speakers & Committee", I: Mic2, p: "content" },
   { href: "/admin/messages", label: "Enquiries", I: Inbox, p: "messages" },
@@ -28,12 +37,13 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
   const nav = (
     <nav className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 py-5">
-        <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-lnh-navy to-lnh-blue ring-1 ring-white/20"><svg viewBox="0 0 64 64" className="h-5 w-5"><path d="M26 10h12v16h16v12H38v16H26V38H10V26h16z" fill="#D2192E" /></svg></span>
-        <div className="leading-tight"><p className="font-display text-sm font-bold text-white">LNH Symposium</p><p className="text-[10px] uppercase tracking-[0.2em] text-lnh-sky">Admin console</p></div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/lnh-mark-light.png" alt="LNH" className="h-9 w-auto" />
+        <div className="leading-tight"><p className="font-display text-sm font-bold text-white">9th LNH Symposium</p><p className="text-[10px] uppercase tracking-[0.2em] text-lnh-sky">Admin console</p></div>
       </div>
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
         {ITEMS.filter((i) => can(user.role, i.p)).map(({ href, label, I }) => {
-          const on = href === "/admin" ? path === "/admin" : path.startsWith(href);
+          const on = href === "/admin" || href === "/admin/dept" ? path === href : path.startsWith(href);
           return (
             <li key={href}>
               <Link href={href} onClick={() => setOpen(false)} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition", on ? "bg-white/10 font-semibold text-white" : "text-slate-400 hover:bg-white/5 hover:text-white")}>

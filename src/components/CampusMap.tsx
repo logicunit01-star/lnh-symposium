@@ -2,13 +2,13 @@
 type Pin = { id: string; name: string; building: string; mapX: number; mapY: number };
 
 const BLOCKS: { x: number; y: number; w: number; h: number; label: string }[] = [
-  { x: 36, y: 14, w: 26, h: 30, label: "Academic Block" },
-  { x: 8, y: 30, w: 22, h: 30, label: "Medical College" },
-  { x: 56, y: 10, w: 14, h: 18, label: "Surgical Tower" },
-  { x: 64, y: 40, w: 22, h: 22, label: "Clinical Skills Centre" },
-  { x: 20, y: 64, w: 24, h: 14, label: "Library & IT Block" },
-  { x: 74, y: 12, w: 18, h: 22, label: "Main Hospital" },
-  { x: 48, y: 52, w: 12, h: 14, label: "Emergency" },
+  { x: 34, y: 12, w: 30, h: 32, label: "Convention Center" },
+  { x: 8, y: 30, w: 24, h: 30, label: "LNMC" },
+  { x: 56, y: 8, w: 14, h: 16, label: "Surgical Tower" },
+  { x: 64, y: 44, w: 22, h: 14, label: "Clinical Skills Centre" },
+  { x: 18, y: 64, w: 26, h: 14, label: "College of Nursing" },
+  { x: 74, y: 10, w: 20, h: 24, label: "Main Hospital · Radiology" },
+  { x: 47, y: 52, w: 14, h: 14, label: "BSMT" },
 ];
 
 export function CampusMap({ pins, active, dark, href, className }: { pins: Pin[]; active?: string | null; dark?: boolean; href?: (p: Pin) => string; className?: string }) {

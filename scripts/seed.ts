@@ -2,7 +2,7 @@
 import bcrypt from "bcryptjs";
 import { db, schema as s } from "../src/lib/db";
 import { eq, sql } from "drizzle-orm";
-import { DEMO_STAFF, EVENT_DEFAULTS, VENUES, seedDemoContent } from "../src/lib/demo-content";
+import { DEMO_STAFF, EVENT_DEFAULTS, VENUES, seedDemoContent, seedDepartments } from "../src/lib/demo-content";
 
 
 async function main() {
@@ -42,6 +42,11 @@ async function main() {
   const [{ nv }] = await db.select({ nv: sql<number>`count(*)::int` }).from(s.venues);
   if (!nv) await db.insert(s.venues).values(VENUES).onConflictDoNothing();
 
+  await seedDepartments(db);
+  if (ev && !ev.sessionSlots?.length) {
+    const { sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt } = EVENT_DEFAULTS;
+    await db.update(s.event).set({ sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt }).where(eq(s.event.id, 1));
+  }
   const added = await seedDemoContent(db);
   if (!added) { console.log("Content already present — skipped dummy content."); return; }
   console.log("Seed complete.");

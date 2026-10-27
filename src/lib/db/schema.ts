@@ -8,12 +8,14 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const created = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 const updated = () => timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date());
 
-export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD"]);
+export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD", "SC_CHAIR", "SECRETARIAT", "MARKETING", "CATERING"]);
 export const sessionTypeEnum = pgEnum("session_type", ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "FAILED", "WAIVED", "REFUNDED"]);
 export const abstractTypeEnum = pgEnum("abstract_type", ["ORAL", "POSTER"]);
-export const abstractStatusEnum = pgEnum("abstract_status", ["SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "REVISION"]);
+export const abstractStatusEnum = pgEnum("abstract_status", ["SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "REVISION", "BACK"]);
 export const channelEnum = pgEnum("channel", ["EMAIL", "SMS"]);
+
+export type SessionSlot = { key: string; day: string; start: string; end: string; optional?: boolean; special?: "PLENARY" | "DEBATE" };
 
 /** Singleton row (id = 1) with editable symposium settings. */
 export const event = pgTable("event", {
@@ -50,6 +52,15 @@ export const event = pgTable("event", {
   themeWeeks: jsonb("theme_weeks").$type<{ from: string; label: string }[]>().notNull().default([]),
   seatTarget: integer("seat_target").notNull().default(3000),
   usdRate: real("usd_rate").notNull().default(280),
+  // Scientific programme (Scientific Committee)
+  sessionSlots: jsonb("session_slots").$type<SessionSlot[]>().notNull().default([]),
+  abstractP1Open: timestamp("abstract_p1_open", { withTimezone: true }),
+  abstractP1Close: timestamp("abstract_p1_close", { withTimezone: true }),
+  abstractP2Open: timestamp("abstract_p2_open", { withTimezone: true }),
+  abstractP2Close: timestamp("abstract_p2_close", { withTimezone: true }),
+  sciLockAt: timestamp("sci_lock_at", { withTimezone: true }), // departments edit session agendas until this date
+  programmeReleasedAt: timestamp("programme_released_at", { withTimezone: true }),
+  agendaTemplates: jsonb("agenda_templates").$type<Record<string, string>>().notNull().default({}),
   updatedAt: updated(),
 });
 
@@ -103,6 +114,28 @@ export const committee = pgTable("committee_members", {
   group: text("group").notNull().default("Organizing Committee"),
   photoUrl: text("photo_url"),
   order: integer("order").notNull().default(0),
+});
+
+/** Departments / specialities (master list). Abstract review state per department lives here. */
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  order: integer("order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  p1SubmittedAt: timestamp("p1_submitted_at", { withTimezone: true }), // HOD sent Phase 1 decisions back
+  p2Required: boolean("p2_required").notNull().default(false), // new abstracts assigned in Phase 2
+  p2SubmittedAt: timestamp("p2_submitted_at", { withTimezone: true }),
+});
+
+/** Uploaded agenda template document per session format (SC V1.0: "Agenda template for each format must be uploaded"). Stored base64, max 5 MB. */
+export const agendaTemplateFiles = pgTable("agenda_template_files", {
+  format: text("format").primaryKey(),
+  fileName: text("file_name").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  data: text("data").notNull(),
+  uploadedBy: text("uploaded_by"),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** Rooms on the LNH campus. Map position is a percentage on the campus schematic. */
@@ -163,6 +196,19 @@ export const sessions = pgTable("sessions", {
   reviewNote: text("review_note"),
   locked: boolean("locked").notNull().default(false),
   coChairDecision: text("co_chair_decision"), // RUN | MERGE | CANCEL | PROMOTE (low-fill remediation)
+  // Scientific session proposal (department form)
+  proposal: boolean("proposal").notNull().default(false), // true = submitted by a department; public only after programme release
+  sessionFormat: text("session_format"), // INVITED_PAPERS | PAPERS_ONLY | GUEST_ONLY | PANEL | CASE_BASED | OTHER
+  formatOther: text("format_other"),
+  preferredSlots: jsonb("preferred_slots").$type<string[]>().notNull().default([]),
+  expectedAudience: integer("expected_audience"),
+  slotKey: text("slot_key"), // allotted slot
+  editGrantUntil: timestamp("edit_grant_until", { withTimezone: true }), // SC Chair authorised a post-lock change
+  // Marketing review of the generated workshop flyer: PENDING | APPROVED | CHANGES
+  flyerStatus: text("flyer_status"),
+  flyerNote: text("flyer_note"),
+  flyerReviewedBy: text("flyer_reviewed_by"),
+  flyerReviewedAt: timestamp("flyer_reviewed_at", { withTimezone: true }),
   createdAt: created(),
 }, (t) => ({ dayIdx: index("sessions_day_idx").on(t.day, t.startsAt) }));
 
@@ -171,6 +217,29 @@ export const sessionSpeakers = pgTable("session_speakers", {
   speakerId: text("speaker_id").notNull().references(() => speakers.id, { onDelete: "cascade" }),
   role: text("role").notNull().default("Speaker"),
 }, (t) => ({ pk: primaryKey({ columns: [t.sessionId, t.speakerId] }) }));
+
+/** People on a scientific session (chairs, moderator, panelists, speakers, presenters) with invitation tracking. */
+export const sessionPeople = pgTable("session_people", {
+  id: id(),
+  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // CHAIR | CO_CHAIR | MODERATOR | PANELIST | SPEAKER | PRESENTER
+  name: text("name").notNull(),
+  designation: text("designation"),
+  affiliation: text("affiliation"),
+  phone: text("phone"),
+  email: text("email"),
+  topic: text("topic"),
+  timeSlot: text("time_slot"),
+  order: integer("order").notNull().default(0),
+  abstractId: text("abstract_id").references(() => abstracts.id, { onDelete: "set null" }),
+  inviteToken: text("invite_token").unique(),
+  inviteStatus: text("invite_status").notNull().default("NOT_SENT"), // NOT_SENT | SENT | ACCEPTED | DECLINED | FAILED | WITHDRAWN
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  reminders: integer("reminders").notNull().default(0),
+  lastReminderAt: timestamp("last_reminder_at", { withTimezone: true }),
+  responseNote: text("response_note"),
+}, (t) => ({ sIdx: index("sp_session_idx").on(t.sessionId) }));
 
 /** Status history for workshop requests (audit trail). */
 export const sessionReviews = pgTable("session_reviews", {
@@ -246,6 +315,8 @@ export const registrations = pgTable("registrations", {
   certificateNo: text("certificate_no").unique(),
   certificateAt: timestamp("certificate_at", { withTimezone: true }),
   notes: text("notes"),
+  employeeId: text("employee_id"), // LNH staff registered onsite
+  source: text("source").notNull().default("ONLINE"), // ONLINE | ONSITE
   remindedAt: timestamp("reminded_at", { withTimezone: true }),
   createdAt: created(),
   updatedAt: updated(),
@@ -277,9 +348,9 @@ export const abstracts = pgTable("abstracts", {
   refNo: text("ref_no").notNull().unique(),
   type: abstractTypeEnum("type").notNull(),
   title: text("title").notNull(),
-  gender: text("gender").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
+  gender: text("gender"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   profession: text("profession"),
   organization: text("organization").notNull(),
   department: text("department").notNull(),
@@ -301,9 +372,50 @@ export const abstracts = pgTable("abstracts", {
   score: integer("score"),
   reviewerNotes: text("reviewer_notes"),
   reviewerId: text("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+  // v2 (Oct 2026 form)
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  presentationPref: text("presentation_pref"), // ORAL | POSTER | EITHER
+  fullName: text("full_name"),
+  designation: text("designation"),
+  kind: text("kind"), // ORIGINAL | CASE
+  sections: jsonb("sections").$type<Record<string, string>>(),
+  coAuthors: jsonb("co_authors").$type<{ name: string; affiliation: string }[]>().notNull().default([]),
+  titleKey: text("title_key"), // normalised title for duplicate checks
+  assignedDept: text("assigned_dept"), // department currently reviewing
+  phase: integer("phase").notNull().default(1),
+  hodDecision: text("hod_decision"), // ACCEPT_ORAL | ACCEPT_POSTER | REJECT | BACK
+  hodScores: jsonb("hod_scores").$type<Record<string, number>>(),
+  hodTotal: integer("hod_total"),
+  hodNotes: text("hod_notes"),
+  hodBy: text("hod_by"),
+  hodAt: timestamp("hod_at", { withTimezone: true }),
+  acceptedAs: text("accepted_as"), // ORAL | POSTER
+  scNotes: text("sc_notes"),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  authorNotifiedAt: timestamp("author_notified_at", { withTimezone: true }),
+  sessionId: text("session_id").references(() => sessions.id, { onDelete: "set null" }),
+  sessionOrder: integer("session_order"),
+  // SC V1.0: venue assigned from the abstract grid + free placement field (poster board, slot, remarks)
+  venueId: text("venue_id").references(() => venues.id, { onDelete: "set null" }),
+  placement: text("placement"),
+  // poster presenter invitation tracking
+  inviteToken: text("invite_token").unique(),
+  inviteStatus: text("invite_status").notNull().default("NOT_SENT"),
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  reminders: integer("reminders").notNull().default(0),
   createdAt: created(),
   updatedAt: updated(),
-}, (t) => ({ statusIdx: index("abs_status_idx").on(t.status) }));
+}, (t) => ({ statusIdx: index("abs_status_idx").on(t.status), titleIdx: index("abs_title_key_idx").on(t.titleKey), deptIdx: index("abs_dept_idx").on(t.assignedDept) }));
+
+export const abstractEvents = pgTable("abstract_events", {
+  id: id(),
+  abstractId: text("abstract_id").notNull().references(() => abstracts.id, { onDelete: "cascade" }),
+  actor: text("actor"),
+  action: text("action").notNull(),
+  note: text("note"),
+  createdAt: created(),
+}, (t) => ({ aIdx: index("abs_ev_idx").on(t.abstractId) }));
 
 export const feedback = pgTable("feedback", {
   id: id(),
@@ -341,6 +453,20 @@ export const notificationLog = pgTable("notification_log", {
   createdAt: created(),
 });
 
+/** One-time codes (sign-up verification, registration look-up). Codes are stored hashed. */
+export const otpCodes = pgTable("otp_codes", {
+  id: id(),
+  purpose: text("purpose").notNull(), // SIGNUP | LOOKUP
+  target: text("target").notNull(), // email or normalised phone
+  codeHash: text("code_hash").notNull(),
+  payload: jsonb("payload"),
+  attempts: integer("attempts").notNull().default(0),
+  sends: integer("sends").notNull().default(1),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: created(),
+}, (t) => ({ tIdx: index("otp_target_idx").on(t.purpose, t.target) }));
+
 /** Atomic counters for human-readable numbers. */
 export const counters = pgTable("counters", {
   key: text("key").primaryKey(),
@@ -350,6 +476,8 @@ export const counters = pgTable("counters", {
 // ---------- relations ----------
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   venue: one(venues, { fields: [sessions.venueId], references: [venues.id] }),
+  people: many(sessionPeople),
+  abstracts: many(abstracts),
   reviews: many(sessionReviews),
   waitlist: many(waitlist),
   speakers: many(sessionSpeakers),
@@ -375,8 +503,18 @@ export const registrationItemsRelations = relations(registrationItems, ({ one })
 export const paymentsRelations = relations(payments, ({ one }) => ({
   registration: one(registrations, { fields: [payments.registrationId], references: [registrations.id] }),
 }));
-export const abstractsRelations = relations(abstracts, ({ one }) => ({
+export const abstractsRelations = relations(abstracts, ({ one, many }) => ({
   reviewer: one(users, { fields: [abstracts.reviewerId], references: [users.id] }),
+  session: one(sessions, { fields: [abstracts.sessionId], references: [sessions.id] }),
+  account: one(accounts, { fields: [abstracts.accountId], references: [accounts.id] }),
+  events: many(abstractEvents),
+}));
+export const abstractEventsRelations = relations(abstractEvents, ({ one }) => ({
+  abstract: one(abstracts, { fields: [abstractEvents.abstractId], references: [abstracts.id] }),
+}));
+export const sessionPeopleRelations = relations(sessionPeople, ({ one }) => ({
+  session: one(sessions, { fields: [sessionPeople.sessionId], references: [sessions.id] }),
+  abstract: one(abstracts, { fields: [sessionPeople.abstractId], references: [abstracts.id] }),
 }));
 export const feedbackRelations = relations(feedback, ({ one }) => ({
   session: one(sessions, { fields: [feedback.sessionId], references: [sessions.id] }),
@@ -399,3 +537,5 @@ export type EventSettings = typeof event.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
 
 export type Account = typeof accounts.$inferSelect;
+export type Abstract = typeof abstracts.$inferSelect;
+export type SessionPerson = typeof sessionPeople.$inferSelect;

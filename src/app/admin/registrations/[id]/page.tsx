@@ -27,7 +27,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
         <div className="space-y-6 lg:col-span-2">
           <div className="a-card p-5">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              {[["Email", r.email], ["Contact", r.phone], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution], ["Address", [r.address, r.city].filter(Boolean).join(", ")], ["Category", r.category.label], ["Early-bird", r.earlyBird ? "Yes" : "No"]].map(([k, v]) => (
+              {[["Email", r.email], ["Contact", r.phone], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution], ["Address", [r.address, r.city].filter(Boolean).join(", ")], ["Category", r.category.label], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee ID", r.employeeId]].map(([k, v]) => (
                 <div key={k as string}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{v || "—"}</dd></div>
               ))}
             </dl>

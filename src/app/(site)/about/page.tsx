@@ -38,7 +38,7 @@ export default async function About() {
             { I: Target, t: "Who should attend", d: "Consultants, residents, GPs, nurses, allied health, administrators, students and health-tech professionals." },
             { I: Users, t: "Format", d: "Pre-conference workshops, keynotes, plenaries, expert panels and oral & poster abstracts." },
             { I: Lightbulb, t: "Outcomes", d: "Actionable frameworks for cost-conscious, quality-driven, technology-enabled care." },
-            { I: HeartPulse, t: "Hosted by", d: "Liaquat National Hospital & Medical College — serving Karachi since 1958." },
+            { I: HeartPulse, t: "Hosted by", d: "Liaquat National Hospital, Institute for Undergraduate and Postgraduate Medical Studies and Health Sciences, Karachi." },
           ].map(({ I, t, d }, i) => (
             <Reveal key={t} delay={i * 80} className="card card-hover p-6">
               <I className="h-6 w-6 text-lnh-rose" />

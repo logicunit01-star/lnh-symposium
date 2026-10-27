@@ -57,7 +57,7 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
           <div><L>Format</L><select name="format" defaultValue={init.format ?? "Hands-on"} className="a-input">{FORMATS.map((x) => <option key={x}>{x}</option>)}</select></div>
           <div><L hint={fixedDepartment ? "(your department)" : undefined}>Owning department</L>
             {fixedDepartment ? <input value={fixedDepartment} readOnly className="a-input bg-slate-50" />
-              : <><input name="department" list="depts" required defaultValue={init.department ?? ""} className="a-input" placeholder="e.g. Critical Care" /><datalist id="depts">{departments.map((d) => <option key={d} value={d} />)}</datalist></>}</div>
+              : <select name="department" required defaultValue={init.department ?? ""} className="a-input"><option value="" disabled>Choose department…</option>{init.department && !departments.includes(init.department) && <option>{init.department}</option>}{departments.map((d) => <option key={d}>{d}</option>)}</select>}</div>
           <div><L hint="(optional)">Contributing departments</L><input name="contributors" defaultValue={init.contributors ?? ""} className="a-input" placeholder="Anaesthesia, Emergency Medicine" /></div>
           <div className="sm:col-span-2"><L>Workshop description</L><textarea name="description" rows={3} maxLength={1200} defaultValue={init.description ?? ""} className="a-input" placeholder="What participants will practise and take away (max 1,200 characters)." /></div>
         </div>

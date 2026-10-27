@@ -5,10 +5,10 @@ import { Lock, ShoppingCart, Trash2, X } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { cn, pkr } from "@/lib/utils";
 
-export function CartButton({ className }: { className?: string }) {
+export function CartButton({ className, bare = false }: { className?: string; bare?: boolean }) {
   const { count, setOpen } = useCart();
   return (
-    <button onClick={() => setOpen(true)} className={cn("relative grid h-10 w-10 place-items-center rounded-full border border-white/15 text-white transition hover:border-lnh-sky hover:bg-white/5", className)} aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}>
+    <button onClick={() => setOpen(true)} className={cn("relative grid place-items-center rounded-full transition", bare ? "h-9 w-9 text-slate-300 hover:bg-white/10 hover:text-white" : "h-10 w-10 border border-white/15 text-white hover:border-lnh-sky hover:bg-white/5", className)} aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}>
       <ShoppingCart className="h-[18px] w-[18px]" />
       {count > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-lnh-red px-1 text-[10px] font-bold text-white shadow-[0_0_12px_#D2192E]">{count}</span>}
     </button>

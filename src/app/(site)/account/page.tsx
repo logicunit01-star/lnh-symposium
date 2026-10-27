@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentAccountClaims } from "@/lib/account";
 import { NeuralField } from "@/components/ui/NeuralField";
@@ -19,6 +20,7 @@ export default async function Account({ searchParams }: { searchParams: { next?:
           <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">{next === "/checkout" ? "Sign in to check out" : "Your symposium account"}</h1>
           <p className="mt-3 max-w-xl text-slate-300">One account for registration, workshops and abstract submission. Returning participants simply sign in.</p>
           <div className="mt-8"><AccountForms next={next} initialMode={searchParams.mode === "signup" ? "signup" : "signin"} /></div>
+          <p className="mt-4 text-sm text-slate-400">Registered at the desk or without an account? <Link href="/my-registrations" className="text-lnh-sky hover:underline">Find your registrations by mobile number</Link>.</p>
         </div>
         <aside className="lg:col-span-4 lg:pt-24"><div className="lg:sticky lg:top-28"><CartPanel /></div></aside>
       </div>

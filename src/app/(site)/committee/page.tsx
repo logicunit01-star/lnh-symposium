@@ -10,7 +10,7 @@ export default async function Committee() {
   const groups = [...new Set(members.map((m) => m.group))];
   return (
     <>
-      <PageHero eyebrow="The team" title={<>Organizing <span className="text-grad">committee</span></>} sub="The faculty and staff of Liaquat National Hospital & Medical College who make the symposium happen." />
+      <PageHero eyebrow="The team" title={<>Organizing <span className="text-grad">committee</span></>} sub="The faculty and staff of Liaquat National Hospital who make the symposium happen." />
       <div className="container-x space-y-20">
         {groups.map((g) => (
           <section key={g}>

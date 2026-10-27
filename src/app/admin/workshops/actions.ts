@@ -112,13 +112,14 @@ export async function reviewWorkshop(id: string, f: FormData) {
   const decided = to === "APPROVED" || to === "REJECTED";
   await db.update(s.sessions).set({
     status: to, reviewNote: note ?? w.reviewNote, locked: decided,
+    ...(to === "APPROVED" ? { flyerStatus: "PENDING", flyerNote: null } : {}),
     ...(decided ? { reviewedAt: new Date(), reviewedById: u.sub } : {}),
   }).where(eq(s.sessions.id, id));
   await log(id, u, w.status, to, note);
   if (decided && w.proposedById) {
     const [p] = await db.select().from(s.users).where(eq(s.users.id, w.proposedById));
     if (p) await sendEmail(p.email, `Workshop request ${to === "APPROVED" ? "approved" : "not approved"}: ${w.title}`, emailLayout("Workshop request decision",
-      `<p>Dear ${p.name},</p><p>The Workshop Programme Committee has <b>${to === "APPROVED" ? "approved" : "not approved"}</b> “${w.title}” (${fmtDate(w.startsAt)}).</p>${note ? `<p>Committee note: ${note.replace(/</g, "&lt;")}</p>` : ""}${to === "APPROVED" ? `<p>It is now live in the catalogue. Flyer: ${appUrl()}/api/workshops/${w.slug}/flyer</p>` : ""}`));
+      `<p>Dear ${p.name},</p><p>The Workshop Programme Committee has <b>${to === "APPROVED" ? "approved" : "not approved"}</b> “${w.title}” (${fmtDate(w.startsAt)}).</p>${note ? `<p>Committee note: ${note.replace(/</g, "&lt;")}</p>` : ""}${to === "APPROVED" ? `<p>It is now live in the catalogue. The flyer goes to the Marketing department for review; we will email it to you once approved.</p>` : ""}`));
   }
   revalidatePath("/admin/workshops", "layout"); revalidatePath("/", "layout");
   redirect(`/admin/workshops/${id}`);
@@ -200,4 +201,34 @@ export async function deleteVenue(id: string) {
   if (n > 0) await db.update(s.venues).set({ active: false }).where(eq(s.venues.id, id)); // keep history
   else await db.delete(s.venues).where(eq(s.venues.id, id));
   revalidatePath("/admin/venues"); redirect("/admin/venues");
+}
+
+
+/** Marketing department: approve the generated flyer or ask for changes. */
+export async function reviewFlyer(id: string, f: FormData) {
+  const u = await requirePerm("flyers");
+  const to = str(f, "flyer");
+  const note = str(f, "note");
+  if (to !== "APPROVED" && to !== "CHANGES") throw new Error("Invalid");
+  if (to === "CHANGES" && !note) redirect(`/admin/flyers?w=${id}&err=note`);
+  const [w] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  if (!w || w.type !== "WORKSHOP" || w.status !== "APPROVED") throw new Error("Not found");
+  await db.update(s.sessions).set({ flyerStatus: to, flyerNote: note ?? null, flyerReviewedBy: u.name, flyerReviewedAt: new Date() }).where(eq(s.sessions.id, id));
+  await log(id, u, null, to === "APPROVED" ? "FLYER_APPROVED" : "FLYER_CHANGES", note ?? (to === "APPROVED" ? "Flyer approved by Marketing" : null));
+  if (to === "APPROVED" && w.proposedById) {
+    const [p] = await db.select().from(s.users).where(eq(s.users.id, w.proposedById));
+    if (p) await sendEmail(p.email, `Flyer approved: ${w.title}`, emailLayout("Your workshop flyer is ready",
+      `<p>Dear ${p.name},</p><p>The Marketing department has approved the flyer for “${w.title}” (${fmtDate(w.startsAt)}).</p><p>Download and share it: ${appUrl()}/api/workshops/${w.slug}/flyer</p>`));
+  }
+  revalidatePath("/admin/flyers"); revalidatePath(`/admin/workshops/${id}`);
+  redirect(`/admin/flyers?w=${id}&saved=${to}`);
+}
+
+/** Workshop committee sends a flyer back to Marketing after fixing the record. */
+export async function resubmitFlyer(id: string) {
+  const u = await requirePerm("workshops.review");
+  await db.update(s.sessions).set({ flyerStatus: "PENDING" }).where(eq(s.sessions.id, id));
+  await log(id, u, null, "FLYER_PENDING", "Flyer resubmitted for Marketing review");
+  revalidatePath(`/admin/workshops/${id}`); revalidatePath("/admin/flyers");
+  redirect(`/admin/workshops/${id}`);
 }

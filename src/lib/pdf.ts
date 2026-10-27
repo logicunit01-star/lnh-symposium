@@ -1,6 +1,9 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
+import fontkit from "@pdf-lib/fontkit";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { fmtDate, fmtDateTime, fmtTime, fmtTime24, pkr, appUrl } from "./utils";
 import { qrPayload } from "./qr-payload";
 
@@ -137,71 +140,137 @@ export async function certificatePdf(p: { name: string; certificateNo: string; e
 }
 
 
-/** A4 flyer generated from an approved workshop record. */
-export async function workshopFlyerPdf(w: {
+// ---------- Flyer template (9th LNH Symposium poster, Oct 2026) ----------
+const FLYER_DIR = path.join(process.cwd(), "assets", "flyer");
+let flyerAssets: Promise<Record<string, Buffer>> | null = null;
+const loadFlyerAssets = () => (flyerAssets ??= (async () => {
+  const names = ["Poppins-Light.ttf", "Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-Bold.ttf", "lnh-logo.png", "campus-scene.png", "symposium-title.pdf"];
+  const files = await Promise.all(names.map((n) => readFile(path.join(FLYER_DIR, n))));
+  return Object.fromEntries(names.map((n, i) => [n, files[i]]));
+})().catch((e) => { flyerAssets = null; throw e; }));
+
+const hex = (h: string) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
+const clean = (v: unknown) => String(v ?? "-").replace(/[\u0000-\u001f]/g, " ");
+
+export type FlyerInput = {
   slug: string; title: string; description: string | null; department: string | null; format: string | null; startsAt: Date; endsAt: Date;
   hall: string | null; building?: string | null; capacity: number | null; left: number | null; fee: number; earlyFee: number | null; cmeHours: number | null;
   leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null;
-}, ev: { name: string; mainTheme: string; contactEmail: string; contactPhone: string }) {
+};
+
+/** A4 flyer generated from an approved workshop record, on the official 9th LNH Symposium poster design. */
+export async function workshopFlyerPdf(w: FlyerInput, ev: { name: string; mainTheme: string; contactEmail: string; contactPhone: string; startDate?: Date; endDate?: Date; eventDays?: string[] }) {
+  const A = await loadFlyerAssets();
   const doc = await PDFDocument.create();
-  doc.setTitle(`${w.title} - flyer`);
+  doc.registerFontkit(fontkit);
+  doc.setTitle(`${w.title} - flyer`); doc.setAuthor("Liaquat National Hospital"); doc.setSubject(ev.name);
   const page = doc.addPage([595, 842]);
-  const f = await doc.embedFont(StandardFonts.Helvetica);
-  const b = await doc.embedFont(StandardFonts.HelveticaBold);
-  const W = 595, M = 48;
-  const SKY = rgb(0.247, 0.722, 0.941), WHITE = rgb(1, 1, 1), DEEP = rgb(0.016, 0.043, 0.118);
+  const W = 595, H = 842;
+  const [light, reg, med, bold] = await Promise.all(["Poppins-Light.ttf", "Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-Bold.ttf"].map((f) => doc.embedFont(A[f], { subset: true })));
+  const NAVYT = hex("#0A1B3D"), MUTED = hex("#4B5B76"), SKYT = hex("#0B84C6"), REDT = hex("#D2192E"), WHITE = rgb(1, 1, 1);
 
-  // dark poster background with accent bands
-  page.drawRectangle({ x: 0, y: 0, width: W, height: 842, color: DEEP });
-  page.drawRectangle({ x: 0, y: 560, width: W, height: 282, color: NAVY });
-  for (let i = 0; i < 14; i++) page.drawLine({ start: { x: 330 + i * 22, y: 842 }, end: { x: 595, y: 842 - (265 - i * 19) }, thickness: 0.4, color: SKY, opacity: 0.25 });
-  page.drawRectangle({ x: 0, y: 556, width: W, height: 4, color: RED });
-  page.drawText("LIAQUAT NATIONAL HOSPITAL & MEDICAL COLLEGE", { x: M, y: 800, size: 8.5, font: b, color: SKY });
-  page.drawText(safe(`${ev.name}  |  PRE-SYMPOSIUM WORKSHOP`), { x: M, y: 784, size: 9, font: f, color: rgb(0.8, 0.86, 1) });
+  // background: the poster's white-to-sky gradient
+  const stops: [number, number[]][] = [[0, [251, 253, 252]], [0.42, [249, 251, 251]], [0.6, [238, 244, 248]], [0.82, [178, 209, 228]], [1, [151, 193, 218]]];
+  const colAt = (t: number) => { let i = 0; while (i < stops.length - 2 && t > stops[i + 1][0]) i++; const [t0, c0] = stops[i], [t1, c1] = stops[i + 1]; const k = (t - t0) / (t1 - t0); return rgb(...(c0.map((c, j) => (c + (c1[j] - c) * k) / 255) as [number, number, number])); };
+  const bands = 140;
+  for (let i = 0; i < bands; i++) page.drawRectangle({ x: 0, y: H - (i + 1) * (H / bands), width: W, height: H / bands + 0.6, color: colAt(i / (bands - 1)) });
 
-  let y = 735;
-  const tag = safe(`${w.department ?? "Workshop"}${w.format ? "  |  " + w.format : ""}`).toUpperCase();
-  page.drawRectangle({ x: M, y: y - 6, width: b.widthOfTextAtSize(tag, 8.5) + 18, height: 20, color: RED });
-  page.drawText(tag, { x: M + 9, y: y, size: 8.5, font: b, color: WHITE });
-  y -= 44;
-  for (const line of wrap(safe(w.title), b, 30, W - 2 * M).slice(0, 4)) { page.drawText(line, { x: M, y, size: 30, font: b, color: WHITE }); y -= 36; }
-  if (w.themeLabel) page.drawText(safe(w.themeLabel), { x: M, y: Math.max(y, 580), size: 10, font: f, color: SKY });
-
-  // facts grid
-  y = 515;
-  const fact = (x: number, label: string, value: string, sub?: string) => {
-    page.drawText(label.toUpperCase(), { x, y, size: 7.5, font: b, color: SKY });
-    page.drawText(safe(value).slice(0, 34), { x, y: y - 18, size: 14, font: b, color: WHITE });
-    if (sub) page.drawText(safe(sub).slice(0, 44), { x, y: y - 32, size: 8.5, font: f, color: rgb(0.7, 0.76, 0.9) });
+  const center = (text: string, y: number, size: number, font: PDFFont, color = NAVYT) => page.drawText(text, { x: (W - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
+  const spaced = (text: string, y: number, size: number, font: PDFFont, track: number, color = NAVYT) => {
+    const width = [...text].reduce((a, c) => a + font.widthOfTextAtSize(c, size) + track, -track);
+    let x = (W - width) / 2;
+    for (const c of text) { page.drawText(c, { x, y, size, font, color }); x += font.widthOfTextAtSize(c, size) + track; }
   };
-  fact(M, "Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }));
-  fact(M + 180, "Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time");
-  fact(M + 340, "Venue", w.hall ?? "-", w.building ?? undefined);
-  y -= 70;
-  fact(M, "CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-");
-  fact(M + 180, "Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined);
-  fact(M + 340, "Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined);
 
-  y -= 62;
-  page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.5, color: rgb(0.2, 0.3, 0.5) });
-  y -= 24;
+  // header: logo, symposium title, dates, theme
+  const logo = await doc.embedPng(A["lnh-logo.png"]);
+  const lw = 300, lh = lw * logo.height / logo.width;
+  page.drawImage(logo, { x: (W - lw) / 2, y: H - 34 - lh, width: lw, height: lh });
+  const [titleArt] = await doc.embedPdf(A["symposium-title.pdf"]);
+  const tw = 296, th = tw * titleArt.height / titleArt.width;
+  page.drawPage(titleArt, { x: (W - tw) / 2, y: 700, width: tw, height: th });
+
+  // "29th, 30th & 31st, January 2027" with superscript ordinals, from the event days
+  const days = (ev.eventDays?.length ? ev.eventDays : ["2027-01-29", "2027-01-30", "2027-01-31"]).map((d) => new Date(`${d}T12:00:00+05:00`));
+  const ord = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th");
+  const parts: [string, boolean][] = [];
+  days.forEach((d, i) => { const n = d.getUTCDate(); parts.push([String(n), false], [ord(n), true], [i === days.length - 1 ? ", " : i === days.length - 2 ? " & " : ", ", false]); });
+  parts.push([`${fmtDate(days.at(-1)!, { month: "long" })} ${fmtDate(days.at(-1)!, { year: "numeric" })}`, false]);
+  const DS = 14, SS = 8;
+  const dw = parts.reduce((a, [t, sup]) => a + reg.widthOfTextAtSize(t, sup ? SS : DS), 0);
+  let dx = (W - dw) / 2;
+  for (const [t, sup] of parts) { page.drawText(t, { x: dx, y: sup ? 678 : 672, size: sup ? SS : DS, font: reg, color: NAVYT }); dx += reg.widthOfTextAtSize(t, sup ? SS : DS); }
+
+  const [themeA, themeB] = ev.mainTheme.includes(":") ? ev.mainTheme.split(/:\s*/) : [ev.mainTheme, ""];
+  const conv = themeB.match(/^(Convergence of)\s+(.*)$/i);
+  center(clean(conv ? `${themeA}: ${conv[1]}` : themeA + (themeB ? ":" : "")), 646, 11.5, light);
+  spaced(clean(conv ? conv[2] : themeB).toUpperCase(), 628, 12, med, 1.2);
+
+  // workshop card
+  const cx = 38, cw = W - 76, cTop = 604, cBot = 300;
+  const r = 16;
+  const card = `M ${r} 0 H ${cw - r} Q ${cw} 0 ${cw} ${r} V ${cTop - cBot - r} Q ${cw} ${cTop - cBot} ${cw - r} ${cTop - cBot} H ${r} Q 0 ${cTop - cBot} 0 ${cTop - cBot - r} V ${r} Q 0 0 ${r} 0 Z`;
+  page.drawSvgPath(card, { x: cx, y: cTop, color: WHITE, opacity: 0.9, borderColor: hex("#BCD6EA"), borderWidth: 0.8 });
+
+  let y = cTop - 30;
+  const tag = "PRE-SYMPOSIUM WORKSHOP";
+  const tagW = bold.widthOfTextAtSize(tag, 7.5) + 18;
+  page.drawSvgPath(`M 9 0 H ${tagW - 9} Q ${tagW} 0 ${tagW} 9 Q ${tagW} 18 ${tagW - 9} 18 H 9 Q 0 18 0 9 Q 0 0 9 0 Z`, { x: cx + 22, y: y + 13, color: REDT });
+  page.drawText(tag, { x: cx + 31, y: y + 1, size: 7.5, font: bold, color: WHITE });
+  const meta = clean([w.department, w.format, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "));
+  page.drawText(meta.toUpperCase(), { x: cx + 22 + tagW + 10, y: y + 1, size: 7.5, font: med, color: SKYT });
+
+  const L = cx + 22, colW = 330;
+  y -= 30;
+  for (const line of wrap(clean(w.title), bold, 19, colW).slice(0, 3)) { page.drawText(line, { x: L, y, size: 19, font: bold, color: NAVYT }); y -= 23; }
+  if (w.themeLabel) { page.drawText(clean(w.themeLabel), { x: L, y: y + 4, size: 8, font: med, color: SKYT }); y -= 12; }
+
+  // facts: 2 rows x 3 columns
+  y -= 12;
+  const fact = (x: number, fy: number, label: string, value: string, sub?: string) => {
+    page.drawText(label.toUpperCase(), { x, y: fy, size: 6.8, font: med, color: SKYT });
+    page.drawText(clean(value).slice(0, 30), { x, y: fy - 14, size: 10.5, font: bold, color: NAVYT });
+    if (sub) page.drawText(clean(sub).slice(0, 38), { x, y: fy - 25, size: 7, font: reg, color: MUTED });
+  };
+  fact(L, y, "Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }));
+  fact(L + 115, y, "Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time");
+  fact(L + 225, y, "Venue", w.hall ?? "-", w.building ?? undefined);
+  y -= 42;
+  fact(L, y, "CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-");
+  fact(L + 115, y, "Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined);
+  fact(L + 225, y, "Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined);
+  y -= 44;
+  page.drawLine({ start: { x: L, y: y + 12 }, end: { x: L + colW, y: y + 12 }, thickness: 0.5, color: hex("#D5E3EF") });
   if (w.leadFaculty) {
-    page.drawText("LEAD FACULTY", { x: M, y, size: 7.5, font: b, color: SKY }); y -= 18;
-    page.drawText(safe(w.leadFaculty), { x: M, y, size: 15, font: b, color: WHITE }); y -= 15;
-    if (w.facultyDegrees) { page.drawText(safe(w.facultyDegrees), { x: M, y, size: 9.5, font: f, color: rgb(0.75, 0.8, 0.92) }); y -= 14; }
-    y -= 12;
+    page.drawText("LEAD FACULTY", { x: L, y, size: 6.8, font: med, color: SKYT }); y -= 14;
+    page.drawText(clean(w.leadFaculty).slice(0, 48), { x: L, y, size: 11, font: bold, color: NAVYT });
+    if (w.facultyDegrees) page.drawText(clean(w.facultyDegrees).slice(0, 40), { x: L + bold.widthOfTextAtSize(clean(w.leadFaculty).slice(0, 48), 11) + 6, y: y + 0.5, size: 8, font: reg, color: MUTED });
+    y -= 16;
   }
-  if (w.description) for (const line of wrap(safe(w.description), f, 10.5, 330).slice(0, 8)) { page.drawText(line, { x: M, y, size: 10.5, font: f, color: rgb(0.85, 0.89, 0.97) }); y -= 15; }
+  if (w.description) {
+    const maxLines = Math.max(0, Math.floor((y - (cBot + 14)) / 11));
+    const lines = wrap(clean(w.description), reg, 8.2, colW);
+    lines.slice(0, maxLines).forEach((line, i) => page.drawText(i === maxLines - 1 && lines.length > maxLines ? line.replace(/\s*\S*$/, " ...") : line, { x: L, y: y - i * 11, size: 8.2, font: reg, color: MUTED }));
+  }
 
-  // QR
+  // QR panel
   const url = `${appUrl()}/workshops#${w.slug}`;
   const qr = await qrPng(doc, url);
-  page.drawRectangle({ x: W - M - 140, y: 112, width: 140, height: 160, color: WHITE });
-  page.drawImage(qr, { x: W - M - 130, y: 140, width: 120, height: 120 });
-  page.drawText("SCAN TO REGISTER", { x: W - M - 70 - b.widthOfTextAtSize("SCAN TO REGISTER", 8) / 2, y: 122, size: 8, font: b, color: NAVY });
+  const qx = cx + cw - 22 - 130, qy = cTop - 214;
+  page.drawSvgPath(`M 12 0 H 118 Q 130 0 130 12 V 152 Q 130 164 118 164 H 12 Q 0 164 0 152 V 12 Q 0 0 12 0 Z`, { x: qx, y: qy + 164, color: hex("#EEF5FB"), borderColor: hex("#BCD6EA"), borderWidth: 0.6 });
+  page.drawImage(qr, { x: qx + 15, y: qy + 34, width: 100, height: 100 });
+  const scan = "SCAN TO REGISTER";
+  page.drawText(scan, { x: qx + 65 - bold.widthOfTextAtSize(scan, 7.5) / 2, y: qy + 18, size: 7.5, font: bold, color: NAVYT });
+  const reg2 = "Limited seats";
+  page.drawText(reg2, { x: qx + 65 - reg.widthOfTextAtSize(reg2, 7) / 2, y: qy + 8, size: 7, font: reg, color: MUTED });
 
-  page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: NAVY });
-  page.drawText(safe(ev.mainTheme), { x: M, y: 42, size: 9, font: b, color: WHITE });
-  page.drawText(safe(`${ev.contactEmail}  |  ${ev.contactPhone}  |  ${appUrl().replace(/^https?:\/\//, "")}/workshops`), { x: M, y: 24, size: 8.5, font: f, color: rgb(0.75, 0.82, 1) });
+  // campus scene (building, robotics and digital health) as on the poster
+  const scene = await doc.embedPng(A["campus-scene.png"]);
+  const sw = 520, sh = sw * scene.height / scene.width;
+  page.drawImage(scene, { x: (W - sw) / 2 + 6, y: 46, width: sw, height: sh });
+
+  // footer line
+  const foot = clean(`${ev.contactEmail}   |   ${ev.contactPhone}   |   ${appUrl().replace(/^https?:\/\//, "")}/workshops`);
+  center(foot, 22, 8, med, NAVYT);
   return doc.save();
 }

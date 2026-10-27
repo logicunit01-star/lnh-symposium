@@ -10,11 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [ev, account] = await Promise.all([getEvent(), currentAccountClaims()]);
   return (
+    <div className="site">
     <CartProvider>
       <Nav year={new Date(ev.startDate).getFullYear()} account={account ? { name: account.name } : null} />
       <main className="min-h-screen">{children}</main>
       <Footer ev={ev} />
       <CartDrawer />
     </CartProvider>
+    </div>
   );
 }

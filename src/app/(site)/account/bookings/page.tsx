@@ -13,6 +13,7 @@ const BADGE: Record<string, string> = { PAID: "bg-emerald-400/15 text-emerald-30
 export default async function Bookings() {
   const a = await currentAccount();
   if (!a) redirect("/account?next=/account/bookings");
+  const abstracts = await db.select().from(s.abstracts).where(eq(s.abstracts.accountId, a.id)).orderBy(desc(s.abstracts.createdAt));
   const regs = await db.query.registrations.findMany({ where: eq(s.registrations.accountId, a.id), orderBy: desc(s.registrations.createdAt), with: { items: { with: { session: true } }, category: true } });
   return (
     <>
@@ -20,6 +21,17 @@ export default async function Bookings() {
         <form action="/api/account/signout" method="POST" className="mt-6"><button className="btn-ghost btn-sm"><LogOut className="h-4 w-4" />Sign out</button></form>
       </PageHero>
       <div className="container-x space-y-4">
+        {abstracts.length > 0 && (
+          <div className="hud p-6">
+            <p className="mono text-xs uppercase tracking-[0.2em] text-slate-400">My abstracts</p>
+            <ul className="mt-3 divide-y divide-white/10">{abstracts.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                <span><span className="mono text-xs text-lnh-sky">{x.refNo}</span><span className="block text-white">{x.abstractTitle}</span></span>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-200">{x.status === "ACCEPTED" && x.authorNotifiedAt ? `Accepted as ${x.acceptedAs === "POSTER" ? "poster" : "oral"}` : x.status === "REJECTED" && x.authorNotifiedAt ? "Not accepted" : "Under review"}</span>
+              </li>
+            ))}</ul>
+          </div>
+        )}
         {!regs.length && <div className="hud p-10 text-center text-slate-400">No bookings yet. <Link href="/workshops" className="text-lnh-sky underline">Browse workshops</Link> or <Link href="/register" className="text-lnh-sky underline">build your registration</Link>.</div>}
         {regs.map((r) => (
           <div key={r.id} className="hud p-6">

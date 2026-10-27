@@ -5,7 +5,11 @@ import { db, schema as s } from "./db";
 /** Public programme: only committee-approved items unless includeAll is set. */
 export async function getProgramme(filter?: { types?: string[]; registrable?: boolean; includeAll?: boolean }) {
   const conds = [];
-  if (!filter?.includeAll) conds.push(eq(s.sessions.status, "APPROVED"));
+  if (!filter?.includeAll) {
+    conds.push(eq(s.sessions.status, "APPROVED"));
+    // Department proposals appear publicly only after the Scientific Committee releases the programme
+    conds.push(sql`(not ${s.sessions.proposal} or exists (select 1 from event e where e.programme_released_at is not null))`);
+  }
   if (filter?.types) conds.push(inArray(s.sessions.type, filter.types as any));
   if (filter?.registrable != null) conds.push(eq(s.sessions.registrable, filter.registrable));
   return db.query.sessions.findMany({
