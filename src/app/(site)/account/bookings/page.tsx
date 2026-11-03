@@ -6,6 +6,7 @@ import { db, schema as s } from "@/lib/db";
 import { currentAccount } from "@/lib/account";
 import { PageHero } from "@/components/ui/PageHero";
 import { fmtDate, fmtDateTime, pkr } from "@/lib/utils";
+import { authorStatus } from "@/lib/abstracts";
 
 export const metadata = { title: "My bookings", robots: { index: false } };
 const BADGE: Record<string, string> = { PAID: "bg-emerald-400/15 text-emerald-300", WAIVED: "bg-sky-400/15 text-sky-300", PENDING: "bg-amber-400/15 text-amber-300", FAILED: "bg-rose-400/15 text-rose-300", REFUNDED: "bg-white/10 text-slate-300" };
@@ -27,7 +28,7 @@ export default async function Bookings() {
             <ul className="mt-3 divide-y divide-white/10">{abstracts.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <span><span className="mono text-xs text-lnh-sky">{x.refNo}</span><span className="block text-white">{x.abstractTitle}</span></span>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-200">{x.status === "ACCEPTED" && x.authorNotifiedAt ? `Accepted as ${x.acceptedAs === "POSTER" ? "poster" : "oral"}` : x.status === "REJECTED" && x.authorNotifiedAt ? "Not accepted" : "Under review"}</span>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-200">{authorStatus(x).label}{x.status === "ACCEPTED" && x.authorNotifiedAt ? ` (${x.acceptedAs === "POSTER" ? "poster" : "oral"})` : ""}</span>
               </li>
             ))}</ul>
           </div>

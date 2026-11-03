@@ -135,7 +135,7 @@ export function RegisterForm({ categories, sessions, preselect }: { categories: 
                       const full = s.left === 0, on = sel.includes(s.id);
                       return (
                         <label key={s.id} className={cn("flex items-center gap-4 rounded-2xl border p-4 transition", full && !on ? "cursor-not-allowed opacity-50" : "cursor-pointer", on ? "border-lnh-sky bg-lnh-sky/10" : "border-white/10 hover:border-white/30")}>
-                          <input type="checkbox" className="h-5 w-5 shrink-0 accent-[#D2192E]" disabled={full && !on} checked={on}
+                          <input type="checkbox" className="h-5 w-5 shrink-0 accent-[#B72025]" disabled={full && !on} checked={on}
                             onChange={() => setSel((p) => (on ? p.filter((x) => x !== s.id) : [...p, s.id]))} />
                           <span className="min-w-0 flex-1">
                             <span className="block text-sm font-semibold text-white">{s.title}</span>
@@ -173,7 +173,7 @@ export function RegisterForm({ categories, sessions, preselect }: { categories: 
             </div>
             <Field label="" error={errs.consent}>
               <label className="flex cursor-pointer gap-3 text-sm text-slate-300">
-                <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[#D2192E]" checked={!!f.consent} onChange={set("consent")} />
+                <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[#B72025]" checked={!!f.consent} onChange={set("consent")} />
                 <span>I confirm the information above is correct and agree to receive registration updates by email and SMS. Fees are non-refundable after payment.</span>
               </label>
             </Field>

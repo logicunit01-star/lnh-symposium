@@ -13,8 +13,11 @@ export const metadata = { title: "Your registration", robots: { index: false } }
 export default async function Success({ params, searchParams }: { params: { token: string }; searchParams: { paid?: string; failed?: string } }) {
   const r = await loadRegistration({ accessToken: params.token });
   if (!r) notFound();
-  const confirmed = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
+  const awaiting = r.regType !== "PARTICIPANT" && r.approvalStatus !== "APPROVED";
+  const confirmed = (r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED") && !awaiting;
   const qr = await QRCode.toDataURL(qrPayload(r), { margin: 1, width: 280, color: { dark: "#040B1E", light: "#ffffff" } });
+  // SC feedback: separate QR codes for the Scientific Agenda and the e-abstract book on the participant ID card
+  const [qrAgenda, qrBook] = await Promise.all([`${appUrl()}/agenda`, `${appUrl()}/abstracts/book`].map((u) => QRCode.toDataURL(u, { margin: 1, width: 200, color: { dark: "#232667", light: "#ffffff" } })));
   const prov = provider();
   return (
     <section className="relative overflow-hidden pb-10 pt-36">
@@ -23,29 +26,40 @@ export default async function Success({ params, searchParams }: { params: { toke
       <div className="container-x relative max-w-4xl">
         {searchParams.failed && <Alert className="mb-6">Payment was not completed. You can try again below.</Alert>}
         <div className="card overflow-hidden">
-          <div className={`flex items-center gap-3 px-6 py-4 text-sm font-semibold sm:px-10 ${confirmed ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+          <div className={`flex items-center gap-3 px-6 py-4 text-sm font-semibold sm:px-10 ${confirmed ? "bg-emerald-500/15 text-emerald-300" : r.approvalStatus === "REJECTED" ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300"}`}>
             {confirmed ? <CheckCircle2 className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
-            {confirmed ? "Registration confirmed" : "Registration received — payment pending"}
+            {confirmed ? "Registration confirmed" : r.approvalStatus === "REJECTED" ? "Registration not approved" : awaiting ? `Registration received — awaiting approval by ${r.regType === "GUEST" ? `the HOD, ${r.department}` : "the Chairperson, Facilitation Committee"}` : "Registration received — payment pending"}
           </div>
           <div className="grid gap-8 p-6 sm:p-10 md:grid-cols-[1fr_auto]">
             <div>
               <p className="eyebrow">Registration number</p>
               <p className="h-display mt-3 text-5xl text-white sm:text-6xl">{r.regNo}</p>
               <p className="mt-4 text-lg text-slate-300">{r.title} {r.firstName} {r.lastName}</p>
-              <p className="text-sm text-slate-500">{r.institution} · {r.category.label}</p>
+              <p className="text-sm text-slate-500">{r.institution} · {r.regType === "PARTICIPANT" ? `${r.designation ?? ""}` : r.category.label}{r.banquetQty ? ` · Banquet pass × ${r.banquetQty}` : ""}</p>
               <div className="mt-6 flex flex-wrap gap-4 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5"><Mail className="h-4 w-4 text-lnh-sky" />PDF emailed to {r.email}</span>
                 <span className="flex items-center gap-1.5"><MessageSquare className="h-4 w-4 text-lnh-sky" />SMS sent to {r.phone}</span>
               </div>
             </div>
-            <div className="text-center">
+            {!awaiting && <div className="text-center">
               <img src={qr} alt="Registration QR code" className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" />
               <p className="mt-2 text-[11px] text-slate-500">Show at the registration desk</p>
-            </div>
+            </div>}
           </div>
+          {confirmed && (
+            <div className="grid gap-4 border-t border-white/10 p-6 sm:grid-cols-2 sm:p-10">
+              {[[qrAgenda, "Scientific Agenda", "/agenda"], [qrBook, "e-Abstract book", "/abstracts/book"]].map(([src, label, href]) => (
+                <a key={href} href={href} className="flex items-center gap-4 rounded-2xl border border-white/10 p-4 hover:border-white/30">
+                  <img src={src} alt={`QR code: ${label}`} className="h-24 w-24 rounded-xl bg-white p-1.5" />
+                  <span><span className="block font-semibold text-white">{label}</span><span className="text-xs text-slate-400">Scan or tap to open. Also printed on your ID card.</span></span>
+                </a>
+              ))}
+            </div>
+          )}
           <div className="border-t border-white/10 p-6 sm:p-10">
             <p className="eyebrow mb-4">Fee summary</p>
-            <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">Conference registration{r.earlyBird ? " (early-bird)" : ""}</span><span className="text-white">{pkr(r.conferenceFee)}</span></div>
+            <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">{r.regType === "PARTICIPANT" ? `Conference registration${r.earlyBird ? " (early-bird)" : ""}` : `${r.category.label} (complimentary)`}</span><span className="text-white">{pkr(r.conferenceFee)}</span></div>
+            {r.banquetQty > 0 && <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">Additional banquet pass × {r.banquetQty}</span><span className="text-white">{pkr(r.banquetFee)}</span></div>}
             {r.items.map((i) => (
               <div key={i.id} className="flex justify-between gap-4 py-1.5 text-sm">
                 <span className="text-slate-300">{i.session.title}<span className="block text-xs text-slate-500">{fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })} · {fmtTime(i.session.startsAt)} · {i.session.hall}</span></span>
@@ -55,11 +69,11 @@ export default async function Success({ params, searchParams }: { params: { toke
             <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-4"><span className="font-semibold uppercase tracking-wider text-white">Total</span><span className="font-display text-3xl font-bold text-lnh-rose">{pkr(r.totalFee)}</span></div>
           </div>
           <div className="flex flex-wrap gap-3 border-t border-white/10 p-6 sm:p-10">
-            {!confirmed && prov !== "manual" && <PayButton token={r.accessToken} amount={pkr(r.totalFee)} />}
+            {!confirmed && !awaiting && prov !== "manual" && <PayButton token={r.accessToken} amount={pkr(r.totalFee)} />}
             <a href={`/api/registrations/${r.accessToken}/pdf`} className="btn-ghost"><Download className="h-4 w-4" />Download PDF</a>
             {r.certificateNo && <a href={`/api/certificates/${r.accessToken}`} className="btn-blue">Download e-certificate</a>}
           </div>
-          {!confirmed && (
+          {!confirmed && !awaiting && (
             <div className="border-t border-white/10 p-6 text-sm text-slate-400 sm:px-10">
               <p className="mb-2 font-semibold text-white">{prov === "manual" ? "Payment by bank transfer" : "Prefer bank transfer?"}</p>
               <ul className="space-y-1">{BANK_DETAILS.map((b) => <li key={b}>{b}</li>)}</ul>

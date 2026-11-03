@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type Slot = { key: string; day: string; start: string; end: string; optional?: boolean; special?: string };
 type P = { name: string; phone: string; email: string };
 type G = P & { designation: string; affiliation: string; topic: string; timeSlot: string };
-type R = P & { topic: string; timeSlot: string; abstractRef?: string };
+type R = P & { topic: string; timeSlot: string; abstractRef?: string; coAuthors?: string; lookup?: string };
 export type ProposalInit = {
   id?: string; draft?: boolean; department?: string; title?: string; sessionFormat?: string; formatOther?: string; preferredSlots?: string[]; expectedAudience?: number | null;
   chair?: P; coChair?: P; moderator?: P; panelists?: G[]; speakers?: G[]; presenters?: R[];
@@ -46,7 +46,7 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
   const fixedSlots = slots.filter((s) => s.special === d.sessionFormat);
   const days = useMemo(() => [...new Set(openSlots.map((s) => s.day))], [openSlots]);
   const set = (patch: Partial<typeof d>) => setD({ ...d, ...patch });
-  const payload = JSON.stringify({ ...d, expectedAudience: Number(d.expectedAudience) || 0, panelists: d.panelists, speakers: d.speakers });
+  const payload = JSON.stringify({ ...d, expectedAudience: Number(d.expectedAudience) || 0, panelists: d.panelists, speakers: d.speakers, presenters: d.presenters.map(({ coAuthors, lookup, ...x }) => x) });
   const dis = !!readOnly;
   const pre = d.prefill && !special;
 
@@ -138,19 +138,29 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
           <label className="flex items-center gap-2"><input disabled={dis} type="radio" checked={!d.hasPresenters} onChange={() => set({ hasPresenters: false })} />No</label></div>
         {d.hasPresenters && (
           <div className="space-y-3">
-            {acceptedOral.length > 0 && <p className="text-xs text-slate-500">Accepted oral abstracts in your department: {acceptedOral.map((a) => `${a.refNo} (${a.author})`).join(", ")}. Enter the ID to link the abstract.</p>}
+            <p className="text-xs text-slate-500">Enter the abstract ID and the title, presenting author, contact details and co-authors are filled in automatically.{acceptedOral.length > 0 && ` Accepted oral abstracts in your department: ${acceptedOral.map((a) => `${a.refNo} (${a.author})`).join(", ")}.`}</p>
+            <datalist id="sp-oral-ids">{acceptedOral.map((a) => <option key={a.refNo} value={a.refNo}>{a.title}</option>)}</datalist>
             {d.presenters.map((r, i) => {
               const up = (patch: Partial<R>) => set({ presenters: d.presenters.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
-              const pick = (ref: string) => { const a = acceptedOral.find((x) => x.refNo === ref.toUpperCase()); up(a ? { abstractRef: ref, topic: r.topic || a.title, name: r.name || a.author, email: r.email || a.email, phone: r.phone || a.phone } : { abstractRef: ref }); };
+              // SC feedback: entering the abstract ID retrieves and fills in the abstract title and author details
+              const pick = async (ref: string) => {
+                up({ abstractRef: ref, lookup: "" });
+                const id = ref.trim().toUpperCase();
+                if (!/^ABS-\d{4}-\d{3,}$/.test(id)) return;
+                const a = await fetch(`/api/admin/abstracts/lookup?ref=${encodeURIComponent(id)}`).then((x) => x.json()).catch(() => null);
+                setD((cur) => ({ ...cur, presenters: cur.presenters.map((x, j) => j !== i ? x : !a?.found ? { ...x, lookup: a?.message ?? "Abstract not found." }
+                  : { ...x, abstractRef: a.refNo, topic: a.title, name: a.author, email: a.email, phone: a.phone, coAuthors: a.coAuthors, lookup: a.message ?? "" }) }));
+              };
               return (
                 <div key={i} className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-6">
                   <div className="sm:col-span-2"><label className="a-label">Presenter's name *</label><input disabled={dis} value={r.name} onChange={(e) => up({ name: e.target.value })} className="a-input" />{err(`presenters.${i}.name`)}</div>
                   <div><label className="a-label">Contact # *</label><input disabled={dis} value={r.phone} onChange={(e) => up({ phone: e.target.value })} className="a-input" />{err(`presenters.${i}.phone`)}</div>
                   <div className="sm:col-span-2"><label className="a-label">Email *</label><input disabled={dis} value={r.email} onChange={(e) => up({ email: e.target.value })} className="a-input" />{err(`presenters.${i}.email`)}</div>
-                  <div><label className="a-label">Abstract ID</label><input disabled={dis} value={r.abstractRef ?? ""} onChange={(e) => pick(e.target.value)} placeholder="ABS-2027-…" className="a-input font-mono text-xs" /></div>
+                  <div><label className="a-label">Abstract ID</label><input disabled={dis} value={r.abstractRef ?? ""} onChange={(e) => pick(e.target.value)} placeholder="ABS-2027-…" list="sp-oral-ids" className="a-input font-mono text-xs" /></div>
                   <div className="sm:col-span-4"><label className="a-label">Research paper / oral presentation title *</label><input disabled={dis} value={r.topic} onChange={(e) => up({ topic: e.target.value })} className="a-input" />{err(`presenters.${i}.topic`)}</div>
                   <div className="sm:col-span-1"><label className="a-label">Time slot *</label><input disabled={dis} value={r.timeSlot} onChange={(e) => up({ timeSlot: e.target.value })} className="a-input" />{err(`presenters.${i}.timeSlot`)}</div>
                   <div className="flex items-end">{!dis && <button type="button" onClick={() => set({ presenters: d.presenters.filter((_, j) => j !== i) })} className="a-btn-ghost text-rose-600"><Trash2 className="h-4 w-4" /></button>}</div>
+                  {(r.coAuthors || r.lookup) && <p className={cn("text-xs sm:col-span-6", r.lookup ? "text-amber-700" : "text-slate-500")}>{r.lookup || `Filled from ${r.abstractRef}. Co-authors: ${r.coAuthors}`}</p>}
                 </div>
               );
             })}

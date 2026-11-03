@@ -49,19 +49,21 @@ html[data-theme="light"] .site .theme-dark-only { display: none !important; }
 .theme-light-only:not(html[data-theme="light"] .site .theme-light-only) { display: none !important; }
 html { scroll-behavior: smooth; overflow-x: clip; }
 body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
-::selection { background: #D2192E; color: #fff; }
+::selection { background: #B72025; color: #fff; }
 
 @layer components {
   .container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
   .eyebrow { @apply inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-lnh-sky; }
-  .eyebrow::before { content: ""; @apply h-1.5 w-1.5 rounded-full bg-lnh-red shadow-[0_0_12px_#D2192E]; }
+  .eyebrow::before { content: ""; @apply h-1.5 w-1.5 rounded-full bg-lnh-red shadow-[0_0_12px_#B72025]; }
   .h-display { @apply font-display font-bold uppercase leading-[0.92] tracking-tight; }
-  .text-grad { @apply bg-gradient-to-r from-white via-lnh-sky to-lnh-blue bg-clip-text text-transparent; }
+  .text-grad { @apply bg-gradient-to-r from-lnh-cyan to-lnh-blue bg-clip-text text-transparent; }
+  /* "9th LNH Symposium" title: official linear gradient #00B8D7 → #0089BF */
+  .text-lnh-title { background-image: linear-gradient(90deg, #00B8D7, #0089BF); @apply bg-clip-text text-transparent; }
   .text-grad-red { @apply bg-gradient-to-r from-lnh-rose via-lnh-red to-lnh-gold bg-clip-text text-transparent; }
 
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-lnh-sky disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-lnh-red text-snow shadow-[0_10px_40px_-10px_#D2192E] hover:bg-lnh-rose hover:shadow-[0_10px_50px_-6px_#FF4D5E]; }
-  .btn-blue { @apply btn bg-lnh-blue text-snow shadow-[0_10px_40px_-10px_#1560D4] hover:bg-[#2a76ea]; }
+  .btn-primary { @apply btn bg-lnh-red text-snow shadow-[0_10px_40px_-10px_#B72025] hover:bg-lnh-rose hover:shadow-[0_10px_50px_-6px_#FF4D5E]; }
+  .btn-blue { @apply btn bg-lnh-blue text-snow shadow-[0_10px_40px_-10px_#0089BF] hover:bg-[#00B8D7]; }
   .btn-ghost { @apply btn border border-white/20 bg-white/5 text-white backdrop-blur hover:border-white/50 hover:bg-white/10; }
   .btn-light { @apply btn bg-white text-ink hover:bg-slate-200; }
   .btn-sm { @apply px-4 py-2 text-xs; }
@@ -78,7 +80,7 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
   .hud::before { content: ""; @apply pointer-events-none absolute inset-0 rounded-3xl; padding: 1px; background: linear-gradient(135deg, rgba(63,184,240,.55), transparent 35%, transparent 65%, rgba(210,25,46,.45)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
   .corner { @apply pointer-events-none absolute h-4 w-4 border-lnh-sky/70; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .text-holo { @apply bg-clip-text text-transparent; background-image: linear-gradient(100deg, rgb(var(--c-white)) 0%, rgb(var(--c-sky)) 30%, rgb(var(--c-white)) 45%, #1560D4 60%, #FF4D5E 85%, rgb(var(--c-white)) 100%); background-size: 200% 100%; @apply animate-shimmer; }
+  .text-holo { @apply bg-clip-text text-transparent; background-image: linear-gradient(100deg, rgb(var(--c-white)) 0%, rgb(var(--c-sky)) 30%, rgb(var(--c-white)) 45%, #0089BF 60%, #FF4D5E 85%, rgb(var(--c-white)) 100%); background-size: 200% 100%; @apply animate-shimmer; }
 
   /* forms (public, dark) */
   .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400; }

@@ -3,7 +3,7 @@ import colors from "tailwindcss/colors";
 
 const v = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
 
-// LNH palette — adjust here to match the official brand guide exactly.
+// LNH palette from the official colour codes (Requirements folder, Nov 2026).
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
@@ -15,11 +15,13 @@ const config: Config = {
         snow: "#FFFFFF", // always white (text on red/blue buttons)
         ink: { DEFAULT: v("--c-ink"), 900: v("--c-ink"), 800: v("--c-ink-800"), 700: v("--c-ink-700"), 600: v("--c-ink-600") },
         slate: { ...colors.slate, 100: v("--c-slate-100"), 200: v("--c-slate-200"), 300: v("--c-slate-300"), 400: v("--c-slate-400"), 500: v("--c-slate-500"), 600: v("--c-slate-600") },
+        // LNH colour codes (Nov 2026): navy #232667, red #B72025, title gradient #00B8D7 → #0089BF
         lnh: {
-          navy: "#0A2E6E",   // primary LNH blue
-          blue: "#1560D4",   // bright blue
+          navy: "#232667",   // primary LNH navy
+          blue: "#0089BF",   // LNH blue (end of the title gradient)
+          cyan: "#00B8D7",   // LNH cyan (start of the title gradient)
           sky: v("--c-sky"), // highlight (#3FB8F0; darker in light mode for contrast)
-          red: "#D2192E",    // LNH red
+          red: "#B72025",    // LNH red
           rose: v("--c-rose"),
           gold: v("--c-gold"),
         },

@@ -24,8 +24,9 @@ export default async function Checkout() {
         <span className="eyebrow">Checkout</span>
         <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">Registration summary &amp; <span className="text-holo">checkout</span></h1>
         <p className="mt-3 text-slate-300">Signed in as <b className="text-white">{a.title} {a.firstName} {a.lastName}</b> · {a.email} · {a.phone}</p>
-        <CheckoutClient catalog={catalog as any} categories={cats.map((c) => ({ id: c.id, label: c.label, fee: early ? c.earlyFee : c.fee, note: c.note }))}
-          processingPct={ev.processingFeePct} early={early} />
+        <CheckoutClient catalog={catalog as any} categories={cats.filter((c) => c.designations?.length).map((c) => ({ id: c.id, label: c.label, fee: early ? c.earlyFee : c.fee, note: c.note, designations: c.designations }))}
+          processingPct={ev.processingFeePct} early={early} banquet={{ fee: ev.banquetFee, max: ev.banquetMax }}
+          account={{ whatsapp: a.whatsapp ?? "", cnic: a.cnic ?? "", address: a.address ?? "", city: a.city ?? "", province: a.province ?? "", country: a.country ?? "Pakistan", qualification: a.qualification ?? "", employeeNo: a.employeeNo ?? "", pmdcNo: a.pmdcNo ?? "" }} />
       </div>
     </section>
   );

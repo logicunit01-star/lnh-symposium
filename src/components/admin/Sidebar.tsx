@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed } from "lucide-react";
+import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
 import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +17,13 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin/dept", label: "My Department", I: Building2, p: "dept.abstracts" },
   { href: "/admin/dept/abstracts", label: "Abstract Review", I: FileText, p: "dept.abstracts" },
   { href: "/admin/dept/sessions", label: "Session Agenda", I: Presentation, p: "dept.sessions" },
+  { href: "/admin/dept/flyers", label: "Session Flyers", I: ImageIcon, p: "dept.flyers" },
+  { href: "/admin/dept/guests", label: "Guest Approvals", I: BadgeCheck, p: "dept.guests" },
   { href: "/admin/abstracts", label: "Abstracts", I: FileText, p: "abstracts" },
   { href: "/admin/programme", label: "Scientific Programme", I: LayoutGrid, p: "programme" },
   { href: "/admin/invitations", label: "Invitations", I: Send, p: "invitations" },
+  { href: "/admin/emails", label: "Automated Emails", I: Mail, p: "emails" },
+  { href: "/admin/volunteers", label: "Volunteers", I: HandHeart, p: "volunteers" },
   { href: "/admin/departments", label: "Departments", I: Building2, p: "departments" },
   { href: "/admin/flyers", label: "Flyer Review", I: ImageIcon, p: "flyers" },
   { href: "/admin/catering", label: "Catering Headcounts", I: UtensilsCrossed, p: "catering" },

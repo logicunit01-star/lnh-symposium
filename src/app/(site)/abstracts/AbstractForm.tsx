@@ -4,17 +4,10 @@ import { CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
 import { cn, COUNTRIES } from "@/lib/utils";
+import { SECTIONS, SECTION_LIMITS, ABSTRACT_TOTAL_WORDS, charLimit } from "@/lib/scientific";
 
 type Kind = "ORIGINAL" | "CASE";
-const SECTIONS: Record<Kind, [string, string][]> = {
-  ORIGINAL: [["background", "Background / Introduction"], ["methods", "Methods"], ["results", "Results"], ["conclusion", "Conclusion"]],
-  CASE: [["background", "Background / Introduction"], ["cases", "Case / cases"]],
-};
-const PREFS = [
-  ["ORAL", "Oral presentation", "Reviewed for oral; may be accepted, rejected or returned to the secretariat."],
-  ["POSTER", "Poster presentation", "Reviewed for poster; may be accepted, rejected or returned to the secretariat."],
-  ["EITHER", "Either oral or poster", "Oral preferred; the department may accept it as oral or as poster."],
-] as const;
+const PREFS = [["ORAL", "Oral presentation"], ["POSTER", "Poster presentation"], ["EITHER", "Either oral or poster"]] as const;
 const countWords = (t: string) => (t.trim().match(/\S+/g) || []).length;
 
 export function AbstractForm({ wordLimit, departments, account }: {
@@ -32,6 +25,8 @@ export function AbstractForm({ wordLimit, departments, account }: {
   const { submit, loading, error, fields } = useSubmit<{ refNo: string }>("/api/abstracts");
 
   const total = useMemo(() => SECTIONS[kind].reduce((a, [k]) => a + countWords(sec[k] ?? ""), 0), [sec, kind]);
+  const limitTotal = Math.min(wordLimit || ABSTRACT_TOTAL_WORDS, ABSTRACT_TOTAL_WORDS);
+  const over = SECTIONS[kind].filter(([k]) => countWords(sec[k] ?? "") > SECTION_LIMITS[kind][k] || (sec[k] ?? "").length > charLimit(SECTION_LIMITS[kind][k])).map(([, l]) => l);
   const tw = countWords(title);
   const keywords = kw.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -49,7 +44,7 @@ export function AbstractForm({ wordLimit, departments, account }: {
       <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
       <p className="eyebrow mt-6">Abstract received</p>
       <p className="h-display mt-3 text-5xl text-white">{done}</p>
-      <p className="mx-auto mt-4 max-w-md text-slate-400">Your abstract ID and a confirmation have been emailed to you. Track its status under My bookings. All further correspondence will be with you as the presenting author.</p>
+      <p className="mx-auto mt-4 max-w-md text-slate-400">Your abstract ID and a confirmation have been emailed to you. You can follow its status (under review, accepted or rejected) on this page and under My bookings. All further correspondence will be with you as the presenting author.</p>
     </div>
   );
 
@@ -70,10 +65,10 @@ export function AbstractForm({ wordLimit, departments, account }: {
       <section>
         <h2 className="font-display text-lg font-bold text-white">1 · Preferred presentation format <span className="text-lnh-red">*</span></h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {PREFS.map(([v, l, d]) => (
+          {PREFS.map(([v, l]) => (
             <label key={v} className={cn("cursor-pointer rounded-2xl border p-4 transition", pref === v ? "border-lnh-sky bg-lnh-sky/10" : "border-white/10 hover:border-white/30")}>
               <input type="radio" name="pref" value={v} checked={pref === v} onChange={() => setPref(v)} className="sr-only" />
-              <span className="font-semibold text-white">{l}</span><span className="mt-1 block text-xs text-slate-400">{d}</span>
+              <span className="font-semibold text-white">{l}</span>
             </label>
           ))}
         </div>
@@ -115,7 +110,7 @@ export function AbstractForm({ wordLimit, departments, account }: {
       </section>
 
       <section>
-        <h2 className="font-display text-lg font-bold text-white">4 · Abstract details</h2>
+        <h2 className="font-display text-lg font-bold text-white">4 · Abstract details <span className="text-sm font-normal text-slate-400">(maximum {limitTotal} words, excluding title, authors and affiliations)</span></h2>
         <div className="mt-3 space-y-4">
           <Field label="Abstract title (full title, maximum 35 words)" name="abstractTitle" required error={fe("abstractTitle")}>
             <textarea id="abstractTitle" rows={2} value={title} onChange={(e) => setTitle(e.target.value)} className="input" />
@@ -128,12 +123,19 @@ export function AbstractForm({ wordLimit, departments, account }: {
               <button type="button" key={v} onClick={() => setKind(v)} className={cn("rounded-full border px-4 py-2 text-sm", kind === v ? "border-lnh-sky bg-lnh-sky/10 text-white" : "border-white/10 text-slate-300")}>{l}</button>
             ))}</div>
           </div>
-          {SECTIONS[kind].map(([k, label]) => (
-            <Field key={k} label={label} name={`s_${k}`} required error={fe(`s_${k}`) || fe(`sections.${k}`)}>
-              <textarea id={`s_${k}`} rows={k === "background" ? 3 : 4} value={sec[k] ?? ""} onChange={(e) => setSec({ ...sec, [k]: e.target.value })} className="input" />
-            </Field>
-          ))}
-          <p className={cn("mono text-sm", total > wordLimit ? "text-lnh-rose" : "text-slate-400")}>{total} / {wordLimit} words (sections only; title, authors and affiliations excluded)</p>
+          {SECTIONS[kind].map(([k, label]) => {
+            const max = SECTION_LIMITS[kind][k], n = countWords(sec[k] ?? ""), chars = (sec[k] ?? "").length, cmax = charLimit(max);
+            return (
+              <Field key={k} label={`${label} (maximum ${max} words)`} name={`s_${k}`} required error={fe(`s_${k}`) || fe(`sections.${k}`)}>
+                <textarea id={`s_${k}`} rows={max > 100 ? 7 : max > 50 ? 4 : 3} value={sec[k] ?? ""} maxLength={cmax + 200} onChange={(e) => setSec({ ...sec, [k]: e.target.value })} className={cn("input", (n > max || chars > cmax) && "border-lnh-rose")} aria-describedby={`c_${k}`} />
+                <p id={`c_${k}`} className={cn("mono mt-1 flex justify-between text-xs", n > max || chars > cmax ? "text-lnh-rose" : "text-slate-500")}>
+                  <span>{n} / {max} words{n > max ? ` · remove ${n - max}` : ""}</span><span>{chars.toLocaleString()} characters</span>
+                </p>
+              </Field>
+            );
+          })}
+          <p className={cn("mono text-sm", total > limitTotal ? "text-lnh-rose" : "text-slate-400")}>Total: {total} / {limitTotal} words (title, authors and affiliations excluded)</p>
+          {over.length > 0 && <p className="err">Shorten: {over.join(", ")}.</p>}
           {fe("sections") && <p className="err">{fe("sections")}</p>}
           <Field label="Keywords (3 to 5, separated by commas)" name="kw" required error={fe("keywords")}>
             <input id="kw" value={kw} onChange={(e) => setKw(e.target.value)} className="input" placeholder="artificial intelligence, triage, emergency department" />
@@ -149,7 +151,7 @@ export function AbstractForm({ wordLimit, departments, account }: {
         <p className="mt-3 text-xs text-slate-500">Once the abstract is submitted, all further correspondence will be with the presenting author.</p>
       </section>
 
-      <button className="btn-primary w-full sm:w-auto" disabled={loading || !!dup || total > wordLimit || tw > 35}>{loading ? "Submitting…" : "Submit abstract"}</button>
+      <button className="btn-primary w-full sm:w-auto" disabled={loading || !!dup || total > limitTotal || over.length > 0 || tw > 35}>{loading ? "Submitting…" : "Submit abstract"}</button>
     </form>
   );
 }

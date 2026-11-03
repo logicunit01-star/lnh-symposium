@@ -5,9 +5,9 @@ import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge } from "@/components/admin/ui";
-import { HOD_DECISION_LABEL, KIND_LABEL, PREF_LABEL, SCORE_CRITERIA, SECTIONS } from "@/lib/scientific";
+import { KIND_LABEL, PREF_LABEL, SCORE_CRITERIA, SECTIONS, decisionLabel } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
-import { assignAbstractVenue, scFinalize, scReassign } from "../actions";
+import { assignAbstractVenue, scReassign } from "../actions";
 
 export default async function AbstractDetail({ params, searchParams }: { params: { id: string }; searchParams: { saved?: string } }) {
   const u = await requirePerm("abstracts");
@@ -16,7 +16,6 @@ export default async function AbstractDetail({ params, searchParams }: { params:
   const depts = await db.select({ name: s.departments.name }).from(s.departments).orderBy(asc(s.departments.name));
   const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building, active: s.venues.active }).from(s.venues).orderBy(asc(s.venues.building), asc(s.venues.name));
   const review = can(u.role, "abstracts.review");
-  const suggested = a.hodDecision === "ACCEPT_ORAL" ? "ORAL" : a.hodDecision === "ACCEPT_POSTER" ? "POSTER" : a.hodDecision === "REJECT" ? "REJECT" : "";
   return (
     <>
       <p className="mb-2 text-sm"><Link href="/admin/abstracts" className="text-lnh-blue hover:underline">← Abstracts</Link></p>
@@ -47,27 +46,17 @@ export default async function AbstractDetail({ params, searchParams }: { params:
         </div>
         <div className="space-y-6">
           <div className="a-card p-5">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold">Department review</p><StatusBadge s={a.status} /></div>
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">HOD review (decision)</p><StatusBadge s={a.status} /></div>
             {a.hodDecision ? (
               <>
-                <p className="mt-2 font-display text-lg font-bold">{HOD_DECISION_LABEL[a.hodDecision]} <span className="text-slate-400">{a.hodTotal}/25</span></p>
+                <p className="mt-2 font-display text-lg font-bold">{decisionLabel(a.hodDecision, a.presentationPref)} <span className="text-slate-400">{a.hodTotal}/25</span></p>
                 <ul className="mt-2 space-y-1 text-xs text-slate-600">{SCORE_CRITERIA.map(([k, l]) => <li key={k} className="flex justify-between"><span>{l}</span><b>{a.hodScores?.[k] ?? "—"}</b></li>)}</ul>
                 {a.hodNotes && <p className="mt-2 text-sm text-slate-600">“{a.hodNotes}”</p>}
                 <p className="mt-2 text-xs text-slate-400">{a.hodBy} · {a.hodAt ? fmtDateTime(a.hodAt) : ""}</p>
               </>
             ) : <p className="mt-2 text-sm text-slate-500">Not yet decided by {a.assignedDept ?? a.specialty}.</p>}
           </div>
-          {review && (
-            <form action={scFinalize.bind(null, a.id)} className="a-card space-y-3 p-5">
-              <p className="text-sm font-semibold">Scientific Committee decision</p>
-              <div className="grid gap-1.5 text-sm">{[["ORAL", "Accept as oral"], ["POSTER", "Accept as poster"], ["REJECT", "Reject"]].map(([v, l]) => (
-                <label key={v} className="flex items-center gap-2"><input type="radio" name="final" value={v} defaultChecked={(a.acceptedAs ?? (a.status === "REJECTED" ? "REJECT" : suggested)) === v} />{l}{suggested === v && <span className="text-[10px] font-bold text-slate-400">department's choice</span>}</label>
-              ))}</div>
-              <textarea name="scNotes" rows={2} defaultValue={a.scNotes ?? ""} placeholder="Quality check notes (internal)" className="a-input" />
-              <button className="a-btn-primary w-full">Save final decision</button>
-              {a.authorNotifiedAt && <p className="text-xs text-slate-500">Author notified {fmtDateTime(a.authorNotifiedAt)}</p>}
-            </form>
-          )}
+          {a.authorNotifiedAt && <p className="a-card p-4 text-xs text-slate-500">Author notified {fmtDateTime(a.authorNotifiedAt)}</p>}
           {review && a.status === "ACCEPTED" && (
             <form action={assignAbstractVenue.bind(null, a.id)} className="a-card space-y-3 p-5">
               <p className="text-sm font-semibold">Venue and placement</p>
@@ -79,7 +68,7 @@ export default async function AbstractDetail({ params, searchParams }: { params:
           )}
           {review && (
             <form action={scReassign.bind(null, a.id)} className="a-card space-y-3 p-5">
-              <p className="text-sm font-semibold">Reassign to a department (Phase 2)</p>
+              <p className="text-sm font-semibold">Reassign to a department (Phase 2){a.status === "BACK" && <span className="ml-2 rounded bg-amber-100 px-1.5 text-[10px] font-bold text-amber-800">RETURNED</span>}</p>
               <p className="text-xs text-slate-500">Opens a short Phase 2 window for that department to decide this abstract.</p>
               <select name="dept" defaultValue="" className="a-input"><option value="" disabled>Choose department…</option>{depts.map((d) => <option key={d.name}>{d.name}</option>)}</select>
               <input name="note" placeholder="Reason (optional)" className="a-input" />

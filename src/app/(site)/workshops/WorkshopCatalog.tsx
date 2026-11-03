@@ -60,7 +60,7 @@ export function WorkshopCatalog({ items }: { items: WorkshopDTO[] }) {
             <button key={k} disabled={!has} onClick={() => { setDay(sel ? null : k); setWeek("all"); }}
               className={cn("relative grid aspect-square place-items-center rounded-lg text-xs transition",
                 !inMonth && "opacity-30", has ? "font-bold text-white hover:bg-lnh-blue/40" : "cursor-default text-slate-600",
-                inWeek && "bg-lnh-blue/20", sel && "bg-lnh-red text-white shadow-[0_0_14px_-2px_#D2192E]")}>
+                inWeek && "bg-lnh-blue/20", sel && "bg-lnh-red text-white shadow-[0_0_14px_-2px_#B72025]")}>
               {d.getUTCDate()}
               {has && !sel && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-lnh-sky" />}
             </button>
@@ -88,7 +88,7 @@ export function WorkshopCatalog({ items }: { items: WorkshopDTO[] }) {
       <div role="tablist" className="sticky top-20 z-20 -mx-4 mb-6 flex gap-2 overflow-x-auto bg-ink/80 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-full sm:border sm:border-white/10 sm:p-2">
         {[{ key: "all", label: "All weeks", range: `${items.length} workshops` }, ...weeks].map((t) => (
           <button key={t.key} role="tab" aria-selected={week === t.key} onClick={() => { setWeek(t.key); setDay(null); if (t.key !== "all") setMonth(t.key.slice(0, 7)); }}
-            className={cn("shrink-0 rounded-full px-5 py-2.5 text-left transition", week === t.key ? "bg-lnh-red text-white shadow-[0_8px_30px_-8px_#D2192E]" : "text-slate-300 hover:bg-white/5")}>
+            className={cn("shrink-0 rounded-full px-5 py-2.5 text-left transition", week === t.key ? "bg-lnh-red text-white shadow-[0_8px_30px_-8px_#B72025]" : "text-slate-300 hover:bg-white/5")}>
             <span className="block font-display text-sm font-bold">{t.label}</span>
             <span className={cn("mono block text-[10px]", week === t.key ? "text-white/80" : "text-slate-500")}>{t.range}</span>
           </button>

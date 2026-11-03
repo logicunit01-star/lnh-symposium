@@ -27,15 +27,16 @@ export default async function Register() {
             <p className="eyebrow">Step 1 · Symposium pass fees</p>
             <div className="hud mt-4 overflow-hidden">
               <table className="w-full text-sm">
-                <thead><tr className="mono text-left text-[10px] uppercase tracking-widest text-slate-500"><th className="px-5 py-3 font-medium">Category</th><th className="px-5 py-3 text-right font-medium">Early-bird</th><th className="px-5 py-3 text-right font-medium">Regular</th></tr></thead>
-                <tbody>{cats.map((c) => (
-                  <tr key={c.id} className="border-t border-white/10"><td className="px-5 py-3 text-slate-200">{c.label}</td>
+                <thead><tr className="mono text-left text-[10px] uppercase tracking-widest text-slate-500"><th className="px-5 py-3 font-medium">Designation</th><th className="px-5 py-3 text-right font-medium">Early-bird</th><th className="px-5 py-3 text-right font-medium">Regular</th></tr></thead>
+                <tbody>{cats.filter((c) => c.designations?.length).map((c) => (
+                  <tr key={c.id} className="border-t border-white/10"><td className="px-5 py-3 text-slate-200">{c.designations.join(" · ")}</td>
                     <td className={`px-5 py-3 text-right ${early ? "font-bold text-white" : "text-slate-500"}`}>Rs {c.earlyFee.toLocaleString()}</td>
                     <td className={`px-5 py-3 text-right ${!early ? "font-bold text-white" : "text-slate-500"}`}>Rs {c.fee.toLocaleString()}</td></tr>
                 ))}</tbody>
+                <tfoot><tr className="border-t border-white/10"><td className="px-5 py-3 text-slate-300">Additional banquet pass (optional, maximum {ev.banquetMax})</td><td colSpan={2} className="px-5 py-3 text-right font-bold text-white">Rs {ev.banquetFee.toLocaleString()} each</td></tr></tfoot>
               </table>
             </div>
-            <p className="mt-2 text-xs text-slate-500">{early && ev.earlyBirdUntil ? `Early-bird rates apply until ${fmtDate(ev.earlyBirdUntil)}. ` : ""}Your pass covers keynotes, panels and ceremonies on all symposium days. You choose the category at checkout.</p>
+            <p className="mt-2 text-xs text-slate-500">{early && ev.earlyBirdUntil ? `Early-bird rates apply until ${fmtDate(ev.earlyBirdUntil)}. ` : ""}Your pass covers keynotes, panels and ceremonies on all symposium days. You choose your designation at checkout. Invited guests and volunteers use the <Link href="/register/guest" className="text-lnh-sky underline">guest</Link> and <Link href="/register/volunteer" className="text-lnh-sky underline">volunteer</Link> registration forms.</p>
           </section>
 
           <section>

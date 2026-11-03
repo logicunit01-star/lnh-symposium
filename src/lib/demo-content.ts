@@ -19,8 +19,9 @@ export const EVENT_DEFAULTS = {
   venue: "Liaquat National Hospital, Stadium Road, Karachi",
   regPrefix: "SYM",
   earlyBirdUntil: D("2026-12-10T23:59:59+05:00"),
-  abstractOpen: D("2026-10-15T00:00:00+05:00"),
-  abstractDeadline: D("2026-12-04T23:59:59+05:00"),
+  // SC feedback (29 Oct 2026): abstracts open 15 Nov, close 15 Dec; decisions and invitations 31 Dec
+  abstractOpen: D("2026-11-15T00:00:00+05:00"),
+  abstractDeadline: D("2026-12-15T23:59:59+05:00"),
   workshopStart: D("2026-12-14T00:00:00+05:00"),
   workshopEnd: D("2027-01-14T23:59:59+05:00"),
   themeWeeks: [
@@ -33,11 +34,11 @@ export const EVENT_DEFAULTS = {
   seatTarget: 3000,
   usdRate: 280,
   sessionSlots: DEFAULT_SLOTS,
-  abstractP1Open: D("2026-10-20T00:00:00+05:00"),
-  abstractP1Close: D("2026-12-14T23:59:59+05:00"),
-  abstractP2Open: D("2026-12-15T00:00:00+05:00"),
-  abstractP2Close: D("2026-12-21T23:59:59+05:00"),
-  sciLockAt: D("2027-01-10T23:59:59+05:00"),
+  abstractP1Open: D("2026-11-15T00:00:00+05:00"),
+  abstractP1Close: D("2026-12-22T23:59:59+05:00"),
+  abstractP2Open: D("2026-12-23T00:00:00+05:00"),
+  abstractP2Close: D("2026-12-27T23:59:59+05:00"),
+  sciLockAt: D("2026-12-29T23:59:59+05:00"),
   programmeReleasedAt: null as Date | null,
   agendaTemplates: DEFAULT_AGENDA_TEMPLATES,
 };
@@ -310,4 +311,5 @@ export const DEMO_STAFF = [
   { name: "Dr. Placeholder (WP Member)", email: "wp.member@lnh.edu.pk", role: "WP_MEMBER", department: null },
   { name: "Marketing Department (demo)", email: "marketing@lnh.edu.pk", role: "MARKETING", department: null },
   { name: "Food Department (demo)", email: "food@lnh.edu.pk", role: "CATERING", department: null },
+  { name: "Chairperson, Facilitation Committee (demo)", email: "facilitation@lnh.edu.pk", role: "FACILITATION_CHAIR", department: null },
 ] as const;

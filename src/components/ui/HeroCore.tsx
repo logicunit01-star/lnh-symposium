@@ -7,16 +7,16 @@ export function HeroCore({ className }: { className?: string }) {
         <radialGradient id="core" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
           <stop offset="18%" stopColor="#3FB8F0" stopOpacity="0.9" />
-          <stop offset="55%" stopColor="#1560D4" stopOpacity="0.35" />
+          <stop offset="55%" stopColor="#0089BF" stopOpacity="0.35" />
           <stop offset="100%" stopColor="#040B1E" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="ring" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#3FB8F0" />
-          <stop offset="60%" stopColor="#1560D4" />
-          <stop offset="100%" stopColor="#D2192E" />
+          <stop offset="60%" stopColor="#0089BF" />
+          <stop offset="100%" stopColor="#B72025" />
         </linearGradient>
         <linearGradient id="ecg" x1="0" x2="1">
-          <stop offset="0%" stopColor="#D2192E" stopOpacity="0" />
+          <stop offset="0%" stopColor="#B72025" stopOpacity="0" />
           <stop offset="45%" stopColor="#FF4D5E" />
           <stop offset="100%" stopColor="#3FB8F0" stopOpacity="0" />
         </linearGradient>
@@ -44,7 +44,7 @@ export function HeroCore({ className }: { className?: string }) {
       {/* hexagonal chip */}
       <g filter="url(#glow)">
         <polygon points="300,212 376,256 376,344 300,388 224,344 224,256" fill="#040B1E" fillOpacity="0.6" stroke="#3FB8F0" strokeWidth="1.5" />
-        <polygon points="300,236 355,268 355,332 300,364 245,332 245,268" fill="none" stroke="#1560D4" strokeOpacity="0.8" />
+        <polygon points="300,236 355,268 355,332 300,364 245,332 245,268" fill="none" stroke="#0089BF" strokeOpacity="0.8" />
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
           return <g key={i}><line x1={300 + Math.cos(a) * 88} y1={300 + Math.sin(a) * 88} x2={300 + Math.cos(a) * 130} y2={300 + Math.sin(a) * 130} stroke="#3FB8F0" strokeOpacity="0.55" /><circle cx={300 + Math.cos(a) * 132} cy={300 + Math.sin(a) * 132} r="3.5" fill="#3FB8F0" /></g>;

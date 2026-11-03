@@ -27,7 +27,9 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
         <div className="space-y-6 lg:col-span-2">
           <div className="a-card p-5">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              {[["Email", r.email], ["Contact", r.phone], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution], ["Address", [r.address, r.city].filter(Boolean).join(", ")], ["Category", r.category.label], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee ID", r.employeeId]].map(([k, v]) => (
+              {[["Type", r.regType === "GUEST" ? `Guest · ${r.guestRole ?? ""} · ${r.guestSession ?? ""} (${r.department ?? ""})` : r.regType === "VOLUNTEER" ? `Volunteer · ${r.department ?? ""} · ${r.academicYear ?? ""}` : "Participant"], ...(r.regType !== "PARTICIPANT" ? [["Approval", `${r.approvalStatus ?? "PENDING"}${r.approvedBy ? ` · ${r.approvedBy}` : ""}`]] : []),
+                ["Email", r.email], ["Contact", r.phone], ["WhatsApp", r.whatsapp], ["CNIC / passport", r.cnic], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Qualification", r.qualification], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution],
+                ["Address", [r.address, r.city, r.province, r.country].filter(Boolean).join(", ")], ["Category", r.category.label], ["Banquet passes", r.banquetQty ? `${r.banquetQty} (${r.banquetFee.toLocaleString()} PKR)` : "None"], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee #", r.employeeId]].map(([k, v]) => (
                 <div key={k as string}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{v || "—"}</dd></div>
               ))}
             </dl>

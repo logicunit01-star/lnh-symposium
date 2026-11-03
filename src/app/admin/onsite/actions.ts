@@ -17,15 +17,16 @@ export async function onsiteRegister(_: DeskResult, f: FormData): Promise<DeskRe
   const [cat] = await db.select().from(s.feeCategory).where(eq(s.feeCategory.id, categoryId));
   if (!cat) return { error: "Choose a category." };
   const employeeId = g("employeeId");
-  if (cat.tier === "EMPLOYEE" && !/^[A-Za-z0-9-]{3,20}$/.test(employeeId)) return { error: "Enter the LNH employee ID shown on the staff card.", fields: { employeeId: "Required for LNH staff" } };
+  if (f.get("lnhStaff") === "on" && !/^[A-Za-z0-9-]{3,20}$/.test(employeeId)) return { error: "Enter the LNH employee number shown on the staff card.", fields: { employeeId: "Required for LNH staff" } };
   const p = registrationInput.safeParse({
     title: g("title"), gender: g("gender"), firstName: g("firstName"), lastName: g("lastName"), email: g("email"), phone: g("phone"),
-    pmdcNo: g("pmdcNo"), designation: g("designation"), specialty: g("department"), institution: g("institution") || "Liaquat National Hospital",
-    categoryId, sessionIds: f.getAll("sessionIds").map(String), consent: true, includePass: f.get("includePass") === "on",
+    whatsapp: g("whatsapp"), cnic: g("cnic"), address: g("address"), city: g("city"), province: g("province"), country: g("country") || "Pakistan", qualification: g("qualification"),
+    pmdcNo: g("pmdcNo"), designation: g("designation"), specialty: g("department"), institution: g("institution") || "Liaquat National Hospital", employeeNo: employeeId,
+    categoryId, sessionIds: f.getAll("sessionIds").map(String), consent: true, includePass: f.get("includePass") === "on", banquetQty: Number(g("banquetQty")) || 0,
   });
   if (!p.success) {
     const fields: Record<string, string> = {};
-    p.error.issues.forEach((i) => { fields[String(i.path[0])] = i.message; });
+    p.error.issues.forEach((i) => { fields[String(i.path[0])] ??= i.message; });
     return { error: "Please correct the highlighted fields.", fields };
   }
   if (!p.data.includePass && !p.data.sessionIds.length) return { error: "Select the symposium pass or at least one session or workshop." };

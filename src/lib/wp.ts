@@ -81,10 +81,18 @@ export function wpKpis(rows: WpRow[], seatTarget: number) {
 /** Paid income split by registrant tier (Student / Employee / General / Foreign). */
 export async function revenueByTier(sc: Scope) {
   const deptFilter = sc.all ? sql`true` : sql`exists (select 1 from registration_items ri join sessions se on se.id = ri.session_id where ri.registration_id = r.id and se.department = ${sc.department})`;
+  // Registration Forms 2027: fee tiers follow designation, so the registrant type is derived from the registration itself
   const res = await db.execute(sql`
-    select fc.tier as tier, count(r.id)::int as n, coalesce(sum(r.total_fee),0)::int as amount
-    from fee_category fc left join registrations r on r.category_id = fc.id and r.payment_status = 'PAID' and ${deptFilter}
-    group by fc.tier`);
+    select t.tier, count(*)::int as n, coalesce(sum(t.total_fee),0)::int as amount from (
+      select r.total_fee, case
+        when r.employee_id is not null and r.employee_id <> '' then 'EMPLOYEE'
+        when fc.tier = 'FOREIGN' or (r.country is not null and r.country <> 'Pakistan') then 'FOREIGN'
+        when fc.tier = 'STUDENT' or r.designation in ('Undergraduate', 'Student') then 'STUDENT'
+        when fc.tier = 'EMPLOYEE' then 'EMPLOYEE'
+        else 'GENERAL' end as tier
+      from registrations r join fee_category fc on fc.id = r.category_id
+      where r.payment_status = 'PAID' and ${deptFilter}) t
+    group by t.tier`);
   const rows = ((res as any).rows ?? res) as { tier: string; n: number; amount: number }[];
   const order = ["STUDENT", "EMPLOYEE", "GENERAL", "FOREIGN"];
   const total = rows.reduce((a, r) => a + Number(r.amount), 0);

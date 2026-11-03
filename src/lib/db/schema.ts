@@ -8,7 +8,7 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const created = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 const updated = () => timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date());
 
-export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD", "SC_CHAIR", "SECRETARIAT", "MARKETING", "CATERING"]);
+export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD", "SC_CHAIR", "SECRETARIAT", "MARKETING", "CATERING", "FACILITATION_CHAIR"]);
 export const sessionTypeEnum = pgEnum("session_type", ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "FAILED", "WAIVED", "REFUNDED"]);
 export const abstractTypeEnum = pgEnum("abstract_type", ["ORAL", "POSTER"]);
@@ -61,6 +61,14 @@ export const event = pgTable("event", {
   sciLockAt: timestamp("sci_lock_at", { withTimezone: true }), // departments edit session agendas until this date
   programmeReleasedAt: timestamp("programme_released_at", { withTimezone: true }),
   agendaTemplates: jsonb("agenda_templates").$type<Record<string, string>>().notNull().default({}),
+  // SC feedback (29 Oct 2026): quality-check guidelines shown to HODs while reviewing
+  qcGuidelines: text("qc_guidelines"),
+  // Registration forms 2027: additional banquet pass
+  banquetFee: integer("banquet_fee").notNull().default(4000),
+  banquetMax: integer("banquet_max").notNull().default(2),
+  // Automated email: official sender and CC (Scientific Committee mailbox)
+  emailFrom: text("email_from"),
+  emailCc: text("email_cc"),
   updatedAt: updated(),
 });
 
@@ -74,6 +82,7 @@ export const feeCategory = pgTable("fee_category", {
   order: integer("order").notNull().default(0),
   active: boolean("active").notNull().default(true),
   tier: text("tier").notNull().default("GENERAL"), // STUDENT | EMPLOYEE | GENERAL | FOREIGN (revenue dashboard)
+  designations: jsonb("designations").$type<string[]>().notNull().default([]), // registration form 2027: designations in this fee tier
 });
 
 export const users = pgTable("users", {
@@ -209,6 +218,9 @@ export const sessions = pgTable("sessions", {
   flyerNote: text("flyer_note"),
   flyerReviewedBy: text("flyer_reviewed_by"),
   flyerReviewedAt: timestamp("flyer_reviewed_at", { withTimezone: true }),
+  // SC feedback: the department's agenda exactly as first submitted (kept unchanged)
+  originalAgenda: jsonb("original_agenda").$type<Record<string, unknown>>(),
+  originalSubmittedAt: timestamp("original_submitted_at", { withTimezone: true }),
   createdAt: created(),
 }, (t) => ({ dayIdx: index("sessions_day_idx").on(t.day, t.startsAt) }));
 
@@ -281,6 +293,12 @@ export const accounts = pgTable("accounts", {
   institution: text("institution").notNull(),
   address: text("address"),
   city: text("city"),
+  whatsapp: text("whatsapp"),
+  cnic: text("cnic"),
+  country: text("country"),
+  province: text("province"),
+  qualification: text("qualification"),
+  employeeNo: text("employee_no"),
   failedLogins: integer("failed_logins").notNull().default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
@@ -304,7 +322,24 @@ export const registrations = pgTable("registrations", {
   institution: text("institution").notNull(),
   address: text("address"),
   city: text("city"),
+  whatsapp: text("whatsapp"),
+  cnic: text("cnic"),
+  country: text("country"),
+  province: text("province"),
+  qualification: text("qualification"),
   categoryId: integer("category_id").notNull().references(() => feeCategory.id),
+  banquetQty: integer("banquet_qty").notNull().default(0),
+  banquetFee: integer("banquet_fee").notNull().default(0),
+  // PARTICIPANT | GUEST (speaker, chair, moderator, panelist) | VOLUNTEER
+  regType: text("reg_type").notNull().default("PARTICIPANT"),
+  guestRole: text("guest_role"), // INVITED_SPEAKER | CHAIRPERSON | MODERATOR | PANELIST
+  guestSession: text("guest_session"),
+  department: text("department"),
+  academicYear: text("academic_year"),
+  approvalStatus: text("approval_status"), // guests and volunteers: PENDING | APPROVED | REJECTED
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvalNote: text("approval_note"),
   conferenceFee: integer("conference_fee").notNull(),
   totalFee: integer("total_fee").notNull(),
   earlyBird: boolean("early_bird").notNull().default(false),
@@ -446,10 +481,37 @@ export const notificationLog = pgTable("notification_log", {
   id: id(),
   channel: channelEnum("channel").notNull(),
   to: text("to").notNull(),
+  cc: text("cc"),
+  sender: text("sender"),
+  templateKey: text("template_key"),
+  ref: text("ref"), // abstract ID, registration no. or session title the message is about
   subject: text("subject"),
   body: text("body").notNull(),
   status: text("status").notNull(), // SENT | LOGGED | FAILED
   error: text("error"),
+  createdAt: created(),
+});
+
+/** Editable automated email templates (SC feedback, 29 Oct 2026). Body uses {{merge_fields}}. */
+export const emailTemplates = pgTable("email_templates", {
+  key: text("key").primaryKey(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  buttonLabel: text("button_label"),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Scheduled email dispatches managed from the admin (e.g. abstract decisions and invitations on 31 Dec). */
+export const emailJobs = pgTable("email_jobs", {
+  id: id(),
+  kind: text("kind").notNull(), // ABSTRACT_DECISIONS | INVITATIONS | INVITE_REMINDERS
+  runAt: timestamp("run_at", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("SCHEDULED"), // SCHEDULED | RUNNING | DONE | CANCELLED | FAILED
+  note: text("note"),
+  createdBy: text("created_by"),
+  ranAt: timestamp("ran_at", { withTimezone: true }),
+  result: text("result"),
   createdAt: created(),
 });
 

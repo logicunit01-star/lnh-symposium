@@ -4,7 +4,7 @@ import { requireDept } from "@/lib/dept";
 import { getEvent } from "@/lib/event";
 import { reviewWindow } from "@/lib/abstracts";
 import { PageTitle } from "@/components/admin/ui";
-import { SCORE_CRITERIA, SECTIONS, PREF_LABEL, KIND_LABEL, HOD_DECISION_LABEL, decisionsFor } from "@/lib/scientific";
+import { SCORE_CRITERIA, SECTIONS, PREF_LABEL, KIND_LABEL, DEFAULT_QC_GUIDELINES, decisionLabel, decisionsFor } from "@/lib/scientific";
 import { cn, fmtDateTime } from "@/lib/utils";
 import { deptDecide, deptSubmit } from "../actions";
 
@@ -19,11 +19,12 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
   const open = rows.filter((r) => r.status === "SUBMITTED" && r.phase === activePhase);
   const decided = open.filter((r) => r.hodDecision).length;
   const lists = {
-    "Accepted as oral": rows.filter((r) => (r.status === "ACCEPTED" && r.acceptedAs === "ORAL") || (r.status !== "ACCEPTED" && r.status !== "SUBMITTED" && r.hodDecision === "ACCEPT_ORAL")),
-    "Accepted as poster": rows.filter((r) => (r.status === "ACCEPTED" && r.acceptedAs === "POSTER") || (r.status !== "ACCEPTED" && r.status !== "SUBMITTED" && r.hodDecision === "ACCEPT_POSTER")),
-    "Rejected": rows.filter((r) => r.status === "REJECTED" || (r.status === "UNDER_REVIEW" && r.hodDecision === "REJECT")),
-    "Returned to secretariat": rows.filter((r) => r.status === "BACK"),
+    "Accepted as oral": rows.filter((r) => r.status === "ACCEPTED" && r.acceptedAs === "ORAL"),
+    "Accepted as poster": rows.filter((r) => r.status === "ACCEPTED" && r.acceptedAs === "POSTER"),
+    "Rejected": rows.filter((r) => r.status === "REJECTED"),
+    "Returned to the Symposium Secretariat": rows.filter((r) => r.status === "BACK"),
   };
+  const qc = (ev.qcGuidelines || DEFAULT_QC_GUIDELINES).split("\n").filter(Boolean);
   const msg = searchParams.err === "incomplete" ? "Decide every abstract before sending them to the secretariat." : searchParams.err === "score" ? "Score all five criteria (1 to 5)." : searchParams.err === "decision" ? "Choose a decision." : null;
 
   return (
@@ -38,13 +39,19 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
           <div><p className="text-xs font-bold uppercase tracking-wider text-lnh-red">Phase {activePhase} open</p>
             <p className="font-display text-xl font-bold text-slate-900">{decided} of {open.length} decided</p>
             <p className="text-sm text-slate-500">After sending, this department can no longer change decisions; it keeps read-only access to the lists.</p></div>
-          <form action={deptSubmit.bind(null, activePhase)}><button disabled={!open.length || decided < open.length} className="a-btn-red">Send decisions to secretariat</button></form>
+          <form action={deptSubmit.bind(null, activePhase)}><button disabled={!open.length || decided < open.length} className="a-btn-red">Send decisions to the Symposium Secretariat</button></form>
         </div>
       ) : (
         <p className="mb-6 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
           {dept?.p1SubmittedAt ? `Phase 1 decisions sent ${fmtDateTime(dept.p1SubmittedAt)}. ` : ""}{dept?.p2SubmittedAt ? `Phase 2 decisions sent ${fmtDateTime(dept.p2SubmittedAt)}. ` : ""}The review portal is not open for this department right now; the lists below are read-only.
         </p>
       )}
+
+      <details className="a-card mb-6 p-5" open={!!activePhase}>
+        <summary className="cursor-pointer font-display text-base font-bold text-slate-900">Quality-check guidelines for abstract review</summary>
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-slate-700">{qc.map((g) => <li key={g}>{g}</li>)}</ol>
+        <p className="mt-3 text-xs text-slate-500">Score each abstract on the five criteria (1 to 5), then choose Accept, Reject or Return to the Symposium Secretariat. Your decision is final; authors are emailed after the agenda is finalised.</p>
+      </details>
 
       {activePhase && (
         <div className="space-y-4">
@@ -54,7 +61,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
                 <span><span className="font-mono text-xs font-semibold text-lnh-blue">{a.refNo}</span>{a.phase === 2 && <span className="ml-2 rounded bg-amber-100 px-1.5 text-[10px] font-bold text-amber-800">PHASE 2</span>}
                   <span className="block font-medium text-slate-900">{a.abstractTitle}</span>
                   <span className="text-xs text-slate-500">{PREF_LABEL[a.presentationPref ?? "ORAL"]} · {KIND_LABEL[a.kind ?? "ORIGINAL"]} · {a.presentingAuthor}, {a.organization}</span></span>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", a.hodDecision ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800")}>{a.hodDecision ? `${HOD_DECISION_LABEL[a.hodDecision]} · ${a.hodTotal}/25` : "To review"}</span>
+                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", a.hodDecision ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800")}>{a.hodDecision ? `${decisionLabel(a.hodDecision, a.presentationPref)} · ${a.hodTotal}/25` : "To review"}</span>
               </summary>
               <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_360px]">
                 <article className="space-y-3 text-sm leading-relaxed text-slate-700">
@@ -64,16 +71,16 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
                   <p className="text-xs text-slate-500">{a.wordCount} words · Keywords: {a.keywords}</p>
                 </article>
                 <form action={deptDecide.bind(null, a.id)} className="space-y-3 rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Scoring sheet</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Quality-check scoring sheet</p>
                   {SCORE_CRITERIA.map(([k, label]) => (
                     <div key={k} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-700">{label}</span>
                       <select name={`sc_${k}`} defaultValue={a.hodScores?.[k] ?? ""} className="a-input w-16 py-1"><option value="">–</option>{[1, 2, 3, 4, 5].map((n) => <option key={n}>{n}</option>)}</select></div>
                   ))}
                   <p className="pt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Decision</p>
                   <div className="grid gap-1.5">{decisionsFor(a.presentationPref).map((d) => (
-                    <label key={d} className="flex items-center gap-2 text-sm"><input type="radio" name="decision" value={d} defaultChecked={a.hodDecision === d} />{HOD_DECISION_LABEL[d]}</label>
+                    <label key={d} className="flex items-center gap-2 text-sm"><input type="radio" name="decision" value={d} defaultChecked={a.hodDecision === d} />{decisionLabel(d, a.presentationPref)}</label>
                   ))}</div>
-                  <textarea name="notes" rows={2} defaultValue={a.hodNotes ?? ""} placeholder="Comments for the Scientific Committee (optional)" className="a-input" />
+                  <textarea name="notes" rows={2} defaultValue={a.hodNotes ?? ""} placeholder="Comments for the Symposium Secretariat (optional)" className="a-input" />
                   <button className="a-btn-primary w-full">Save decision</button>
                 </form>
               </div>
@@ -88,7 +95,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
           <div key={label} className="a-card p-5">
             <h2 className="font-display text-base font-bold">{label} <span className="text-slate-400">({list.length})</span></h2>
             <ul className="mt-3 divide-y divide-slate-100 text-sm">
-              {list.map((a) => <li key={a.id} className="py-2"><span className="font-mono text-xs text-lnh-blue">{a.refNo}</span> {a.abstractTitle}<span className="block text-xs text-slate-400">{a.presentingAuthor} · {a.status === "ACCEPTED" || a.status === "REJECTED" ? "final" : "awaiting Scientific Committee"}</span></li>)}
+              {list.map((a) => <li key={a.id} className="py-2"><span className="font-mono text-xs text-lnh-blue">{a.refNo}</span> {a.abstractTitle}<span className="block text-xs text-slate-400">{a.presentingAuthor} · {a.status === "BACK" ? "with the secretariat for reassignment" : a.authorNotifiedAt ? "author notified" : "author notified on the decision date"}</span></li>)}
               {!list.length && <li className="py-2 text-slate-400">None</li>}
             </ul>
           </div>

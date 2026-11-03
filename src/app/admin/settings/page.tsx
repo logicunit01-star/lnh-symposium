@@ -6,8 +6,7 @@ import { getEvent } from "@/lib/event";
 import { PageTitle } from "@/components/admin/ui";
 import { TZ } from "@/lib/utils";
 import { saveSettings, saveFee, resetDemoContent } from "../actions";
-import { TIER_LABEL } from "@/lib/wp";
-import { SESSION_FORMATS } from "@/lib/scientific";
+import { DEFAULT_QC_GUIDELINES, SESSION_FORMATS } from "@/lib/scientific";
 
 const dt = (d: Date | null) => {
   if (!d) return "";
@@ -37,6 +36,7 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <F n="venue" l="Venue" v={ev.venue} span />
         <F n="virtualLink" l="Virtual platform link" v={ev.virtualLink} /><F n="heroVideoUrl" l="Hero background video URL (.mp4)" v={ev.heroVideoUrl} />
         <F n="earlyBirdUntil" l="Early-bird ends" t="datetime-local" v={dt(ev.earlyBirdUntil)} />
+        <F n="banquetFee" l="Additional banquet pass fee (PKR)" t="number" v={ev.banquetFee} /><F n="banquetMax" l="Banquet passes allowed per registration" t="number" v={ev.banquetMax} />
         <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="registrationOpen" defaultChecked={ev.registrationOpen} /> Registration open</label>
         <F n="abstractOpen" l="Abstract submission opens" t="datetime-local" v={dt(ev.abstractOpen)} /><F n="abstractDeadline" l="Abstract deadline" t="datetime-local" v={dt(ev.abstractDeadline)} />
         <F n="abstractWordLimit" l="Abstract word limit" t="number" v={ev.abstractWordLimit} /><div />
@@ -48,7 +48,10 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <div className="sm:col-span-2"><label className="a-label">Session slots (one per line: YYYY-MM-DD HH:MM-HH:MM; add "optional", or "plenary" / "debate" for the committee's fixed sessions)</label><textarea name="sessionSlots" rows={11} defaultValue={ev.sessionSlots.map((s) => `${s.day} ${s.start}-${s.end}${s.optional ? " optional" : ""}${s.special ? ` ${s.special.toLowerCase()}` : ""}`).join("\n")} className="a-input font-mono text-xs" /></div>
         <F n="abstractP1Open" l="Abstract review Phase 1 opens (HODs)" t="datetime-local" v={dt(ev.abstractP1Open)} /><F n="abstractP1Close" l="Phase 1 closes" t="datetime-local" v={dt(ev.abstractP1Close)} />
         <F n="abstractP2Open" l="Phase 2 opens (reassigned abstracts)" t="datetime-local" v={dt(ev.abstractP2Open)} /><F n="abstractP2Close" l="Phase 2 closes" t="datetime-local" v={dt(ev.abstractP2Close)} />
-        <F n="sciLockAt" l="Department agenda lock date" t="datetime-local" v={dt(ev.sciLockAt)} /><div />
+        <F n="sciLockAt" l="Department agenda deadline (locked after this; Scientific Committee edits only)" t="datetime-local" v={dt(ev.sciLockAt)} /><div />
+        <div className="sm:col-span-2"><label className="a-label">Abstract quality-check guidelines shown to HODs (one per line)</label><textarea name="qcGuidelines" rows={6} defaultValue={ev.qcGuidelines ?? DEFAULT_QC_GUIDELINES} className="a-input text-xs" /></div>
+        <p className="sm:col-span-2 mt-2 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-wider text-slate-500">Automated emails</p>
+        <F n="emailFrom" l="Sender (official Scientific Committee / symposium email ID), e.g. Scientific Committee &lt;sc@lnh.edu.pk&gt;" v={ev.emailFrom} /><F n="emailCc" l="CC on automated emails (comma separated)" v={ev.emailCc} />
         {Object.entries(SESSION_FORMATS).map(([k, label]) => (
           <div key={k} className="sm:col-span-2"><label className="a-label">Agenda template: {label}</label><textarea name={`tpl_${k}`} rows={3} defaultValue={ev.agendaTemplates?.[k] ?? ""} className="a-input font-mono text-xs" />
             <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -66,10 +69,11 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <div><p className="font-semibold text-slate-800">Reset demo content</p><p className="text-sm text-slate-500">Loads the 2027 demo programme (AI · Robotics · Digitization days and pre-conference workshops) and event dates. Deletes all registrations, accounts, programme, speakers and committee. Super Admin only.</p></div>
         <button className="a-btn-red">Reset demo content</button>
       </form>
-      <h2 className="mb-3 mt-10 font-display text-lg font-bold">Registration categories & fees (PKR)</h2>
+      <h2 className="mb-1 mt-10 font-display text-lg font-bold">Registration fee tiers (PKR)</h2>
+      <p className="mb-3 text-sm text-slate-500">Registration Forms 2027: participants choose their designation; the tier gives the early-bird or regular fee. Guest and volunteer categories stay inactive (they are free and approved separately).</p>
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>Order</th><th>Code</th><th>Label</th><th>Early-bird</th><th>Regular</th><th>Revenue tier</th><th>Note</th><th>Active</th><th /></tr></thead>
+          <thead><tr><th>Order</th><th>Code</th><th>Label</th><th>Designations (comma separated)</th><th>Early-bird</th><th>Regular</th><th>Note</th><th>Active</th><th /></tr></thead>
           <tbody>{[...fees, null].map((f) => {
             const id = f ? `f_${f.id}` : "f_new";
             return (
@@ -77,9 +81,10 @@ export default async function Settings({ searchParams }: { searchParams: { reset
                 <td><input form={id} name="order" type="number" defaultValue={f?.order ?? fees.length + 1} className="a-input w-16" /></td>
                 <td><input form={id} name="code" required defaultValue={f?.code ?? ""} className="a-input w-24" /></td>
                 <td><input form={id} name="label" required defaultValue={f?.label ?? ""} placeholder={f ? "" : "New category…"} className="a-input" /></td>
+                <td><textarea form={id} name="designations" rows={2} defaultValue={(f?.designations ?? []).join(", ")} className="a-input min-w-[220px] text-xs" /></td>
                 <td><input form={id} name="earlyFee" type="number" defaultValue={f?.earlyFee ?? ""} className="a-input w-24" /></td>
                 <td><input form={id} name="fee" type="number" defaultValue={f?.fee ?? ""} className="a-input w-24" /></td>
-                <td><select form={id} name="tier" defaultValue={f?.tier ?? "GENERAL"} className="a-input w-32">{Object.entries(TIER_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
+
                 <td><input form={id} name="note" defaultValue={f?.note ?? ""} className="a-input" /></td>
                 <td><input form={id} name="active" type="checkbox" defaultChecked={f?.active ?? true} /></td>
                 <td><form id={id} action={saveFee.bind(null, f?.id ?? null)}><button className="a-btn-primary py-1.5 text-xs">{f ? "Save" : "Add"}</button></form></td>

@@ -7,14 +7,15 @@ import path from "node:path";
 import { fmtDate, fmtDateTime, fmtTime, fmtTime24, pkr, appUrl } from "./utils";
 import { qrPayload } from "./qr-payload";
 
-const NAVY = rgb(0.039, 0.18, 0.43);
-const BLUE = rgb(0.082, 0.376, 0.83);
-const RED = rgb(0.82, 0.098, 0.18);
+// LNH colour codes (Nov 2026): navy #232667, red #B72025, cyan #00B8D7 → #0089BF
+const NAVY = rgb(0x23 / 255, 0x26 / 255, 0x67 / 255);
+const BLUE = rgb(0x00 / 255, 0x89 / 255, 0xbf / 255);
+const RED = rgb(0xb7 / 255, 0x20 / 255, 0x25 / 255);
 const GREY = rgb(0.36, 0.42, 0.55);
 const INK = rgb(0.04, 0.1, 0.23);
 
 async function qrPng(doc: PDFDocument, text: string) {
-  const data = await QRCode.toBuffer(text, { margin: 1, width: 300, color: { dark: "#0A2E6E", light: "#FFFFFF" } });
+  const data = await QRCode.toBuffer(text, { margin: 1, width: 300, color: { dark: "#232667", light: "#FFFFFF" } });
   return doc.embedPng(data);
 }
 function wrap(text: string, font: PDFFont, size: number, max: number) {
@@ -32,6 +33,8 @@ type RegForPdf = {
   regNo: string; accessToken: string; title: string; gender: string; firstName: string; lastName: string; email: string; phone: string;
   pmdcNo: string | null; specialty: string | null; designation: string | null; institution: string; address: string | null; city: string | null;
   conferenceFee: number; totalFee: number; earlyBird: boolean; paymentStatus: string; createdAt: Date;
+  whatsapp?: string | null; cnic?: string | null; country?: string | null; province?: string | null; qualification?: string | null; employeeId?: string | null;
+  banquetQty?: number; banquetFee?: number; regType?: string; guestRole?: string | null; guestSession?: string | null; department?: string | null; approvalStatus?: string | null;
   category: { label: string };
   items: { fee: number; session: { title: string; startsAt: Date; endsAt: Date; hall: string | null; type: string } }[];
 };
@@ -53,7 +56,8 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawText("REGISTRATION CONFIRMATION", { x: 40, y: 705, size: 10, font: b, color: RED });
   page.drawText(r.regNo, { x: 40, y: 678, size: 26, font: b, color: INK });
   page.drawText(`Registered on ${fmtDateTime(r.createdAt)}`, { x: 40, y: 660, size: 9, font: f, color: GREY });
-  const status = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED" ? "CONFIRMED" : "PAYMENT PENDING";
+  const awaiting = !!r.regType && r.regType !== "PARTICIPANT" && r.approvalStatus !== "APPROVED";
+  const status = awaiting ? "AWAITING APPROVAL" : r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED" ? "CONFIRMED" : "PAYMENT PENDING";
   page.drawRectangle({ x: 40, y: 630, width: b.widthOfTextAtSize(status, 9) + 20, height: 20, color: status === "CONFIRMED" ? rgb(0.05, 0.55, 0.3) : rgb(0.85, 0.55, 0.05) });
   page.drawText(status, { x: 50, y: 636, size: 9, font: b, color: rgb(1, 1, 1) });
 
@@ -69,17 +73,23 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   row("Name", `${r.title} ${r.firstName} ${r.lastName}`);
   row("Gender", r.gender);
   row("Email", r.email);
-  row("Contact No.", r.phone);
+  row("Cell / WhatsApp", [r.phone, r.whatsapp].filter(Boolean).join("  /  "));
+  row(r.country && r.country !== "Pakistan" ? "Passport No." : "CNIC No.", r.cnic || "-");
   row("PMDC No.", r.pmdcNo || "-");
-  row("Specialty", r.specialty || "-");
+  row("Qualification", r.qualification || "-");
   row("Designation", r.designation || "-");
-  row("Hospital / Institution", r.institution);
-  row("Address", [r.address, r.city].filter(Boolean).join(", ") || "-");
-  row("Category", r.category.label);
+  row("Organization / Institute", r.institution);
+  row("Address", [r.address, r.city, r.province, r.country].filter(Boolean).join(", ") || "-");
+  if (r.employeeId) row("LNH employee #", r.employeeId);
+  row("Category", r.regType === "GUEST" ? `Guest: ${r.guestRole ?? ""} · ${r.guestSession ?? ""}` : r.category.label);
   y -= 8;
   section("Participation & fee summary");
   page.drawText(`Conference registration${r.earlyBird ? " (early-bird)" : ""}`, { x: 40, y, size: 10, font: f, color: INK });
   page.drawText(pkr(r.conferenceFee), { x: W - 40 - b.widthOfTextAtSize(pkr(r.conferenceFee), 10), y, size: 10, font: b, color: INK }); y -= 17;
+  if (r.banquetQty) {
+    page.drawText(`Additional banquet pass x ${r.banquetQty}`, { x: 40, y, size: 10, font: f, color: INK });
+    page.drawText(pkr(r.banquetFee ?? 0), { x: W - 40 - b.widthOfTextAtSize(pkr(r.banquetFee ?? 0), 10), y, size: 10, font: b, color: INK }); y -= 17;
+  }
   for (const it of r.items) {
     const line = `${it.session.title}`;
     const lines = wrap(safe(line), f, 10, 360);
@@ -96,7 +106,40 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: rgb(0.95, 0.96, 0.99) });
   page.drawText(safe(`${ev.venue}  |  ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} - ${fmtDate(ev.endDate)}`), { x: 40, y: 42, size: 8, font: f, color: GREY });
   page.drawText(safe(`Manage your registration: ${appUrl()}/register/status`), { x: 40, y: 28, size: 8, font: f, color: GREY });
+  if (!awaiting) await idCardPage(doc, r, ev, f, b);
   return doc.save();
+}
+
+/** Participant registration ID card (4 x 6 in): check-in QR + separate QR codes for the Scientific Agenda and the e-abstract book (SC feedback). */
+async function idCardPage(doc: PDFDocument, r: RegForPdf, ev: { name: string }, f: PDFFont, b: PDFFont) {
+  const W = 288, H = 432;
+  const p = doc.addPage([W, H]);
+  p.drawRectangle({ x: 0, y: H - 92, width: W, height: 92, color: NAVY });
+  p.drawRectangle({ x: 0, y: H - 96, width: W, height: 4, color: RED });
+  const c = (t: string, y: number, size: number, font: PDFFont, color = INK) => p.drawText(t, { x: (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color });
+  c("LIAQUAT NATIONAL HOSPITAL", H - 28, 8, b, rgb(0.75, 0.82, 1));
+  c(safe(ev.name), H - 50, 14, b, rgb(1, 1, 1));
+  c("29, 30 & 31 January 2027", H - 68, 9, f, rgb(0.85, 0.9, 1));
+  const role = r.regType === "GUEST" ? (r.guestRole ?? "GUEST").replace("_", " ") : r.regType === "VOLUNTEER" ? "VOLUNTEER" : "DELEGATE";
+  const tag = role.toUpperCase();
+  const tw = b.widthOfTextAtSize(tag, 9) + 18;
+  p.drawRectangle({ x: (W - tw) / 2, y: H - 124, width: tw, height: 18, color: r.regType === "PARTICIPANT" || !r.regType ? BLUE : RED });
+  c(tag, H - 118, 9, b, rgb(1, 1, 1));
+  const name = safe(`${r.title} ${r.firstName} ${r.lastName}`);
+  const ns = b.widthOfTextAtSize(name, 18) > W - 30 ? 14 : 18;
+  c(name, H - 150, ns, b);
+  c(safe(r.institution).slice(0, 48), H - 166, 9, f, GREY);
+  c(r.regNo, H - 184, 11, b, BLUE);
+  const main = await qrPng(doc, qrPayload(r));
+  p.drawImage(main, { x: (W - 118) / 2, y: 126, width: 118, height: 118 });
+  c("Check-in", 116, 7, f, GREY);
+  const qa = await qrPng(doc, `${appUrl()}/agenda`), qb = await qrPng(doc, `${appUrl()}/abstracts/book`);
+  p.drawImage(qa, { x: 34, y: 30, width: 72, height: 72 });
+  p.drawImage(qb, { x: W - 34 - 72, y: 30, width: 72, height: 72 });
+  p.drawText("Scientific Agenda", { x: 70 - b.widthOfTextAtSize("Scientific Agenda", 7.5) / 2, y: 20, size: 7.5, font: b, color: NAVY });
+  p.drawText("e-Abstract book", { x: W - 70 - b.widthOfTextAtSize("e-Abstract book", 7.5) / 2, y: 20, size: 7.5, font: b, color: NAVY });
+  p.drawLine({ start: { x: 20, y: 110 }, end: { x: W - 20, y: 110 }, thickness: 0.4, color: rgb(0.85, 0.88, 0.94) });
+  if (r.banquetQty) c(`Banquet pass x ${r.banquetQty}`, 6, 7, b, RED);
 }
 
 export async function certificatePdf(p: { name: string; certificateNo: string; eventName: string; theme: string; dates: string; items: string[]; cme?: number }) {
@@ -140,13 +183,15 @@ export async function certificatePdf(p: { name: string; certificateNo: string; e
 }
 
 
-// ---------- Flyer template (9th LNH Symposium poster, Oct 2026) ----------
+// ---------- Flyer template (9th LNH Symposium poster; Marketing spec, 30 Oct 2026) ----------
+// DM Sans, 1080 x 1350 (social media portrait, also the base for workshop standees). Fonts are embedded in full (not subset)
+// so every text line stays editable in Acrobat / Illustrator / Canva. Colours: navy #232667, red #B72025, cyan #00B8D7 → blue #0089BF.
 const FLYER_DIR = path.join(process.cwd(), "assets", "flyer");
 let flyerAssets: Promise<Record<string, Buffer>> | null = null;
+const FLYER_FILES = ["DMSans_300Light.ttf", "DMSans_400Regular.ttf", "DMSans_500Medium.ttf", "DMSans_700Bold.ttf", "lnh-logo.png", "campus-scene.png", "symposium-title.pdf"];
 const loadFlyerAssets = () => (flyerAssets ??= (async () => {
-  const names = ["Poppins-Light.ttf", "Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-Bold.ttf", "lnh-logo.png", "campus-scene.png", "symposium-title.pdf"];
-  const files = await Promise.all(names.map((n) => readFile(path.join(FLYER_DIR, n))));
-  return Object.fromEntries(names.map((n, i) => [n, files[i]]));
+  const files = await Promise.all(FLYER_FILES.map((n) => readFile(path.join(FLYER_DIR, n))));
+  return Object.fromEntries(FLYER_FILES.map((n, i) => [n, files[i]]));
 })().catch((e) => { flyerAssets = null; throw e; }));
 
 const hex = (h: string) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
@@ -157,120 +202,157 @@ export type FlyerInput = {
   hall: string | null; building?: string | null; capacity: number | null; left: number | null; fee: number; earlyFee: number | null; cmeHours: number | null;
   leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null;
 };
+type FlyerEvent = { name: string; mainTheme: string; contactEmail: string; contactPhone: string; startDate?: Date; endDate?: Date; eventDays?: string[] };
+type Fact = [label: string, value: string, sub?: string];
+type PosterSpec = {
+  docTitle: string; tag: string; tagColor: string; meta: string; title: string; subtitle?: string | null; facts: Fact[];
+  people: { label: string; name: string; note?: string | null }[]; lines?: string[]; description?: string | null;
+  qrUrl: string; qrTitle: string; qrSub: string; footerPath: string;
+};
 
-/** A4 flyer generated from an approved workshop record, on the official 9th LNH Symposium poster design. */
-export async function workshopFlyerPdf(w: FlyerInput, ev: { name: string; mainTheme: string; contactEmail: string; contactPhone: string; startDate?: Date; endDate?: Date; eventDays?: string[] }) {
+async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
   const A = await loadFlyerAssets();
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
-  doc.setTitle(`${w.title} - flyer`); doc.setAuthor("Liaquat National Hospital"); doc.setSubject(ev.name);
-  const page = doc.addPage([595, 842]);
-  const W = 595, H = 842;
-  const [light, reg, med, bold] = await Promise.all(["Poppins-Light.ttf", "Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-Bold.ttf"].map((f) => doc.embedFont(A[f], { subset: true })));
-  const NAVYT = hex("#0A1B3D"), MUTED = hex("#4B5B76"), SKYT = hex("#0B84C6"), REDT = hex("#D2192E"), WHITE = rgb(1, 1, 1);
+  doc.setTitle(spec.docTitle); doc.setAuthor("Liaquat National Hospital"); doc.setSubject(ev.name); doc.setCreator("9th LNH Symposium portal");
+  const W = 1080, H = 1350;
+  const page = doc.addPage([W, H]);
+  const [light, reg, med, bold] = await Promise.all(["DMSans_300Light.ttf", "DMSans_400Regular.ttf", "DMSans_500Medium.ttf", "DMSans_700Bold.ttf"].map((f) => doc.embedFont(A[f], { subset: false })));
+  const NAVYT = hex("#232667"), MUTED = hex("#4B5B76"), BLUET = hex("#0089BF"), CYAN = hex("#00B8D7"), WHITE = rgb(1, 1, 1);
 
   // background: the poster's white-to-sky gradient
   const stops: [number, number[]][] = [[0, [251, 253, 252]], [0.42, [249, 251, 251]], [0.6, [238, 244, 248]], [0.82, [178, 209, 228]], [1, [151, 193, 218]]];
   const colAt = (t: number) => { let i = 0; while (i < stops.length - 2 && t > stops[i + 1][0]) i++; const [t0, c0] = stops[i], [t1, c1] = stops[i + 1]; const k = (t - t0) / (t1 - t0); return rgb(...(c0.map((c, j) => (c + (c1[j] - c) * k) / 255) as [number, number, number])); };
-  const bands = 140;
-  for (let i = 0; i < bands; i++) page.drawRectangle({ x: 0, y: H - (i + 1) * (H / bands), width: W, height: H / bands + 0.6, color: colAt(i / (bands - 1)) });
+  const bands = 160;
+  for (let i = 0; i < bands; i++) page.drawRectangle({ x: 0, y: H - (i + 1) * (H / bands), width: W, height: H / bands + 0.8, color: colAt(i / (bands - 1)) });
 
   const center = (text: string, y: number, size: number, font: PDFFont, color = NAVYT) => page.drawText(text, { x: (W - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
-  const spaced = (text: string, y: number, size: number, font: PDFFont, track: number, color = NAVYT) => {
-    const width = [...text].reduce((a, c) => a + font.widthOfTextAtSize(c, size) + track, -track);
-    let x = (W - width) / 2;
-    for (const c of text) { page.drawText(c, { x, y, size, font, color }); x += font.widthOfTextAtSize(c, size) + track; }
-  };
 
-  // header: logo, symposium title, dates, theme
+  // header: logo, symposium title (official gradient artwork), dates, theme
   const logo = await doc.embedPng(A["lnh-logo.png"]);
-  const lw = 300, lh = lw * logo.height / logo.width;
-  page.drawImage(logo, { x: (W - lw) / 2, y: H - 34 - lh, width: lw, height: lh });
+  const lw = 560, lh = lw * logo.height / logo.width, ly = H - 54 - lh;
+  page.drawImage(logo, { x: (W - lw) / 2, y: ly, width: lw, height: lh });
   const [titleArt] = await doc.embedPdf(A["symposium-title.pdf"]);
-  const tw = 296, th = tw * titleArt.height / titleArt.width;
-  page.drawPage(titleArt, { x: (W - tw) / 2, y: 700, width: tw, height: th });
+  const tw = 540, th = tw * titleArt.height / titleArt.width, ty = ly - 30 - th;
+  page.drawPage(titleArt, { x: (W - tw) / 2, y: ty, width: tw, height: th });
 
-  // "29th, 30th & 31st, January 2027" with superscript ordinals, from the event days
   const days = (ev.eventDays?.length ? ev.eventDays : ["2027-01-29", "2027-01-30", "2027-01-31"]).map((d) => new Date(`${d}T12:00:00+05:00`));
   const ord = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th");
   const parts: [string, boolean][] = [];
   days.forEach((d, i) => { const n = d.getUTCDate(); parts.push([String(n), false], [ord(n), true], [i === days.length - 1 ? ", " : i === days.length - 2 ? " & " : ", ", false]); });
   parts.push([`${fmtDate(days.at(-1)!, { month: "long" })} ${fmtDate(days.at(-1)!, { year: "numeric" })}`, false]);
-  const DS = 14, SS = 8;
+  const DS = 27, SS = 15, dy = ty - 44;
   const dw = parts.reduce((a, [t, sup]) => a + reg.widthOfTextAtSize(t, sup ? SS : DS), 0);
   let dx = (W - dw) / 2;
-  for (const [t, sup] of parts) { page.drawText(t, { x: dx, y: sup ? 678 : 672, size: sup ? SS : DS, font: reg, color: NAVYT }); dx += reg.widthOfTextAtSize(t, sup ? SS : DS); }
+  for (const [t, sup] of parts) { page.drawText(t, { x: dx, y: sup ? dy + 11 : dy, size: sup ? SS : DS, font: reg, color: NAVYT }); dx += reg.widthOfTextAtSize(t, sup ? SS : DS); }
 
   const [themeA, themeB] = ev.mainTheme.includes(":") ? ev.mainTheme.split(/:\s*/) : [ev.mainTheme, ""];
   const conv = themeB.match(/^(Convergence of)\s+(.*)$/i);
-  center(clean(conv ? `${themeA}: ${conv[1]}` : themeA + (themeB ? ":" : "")), 646, 11.5, light);
-  spaced(clean(conv ? conv[2] : themeB).toUpperCase(), 628, 12, med, 1.2);
+  center(clean(conv ? `${themeA}: ${conv[1]}` : themeA + (themeB ? ":" : "")), dy - 44, 21, light);
+  const caps = clean(conv ? conv[2] : themeB).toUpperCase();
+  const capsSize = 22, track = 2.2, capsW = [...caps].reduce((a, c) => a + med.widthOfTextAtSize(c, capsSize) + track, -track);
+  let cxs = (W - capsW) / 2;
+  for (const c of caps) { page.drawText(c, { x: cxs, y: dy - 78, size: capsSize, font: med, color: NAVYT }); cxs += med.widthOfTextAtSize(c, capsSize) + track; }
 
-  // workshop card
-  const cx = 38, cw = W - 76, cTop = 604, cBot = 300;
-  const r = 16;
-  const card = `M ${r} 0 H ${cw - r} Q ${cw} 0 ${cw} ${r} V ${cTop - cBot - r} Q ${cw} ${cTop - cBot} ${cw - r} ${cTop - cBot} H ${r} Q 0 ${cTop - cBot} 0 ${cTop - cBot - r} V ${r} Q 0 0 ${r} 0 Z`;
-  page.drawSvgPath(card, { x: cx, y: cTop, color: WHITE, opacity: 0.9, borderColor: hex("#BCD6EA"), borderWidth: 0.8 });
+  // campus scene (building, robotics and digital health) as on the poster, behind the card's lower edge
+  const scene = await doc.embedPng(A["campus-scene.png"]);
+  const sw = 860, sh = sw * scene.height / scene.width;
+  page.drawImage(scene, { x: (W - sw) / 2 + 10, y: 44, width: sw, height: sh });
 
-  let y = cTop - 30;
-  const tag = "PRE-SYMPOSIUM WORKSHOP";
-  const tagW = bold.widthOfTextAtSize(tag, 7.5) + 18;
-  page.drawSvgPath(`M 9 0 H ${tagW - 9} Q ${tagW} 0 ${tagW} 9 Q ${tagW} 18 ${tagW - 9} 18 H 9 Q 0 18 0 9 Q 0 0 9 0 Z`, { x: cx + 22, y: y + 13, color: REDT });
-  page.drawText(tag, { x: cx + 31, y: y + 1, size: 7.5, font: bold, color: WHITE });
-  const meta = clean([w.department, w.format, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "));
-  page.drawText(meta.toUpperCase(), { x: cx + 22 + tagW + 10, y: y + 1, size: 7.5, font: med, color: SKYT });
+  // card
+  const cx = 60, cw = W - 120, cTop = dy - 112, cBot = 44 + sh - 30, r = 26;
+  const chh = cTop - cBot;
+  page.drawSvgPath(`M ${r} 0 H ${cw - r} Q ${cw} 0 ${cw} ${r} V ${chh - r} Q ${cw} ${chh} ${cw - r} ${chh} H ${r} Q 0 ${chh} 0 ${chh - r} V ${r} Q 0 0 ${r} 0 Z`,
+    { x: cx, y: cTop, color: WHITE, opacity: 0.93, borderColor: hex("#BCD6EA"), borderWidth: 1.2 });
 
-  const L = cx + 22, colW = 330;
-  y -= 30;
-  for (const line of wrap(clean(w.title), bold, 19, colW).slice(0, 3)) { page.drawText(line, { x: L, y, size: 19, font: bold, color: NAVYT }); y -= 23; }
-  if (w.themeLabel) { page.drawText(clean(w.themeLabel), { x: L, y: y + 4, size: 8, font: med, color: SKYT }); y -= 12; }
+  let y = cTop - 52;
+  const tagW = bold.widthOfTextAtSize(spec.tag, 14) + 34;
+  page.drawSvgPath(`M 16 0 H ${tagW - 16} Q ${tagW} 0 ${tagW} 16 Q ${tagW} 32 ${tagW - 16} 32 H 16 Q 0 32 0 16 Q 0 0 16 0 Z`, { x: cx + 40, y: y + 23, color: hex(spec.tagColor) });
+  page.drawText(spec.tag, { x: cx + 57, y: y + 2, size: 14, font: bold, color: WHITE });
+  page.drawText(clean(spec.meta).toUpperCase().slice(0, 60), { x: cx + 40 + tagW + 16, y: y + 2, size: 13.5, font: med, color: BLUET });
 
-  // facts: 2 rows x 3 columns
-  y -= 12;
-  const fact = (x: number, fy: number, label: string, value: string, sub?: string) => {
-    page.drawText(label.toUpperCase(), { x, y: fy, size: 6.8, font: med, color: SKYT });
-    page.drawText(clean(value).slice(0, 30), { x, y: fy - 14, size: 10.5, font: bold, color: NAVYT });
-    if (sub) page.drawText(clean(sub).slice(0, 38), { x, y: fy - 25, size: 7, font: reg, color: MUTED });
+  const L = cx + 40, colW = 600, qrW = 250;
+  y -= 56;
+  for (const line of wrap(clean(spec.title), bold, 40, colW).slice(0, 3)) { page.drawText(line, { x: L, y, size: 40, font: bold, color: NAVYT }); y -= 46; }
+  if (spec.subtitle) { page.drawText(clean(spec.subtitle).slice(0, 70), { x: L, y: y + 8, size: 15, font: med, color: BLUET }); y -= 22; }
+
+  // facts: up to 2 rows x 3 columns
+  y -= 18;
+  const fact = (x: number, fy: number, [label, value, sub]: Fact) => {
+    page.drawText(label.toUpperCase(), { x, y: fy, size: 12.5, font: med, color: BLUET });
+    page.drawText(clean(value).slice(0, 26), { x, y: fy - 26, size: 20, font: bold, color: NAVYT });
+    if (sub) page.drawText(clean(sub).slice(0, 34), { x, y: fy - 46, size: 13, font: reg, color: MUTED });
   };
-  fact(L, y, "Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }));
-  fact(L + 115, y, "Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time");
-  fact(L + 225, y, "Venue", w.hall ?? "-", w.building ?? undefined);
-  y -= 42;
-  fact(L, y, "CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-");
-  fact(L + 115, y, "Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined);
-  fact(L + 225, y, "Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined);
-  y -= 44;
-  page.drawLine({ start: { x: L, y: y + 12 }, end: { x: L + colW, y: y + 12 }, thickness: 0.5, color: hex("#D5E3EF") });
-  if (w.leadFaculty) {
-    page.drawText("LEAD FACULTY", { x: L, y, size: 6.8, font: med, color: SKYT }); y -= 14;
-    page.drawText(clean(w.leadFaculty).slice(0, 48), { x: L, y, size: 11, font: bold, color: NAVYT });
-    if (w.facultyDegrees) page.drawText(clean(w.facultyDegrees).slice(0, 40), { x: L + bold.widthOfTextAtSize(clean(w.leadFaculty).slice(0, 48), 11) + 6, y: y + 0.5, size: 8, font: reg, color: MUTED });
-    y -= 16;
+  spec.facts.slice(0, 6).forEach((f, i) => fact(L + (i % 3) * 205, y - Math.floor(i / 3) * 78, f));
+  y -= spec.facts.length > 3 ? 160 : 82;
+  page.drawLine({ start: { x: L, y: y + 20 }, end: { x: L + colW, y: y + 20 }, thickness: 1, color: hex("#D5E3EF") });
+
+  for (const p of spec.people) {
+    if (y < cBot + 70) break;
+    page.drawText(p.label.toUpperCase(), { x: L, y, size: 12.5, font: med, color: BLUET });
+    page.drawText(clean(p.name).slice(0, 44), { x: L + 170, y, size: 18, font: bold, color: NAVYT });
+    if (p.note) page.drawText(clean(p.note).slice(0, 40), { x: L + 170 + bold.widthOfTextAtSize(clean(p.name).slice(0, 44), 18) + 10, y: y + 1, size: 13, font: reg, color: MUTED });
+    y -= 30;
   }
-  if (w.description) {
-    const maxLines = Math.max(0, Math.floor((y - (cBot + 14)) / 11));
-    const lines = wrap(clean(w.description), reg, 8.2, colW);
-    lines.slice(0, maxLines).forEach((line, i) => page.drawText(i === maxLines - 1 && lines.length > maxLines ? line.replace(/\s*\S*$/, " ...") : line, { x: L, y: y - i * 11, size: 8.2, font: reg, color: MUTED }));
-  }
+  const extra = [...(spec.lines ?? []), ...(spec.description ? wrap(clean(spec.description), reg, 15, colW) : [])];
+  const maxLines = Math.max(0, Math.floor((y - (cBot + 30)) / 21));
+  extra.slice(0, maxLines).forEach((line, i) => page.drawText(i === maxLines - 1 && extra.length > maxLines ? line.replace(/\s*\S*$/, " ...") : line, { x: L, y: y - 4 - i * 21, size: 15, font: reg, color: MUTED }));
 
   // QR panel
-  const url = `${appUrl()}/workshops#${w.slug}`;
-  const qr = await qrPng(doc, url);
-  const qx = cx + cw - 22 - 130, qy = cTop - 214;
-  page.drawSvgPath(`M 12 0 H 118 Q 130 0 130 12 V 152 Q 130 164 118 164 H 12 Q 0 164 0 152 V 12 Q 0 0 12 0 Z`, { x: qx, y: qy + 164, color: hex("#EEF5FB"), borderColor: hex("#BCD6EA"), borderWidth: 0.6 });
-  page.drawImage(qr, { x: qx + 15, y: qy + 34, width: 100, height: 100 });
-  const scan = "SCAN TO REGISTER";
-  page.drawText(scan, { x: qx + 65 - bold.widthOfTextAtSize(scan, 7.5) / 2, y: qy + 18, size: 7.5, font: bold, color: NAVYT });
-  const reg2 = "Limited seats";
-  page.drawText(reg2, { x: qx + 65 - reg.widthOfTextAtSize(reg2, 7) / 2, y: qy + 8, size: 7, font: reg, color: MUTED });
-
-  // campus scene (building, robotics and digital health) as on the poster
-  const scene = await doc.embedPng(A["campus-scene.png"]);
-  const sw = 520, sh = sw * scene.height / scene.width;
-  page.drawImage(scene, { x: (W - sw) / 2 + 6, y: 46, width: sw, height: sh });
+  const qr = await qrPng(doc, spec.qrUrl);
+  const qx = cx + cw - 40 - qrW, qh = 300, qy = cTop - 70 - qh;
+  page.drawSvgPath(`M 22 0 H ${qrW - 22} Q ${qrW} 0 ${qrW} 22 V ${qh - 22} Q ${qrW} ${qh} ${qrW - 22} ${qh} H 22 Q 0 ${qh} 0 ${qh - 22} V 22 Q 0 0 22 0 Z`, { x: qx, y: qy + qh, color: hex("#EEF5FB"), borderColor: hex("#BCD6EA"), borderWidth: 1 });
+  page.drawImage(qr, { x: qx + 30, y: qy + 68, width: qrW - 60, height: qrW - 60 });
+  page.drawText(spec.qrTitle, { x: qx + qrW / 2 - bold.widthOfTextAtSize(spec.qrTitle, 14) / 2, y: qy + 38, size: 14, font: bold, color: NAVYT });
+  page.drawText(spec.qrSub, { x: qx + qrW / 2 - reg.widthOfTextAtSize(spec.qrSub, 12.5) / 2, y: qy + 18, size: 12.5, font: reg, color: MUTED });
+  page.drawRectangle({ x: qx + 30, y: qy - 14, width: qrW - 60, height: 4, color: CYAN });
 
   // footer line
-  const foot = clean(`${ev.contactEmail}   |   ${ev.contactPhone}   |   ${appUrl().replace(/^https?:\/\//, "")}/workshops`);
-  center(foot, 22, 8, med, NAVYT);
+  center(clean(`${ev.contactEmail}   |   ${ev.contactPhone}   |   ${appUrl().replace(/^https?:\/\//, "")}${spec.footerPath}`), 16, 15, med, NAVYT);
   return doc.save();
+}
+
+/** Flyer generated from an approved workshop record on the official 9th LNH Symposium poster design (1080 x 1350, DM Sans). */
+export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
+  return posterFlyer({
+    docTitle: `${w.title} - flyer`, tag: "PRE-SYMPOSIUM WORKSHOP", tagColor: "#B72025",
+    meta: [w.department, w.format, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "),
+    title: w.title, subtitle: w.themeLabel,
+    facts: [
+      ["Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
+      ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time"],
+      ["Venue", w.hall ?? "-", w.building ?? undefined],
+      ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
+      ["Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined],
+      ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
+    ],
+    people: w.leadFaculty ? [{ label: "Lead faculty", name: w.leadFaculty, note: w.facultyDegrees }] : [],
+    description: w.description,
+    qrUrl: `${appUrl()}/workshops#${w.slug}`, qrTitle: "SCAN TO REGISTER", qrSub: "Limited seats", footerPath: "/workshops",
+  }, ev);
+}
+
+export type SessionFlyerInput = {
+  slug: string; title: string; department: string | null; formatLabel: string | null; startsAt: Date; endsAt: Date; hall: string | null; building?: string | null;
+  expectedAudience: number | null; people: { role: string; name: string; topic?: string | null; designation?: string | null }[];
+};
+
+/** Scientific session flyer (SC feedback, 29 Oct 2026): generated from the approved session content, then approved by the HOD and locked. */
+export async function sessionFlyerPdf(x: SessionFlyerInput, ev: FlyerEvent) {
+  const one = (r: string) => x.people.find((p) => p.role === r);
+  const lead = [["CHAIR", "Chairperson"], ["CO_CHAIR", "Co-Chairperson"], ["MODERATOR", "Moderator"]].map(([r, l]) => ({ p: one(r), l })).filter((z) => z.p)
+    .map(({ p, l }) => ({ label: l, name: p!.name, note: p!.designation }));
+  const talks = x.people.filter((p) => ["KEYNOTE", "SPEAKER", "PANELIST", "PRESENTER"].includes(p.role))
+    .map((p) => `${p.role === "KEYNOTE" ? "Keynote: " : p.role === "PANELIST" ? "Panelist: " : ""}${p.name}${p.topic ? ` - ${p.topic}` : ""}`);
+  return posterFlyer({
+    docTitle: `${x.title} - session flyer`, tag: "SCIENTIFIC SESSION", tagColor: "#232667",
+    meta: [x.department, x.formatLabel].filter(Boolean).join("  ·  "), title: x.title,
+    facts: [
+      ["Date", fmtDate(x.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
+      ["Time", `${fmtTime24(x.startsAt)} - ${fmtTime24(x.endsAt)}`, "Pakistan time"],
+      ["Venue", x.hall ?? "To be announced", x.building ?? undefined],
+    ],
+    people: lead, lines: talks,
+    qrUrl: `${appUrl()}/agenda`, qrTitle: "SCAN FOR THE AGENDA", qrSub: "Scientific programme", footerPath: "/agenda",
+  }, ev);
 }

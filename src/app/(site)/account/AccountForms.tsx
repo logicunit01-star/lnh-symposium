@@ -4,7 +4,8 @@ import { Check, Eye, EyeOff, X } from "lucide-react";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
 import { OtpVerify } from "@/components/ui/OtpVerify";
-import { cn, TITLES, SPECIALTIES } from "@/lib/utils";
+import { cn, TITLES, SPECIALTIES, COUNTRIES } from "@/lib/utils";
+import { PROVINCES, maskCnic } from "@/lib/reg-fields";
 
 const RULES: [string, (p: string) => boolean][] = [
   ["8+ characters", (p) => p.length >= 8], ["Uppercase letter", (p) => /[A-Z]/.test(p)], ["Number", (p) => /[0-9]/.test(p)], ["Special character", (p) => /[^A-Za-z0-9]/.test(p)],
@@ -17,7 +18,7 @@ export function AccountForms({ next, initialMode }: { next: string; initialMode:
     <div className="hud overflow-hidden">
       <div className="grid grid-cols-2 border-b border-white/10">
         {(["signin", "signup"] as const).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={cn("py-4 text-sm font-semibold uppercase tracking-wider transition", mode === m ? "bg-white/5 text-white shadow-[inset_0_-2px_0_#D2192E]" : "text-slate-500 hover:text-white")}>
+          <button key={m} onClick={() => setMode(m)} className={cn("py-4 text-sm font-semibold uppercase tracking-wider transition", mode === m ? "bg-white/5 text-white shadow-[inset_0_-2px_0_#B72025]" : "text-slate-500 hover:text-white")}>
             {m === "signin" ? "Sign in" : "Create account"}
           </button>
         ))}
@@ -49,9 +50,10 @@ function SignIn({ next, onSwitch }: { next: string; onSwitch: () => void }) {
 
 function SignUp({ next }: { next: string }) {
   const { submit, loading, error, fields } = useSubmit("/api/account/signup");
-  const [f, setF] = useState<Record<string, string>>({ title: "Dr.", gender: "" });
+  const [f, setF] = useState<Record<string, string>>({ title: "Dr.", gender: "", country: "Pakistan" });
+  const pk = (f.country || "Pakistan") === "Pakistan";
   const [show, setShow] = useState(false);
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((p) => ({ ...p, [k]: k === "phone" ? maskPhone(e.target.value) : e.target.value }));
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((p) => ({ ...p, [k]: k === "phone" || k === "whatsapp" ? maskPhone(e.target.value) : k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? maskCnic(e.target.value) : e.target.value }));
   const [otp, setOtp] = useState<{ otpId: string; sentTo: { email: string; phone: string }; demoCode?: string } | null>(null);
   const pw = f.password ?? "";
   const ok = RULES.every(([, t]) => t(pw));
@@ -74,14 +76,21 @@ function SignUp({ next }: { next: string }) {
       <Field label="Last name" name="lastName" required error={fields.lastName}><input id="lastName" maxLength={50} autoComplete="family-name" className="input" value={f.lastName ?? ""} onChange={set("lastName")} /></Field>
       <Field label="Email address (your username)" name="email" required error={fields.email}><input id="email" type="email" autoComplete="email" className="input" value={f.email ?? ""} onChange={set("email")} /></Field>
       <Field label="Contact no." name="phone" required error={fields.phone} hint="03XX-XXXXXXX"><input id="phone" inputMode="numeric" autoComplete="tel" placeholder="03XX-XXXXXXX" className="input mono" value={f.phone ?? ""} onChange={set("phone")} /></Field>
-      <Field label="PMDC no." name="pmdcNo" hint="Optional" error={fields.pmdcNo}><input id="pmdcNo" className="input" value={f.pmdcNo ?? ""} onChange={set("pmdcNo")} /></Field>
+      <Field label="PMDC no." name="pmdcNo" hint="Medical doctors only" error={fields.pmdcNo}><input id="pmdcNo" className="input" value={f.pmdcNo ?? ""} onChange={set("pmdcNo")} /></Field>
       <Field label="Specialty" name="specialty" hint="Start typing to see suggestions" error={fields.specialty}>
         <input id="specialty" list="specialties" className="input" value={f.specialty ?? ""} onChange={set("specialty")} />
         <datalist id="specialties">{SPECIALTIES.map((s) => <option key={s} value={s} />)}</datalist>
       </Field>
       <Field label="Designation" name="designation" hint="Optional" error={fields.designation}><input id="designation" className="input" value={f.designation ?? ""} onChange={set("designation")} /></Field>
       <Field label="Hospital / institution" name="institution" required error={fields.institution}><input id="institution" className="input" value={f.institution ?? ""} onChange={set("institution")} /></Field>
-      <Field label="Address" name="address" hint="Optional" error={fields.address} className="sm:col-span-2"><textarea id="address" rows={2} autoComplete="street-address" className="input" value={f.address ?? ""} onChange={set("address")} /></Field>
+      <Field label="WhatsApp no." name="whatsapp" hint="Optional" error={fields.whatsapp}><input id="whatsapp" inputMode="numeric" placeholder="03XX-XXXXXXX" className="input mono" value={f.whatsapp ?? ""} onChange={set("whatsapp")} /></Field>
+      <Field label={pk ? "CNIC no." : "Passport no."} name="cnic" required error={fields.cnic}><input id="cnic" inputMode={pk ? "numeric" : "text"} placeholder={pk ? "12345-1234567-1" : ""} className="input mono" value={f.cnic ?? ""} onChange={set("cnic")} /></Field>
+      <Field label="Address" name="address" required error={fields.address} className="sm:col-span-2"><textarea id="address" rows={2} autoComplete="street-address" className="input" value={f.address ?? ""} onChange={set("address")} /></Field>
+      <Field label="Country" name="country" error={fields.country}><select id="country" className="input" value={f.country} onChange={set("country")}>{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
+      <Field label="Province" name="province" error={fields.province}>{pk ? <select id="province" className="input" value={f.province ?? ""} onChange={set("province")}><option value="">Choose…</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select> : <input id="province" className="input" value={f.province ?? ""} onChange={set("province")} />}</Field>
+      <Field label="City" name="city" required error={fields.city}><input id="city" className="input" value={f.city ?? ""} onChange={set("city")} /></Field>
+      <Field label="Highest academic qualification" name="qualification" hint="Optional" error={fields.qualification}><input id="qualification" className="input" placeholder="e.g. MBBS, FCPS" value={f.qualification ?? ""} onChange={set("qualification")} /></Field>
+      <Field label="Employee # (LNH staff only)" name="employeeNo" hint="Optional" error={fields.employeeNo}><input id="employeeNo" className="input mono" value={f.employeeNo ?? ""} onChange={set("employeeNo")} /></Field>
       <Field label="Password" name="password" required error={fields.password}>
         <div className="relative"><input id="password" type={show ? "text" : "password"} autoComplete="new-password" className="input pr-12" value={pw} onChange={set("password")} />
           <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-label={show ? "Hide password" : "Show password"}>{show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>

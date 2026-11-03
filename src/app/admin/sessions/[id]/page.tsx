@@ -20,7 +20,7 @@ export default async function SessionDash({ params }: { params: { id: string } }
   const paid = active.filter((i) => i.registration.paymentStatus !== "PENDING");
   const attended = items.filter((i) => i.attendedAt).length;
   const fbUrl = `${appUrl()}/feedback/${x.slug}`;
-  const qr = await QRCode.toDataURL(fbUrl, { margin: 1, width: 480, color: { dark: "#0A2E6E", light: "#ffffff" } });
+  const qr = await QRCode.toDataURL(fbUrl, { margin: 1, width: 480, color: { dark: "#232667", light: "#ffffff" } });
   const stats = await feedbackStats(x.id);
   return (
     <>

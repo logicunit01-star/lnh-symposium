@@ -2,25 +2,30 @@
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { onsiteRegister, type DeskResult } from "@/app/admin/onsite/actions";
-import { cn, pkr } from "@/lib/utils";
+import { cn, pkr, COUNTRIES } from "@/lib/utils";
+import { PROVINCES, maskCnic } from "@/lib/reg-fields";
 
-type Cat = { id: number; label: string; fee: number; tier: string };
+type Cat = { id: number; label: string; fee: number; tier: string; designations: string[] };
 type Item = { id: string; title: string; when: string; fee: number; left: number | null; kind: string };
 const TITLES = ["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms."];
 const maskPhone = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 11); return d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d; };
 
 function Go() { const { pending } = useFormStatus(); return <button disabled={pending} className="a-btn-red w-full py-3 text-base">{pending ? "Registering…" : "Register and issue pass"}</button>; }
 
-export function OnsiteForm({ cats, items, procPct }: { cats: Cat[]; items: Item[]; procPct: number }) {
+export function OnsiteForm({ cats, items, procPct, banquet }: { cats: Cat[]; items: Item[]; procPct: number; banquet: { fee: number; max: number } }) {
   const [state, action] = useFormState<DeskResult, FormData>(onsiteRegister, null);
-  const emp = cats.find((c) => c.tier === "EMPLOYEE") ?? cats[0];
-  const [catId, setCatId] = useState(emp?.id);
+  const [designation, setDesignation] = useState("Hospital Staff");
+  const catId = cats.find((c) => c.designations.includes(designation))?.id;
+  const [staff, setStaff] = useState(true);
+  const [banq, setBanq] = useState(0);
+  const [cnic, setCnic] = useState("");
+  const [country, setCountry] = useState("Pakistan");
   const [pass, setPass] = useState(true);
   const [sel, setSel] = useState<string[]>([]);
   const [phone, setPhone] = useState("");
   const [pay, setPay] = useState("CASH");
   const cat = cats.find((c) => c.id === catId);
-  const sub = (pass ? cat?.fee ?? 0 : 0) + items.filter((i) => sel.includes(i.id)).reduce((a, i) => a + i.fee, 0);
+  const sub = (pass ? cat?.fee ?? 0 : 0) + banq * banquet.fee + items.filter((i) => sel.includes(i.id)).reduce((a, i) => a + i.fee, 0);
   const total = sub + Math.round((sub * (procPct || 0)) / 100);
   const fe = state?.fields ?? {};
   const err = (k: string) => fe[k] && <p className="mt-1 text-xs text-rose-600">{fe[k]}</p>;
@@ -38,18 +43,27 @@ export function OnsiteForm({ cats, items, procPct }: { cats: Cat[]; items: Item[
           <div className="sm:col-span-2"><label className="a-label">Last name</label><input name="lastName" required maxLength={50} className="a-input" />{err("lastName")}</div>
           <div className="sm:col-span-3"><label className="a-label">Email</label><input name="email" type="email" required className="a-input" />{err("email")}</div>
           <div className="sm:col-span-3"><label className="a-label">Mobile</label><input name="phone" required inputMode="numeric" placeholder="03XX-XXXXXXX" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} className="a-input font-mono" />{err("phone")}</div>
-          <div className="sm:col-span-2"><label className="a-label">LNH employee ID {cat?.tier === "EMPLOYEE" && <span className="text-rose-600">*</span>}</label><input name="employeeId" className="a-input font-mono" placeholder="e.g. 10452" />{err("employeeId")}</div>
+          <div className="sm:col-span-2"><label className="a-label">WhatsApp no.</label><input name="whatsapp" inputMode="numeric" placeholder="03XX-XXXXXXX" className="a-input font-mono" />{err("whatsapp")}</div>
+          <div className="sm:col-span-2"><label className="a-label">Country</label><select name="country" value={country} onChange={(e) => setCountry(e.target.value)} className="a-input">{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></div>
+          <div className="sm:col-span-2"><label className="a-label">{country === "Pakistan" ? "CNIC no." : "Passport no."} *</label><input name="cnic" required value={cnic} onChange={(e) => setCnic(country === "Pakistan" ? maskCnic(e.target.value) : e.target.value)} placeholder={country === "Pakistan" ? "12345-1234567-1" : ""} className="a-input font-mono" />{err("cnic")}</div>
+          <div className="sm:col-span-6"><label className="a-label">Address *</label><input name="address" required className="a-input" />{err("address")}</div>
+          <div className="sm:col-span-2"><label className="a-label">Province</label><select name="province" defaultValue="Sindh" className="a-input"><option value="">—</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select></div>
+          <div className="sm:col-span-2"><label className="a-label">City *</label><input name="city" required defaultValue="Karachi" className="a-input" />{err("city")}</div>
+          <div className="sm:col-span-2"><label className="a-label">Highest academic qualification</label><input name="qualification" className="a-input" /></div>
+          <div className="sm:col-span-3"><label className="a-label">PMDC no. (medical doctors only)</label><input name="pmdcNo" className="a-input" /></div>
+          <div className="sm:col-span-3"><label className="a-label">Organization / institute</label><input name="institution" defaultValue="Liaquat National Hospital" className="a-input" /></div>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="lnhStaff" checked={staff} onChange={(e) => setStaff(e.target.checked)} />LNH staff</label>
+          <div className="sm:col-span-2"><label className="a-label">Employee # {staff && <span className="text-rose-600">*</span>}</label><input name="employeeId" className="a-input font-mono" placeholder="e.g. 10452" />{err("employeeId")}</div>
           <div className="sm:col-span-2"><label className="a-label">Department</label><input name="department" className="a-input" /></div>
-          <div className="sm:col-span-2"><label className="a-label">Designation</label><input name="designation" className="a-input" /></div>
-          <div className="sm:col-span-3"><label className="a-label">PMDC no. (optional)</label><input name="pmdcNo" className="a-input" /></div>
-          <div className="sm:col-span-3"><label className="a-label">Institution</label><input name="institution" defaultValue="Liaquat National Hospital" className="a-input" /></div>
         </section>
 
         <section className="a-card p-5">
           <div className="flex flex-wrap items-end gap-4">
-            <div className="min-w-[240px] flex-1"><label className="a-label">Registration category</label>
-              <select name="categoryId" value={catId} onChange={(e) => setCatId(Number(e.target.value))} className="a-input">{cats.map((c) => <option key={c.id} value={c.id}>{c.label} — {pkr(c.fee)}</option>)}</select></div>
-            <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="includePass" checked={pass} onChange={(e) => setPass(e.target.checked)} />Symposium pass</label>
+            <div className="min-w-[240px] flex-1"><label className="a-label">Designation (fee tier)</label>
+              <input type="hidden" name="categoryId" value={catId ?? ""} />
+              <select name="designation" value={designation} onChange={(e) => setDesignation(e.target.value)} className="a-input">{cats.map((c) => <optgroup key={c.id} label={pkr(c.fee)}>{c.designations.map((d) => <option key={d}>{d}</option>)}</optgroup>)}</select>{err("designation")}</div>
+            <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="includePass" checked={pass} onChange={(e) => setPass(e.target.checked)} />Symposium pass {cat && `(${pkr(cat.fee)})`}</label>
+            <div><label className="a-label">Banquet passes ({pkr(banquet.fee)} each)</label><select name="banquetQty" value={banq} onChange={(e) => setBanq(Number(e.target.value))} className="a-input w-28">{Array.from({ length: banquet.max + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n === 0 ? "No" : n}</option>)}</select></div>
           </div>
           {groups.map(([k, label]) => {
             const list = items.filter((i) => (k === "WORKSHOP") === (i.kind === "WORKSHOP"));

@@ -41,6 +41,7 @@ export default async function Invitations({ searchParams }: { searchParams: { st
               <td className="whitespace-nowrap text-xs text-slate-500">{i.respondedAt ? fmtDateTime(i.respondedAt) : "—"}</td>
               <td className="whitespace-nowrap text-right text-xs">
                 {i.status !== "WITHDRAWN" && <form action={resendOne.bind(null, i.kind, i.id)} className="inline"><button className="font-semibold text-lnh-blue hover:underline">{i.status === "NOT_SENT" ? "Send" : "Resend"}</button></form>}
+                {i.token && i.status !== "WITHDRAWN" && <a href={`/invite/${i.token}`} target="_blank" title="Response page (share by WhatsApp if email is not set up)" className="ml-2 text-slate-500 hover:underline">Link</a>}
                 {i.status !== "WITHDRAWN" && <form action={withdraw.bind(null, i.kind, i.id)} className="ml-2 inline"><button className="text-slate-500 hover:underline">Withdraw</button></form>}
               </td>
             </tr>

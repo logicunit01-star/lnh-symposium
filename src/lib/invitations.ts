@@ -2,50 +2,48 @@ import "server-only";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { getEvent } from "./event";
-import { sendEmail, emailLayout } from "./notify";
+import { sendTemplate } from "./email";
 import { appUrl, randomToken } from "./utils";
-import { PEOPLE_ROLES, slotLabel } from "./scientific";
+import { INVITE_LABEL, PEOPLE_ROLES, slotLabel } from "./scientific";
 import { slotOf } from "./programme";
 
 export type Invite = {
-  kind: "PERSON" | "POSTER"; id: string; name: string; email: string | null; role: string; status: string; reminders: number;
+  kind: "PERSON" | "POSTER"; id: string; name: string; email: string | null; role: string; roleKey: string; status: string; reminders: number;
   invitedAt: Date | null; respondedAt: Date | null; session: string | null; when: string | null; venue: string | null; topic: string | null; token: string | null; note?: string | null;
+  date?: string | null; time?: string | null; department?: string | null; abstractRef?: string | null;
 };
 
 /** Everyone who should receive an invitation: people on approved, scheduled sessions + accepted posters. */
 export async function allInvites(): Promise<Invite[]> {
   const ev = await getEvent();
-  const people = await db.select({ p: s.sessionPeople, title: s.sessions.title, slotKey: s.sessions.slotKey, venue: s.sessions.hall })
-    .from(s.sessionPeople).innerJoin(s.sessions, eq(s.sessions.id, s.sessionPeople.sessionId))
+  const people = await db.select({ p: s.sessionPeople, title: s.sessions.title, slotKey: s.sessions.slotKey, venue: s.sessions.hall, department: s.sessions.department, ref: s.abstracts.refNo })
+    .from(s.sessionPeople).innerJoin(s.sessions, eq(s.sessions.id, s.sessionPeople.sessionId)).leftJoin(s.abstracts, eq(s.abstracts.id, s.sessionPeople.abstractId))
     .where(and(eq(s.sessions.status, "APPROVED"), eq(s.sessions.proposal, true), isNotNull(s.sessions.slotKey)));
   const posters = await db.select({ a: s.abstracts, venue: s.venues.name }).from(s.abstracts).leftJoin(s.venues, eq(s.venues.id, s.abstracts.venueId))
     .where(and(eq(s.abstracts.status, "ACCEPTED"), eq(s.abstracts.acceptedAs, "POSTER")));
   return [
-    ...people.map(({ p, title, slotKey, venue }) => {
+    ...people.map(({ p, title, slotKey, venue, department, ref }) => {
       const sl = slotOf(ev.sessionSlots, slotKey);
-      return { kind: "PERSON" as const, id: p.id, name: p.name, email: p.email, role: PEOPLE_ROLES[p.role] ?? p.role, status: p.inviteStatus, reminders: p.reminders, invitedAt: p.invitedAt, respondedAt: p.respondedAt,
-        session: title, when: sl ? `${slotLabel(sl)}${p.timeSlot ? ` (your slot ${p.timeSlot})` : ""}` : null, venue, topic: p.topic, token: p.inviteToken, note: p.responseNote };
+      return { kind: "PERSON" as const, id: p.id, name: p.name, email: p.email, role: PEOPLE_ROLES[p.role] ?? p.role, roleKey: p.role, status: p.inviteStatus, reminders: p.reminders, invitedAt: p.invitedAt, respondedAt: p.respondedAt,
+        session: title, when: sl ? `${slotLabel(sl)}${p.timeSlot ? ` (your slot ${p.timeSlot})` : ""}` : null, venue, topic: p.topic, token: p.inviteToken, note: p.responseNote,
+        date: sl ? slotLabel(sl).split(" · ")[0] : null, time: sl ? `${sl.start}–${sl.end}${p.timeSlot ? ` (your slot ${p.timeSlot})` : ""}` : null, department, abstractRef: ref };
     }),
-    ...posters.map(({ a, venue }) => ({ kind: "POSTER" as const, id: a.id, name: a.presentingAuthor, email: a.email, role: "Poster presenter", status: a.inviteStatus, reminders: a.reminders, invitedAt: a.invitedAt, respondedAt: a.respondedAt,
-      session: "Poster presentation", when: a.placement || "Poster display and judging: see the released programme", venue: venue ?? "Exhibition Hall (Convention Center)", topic: `${a.refNo}: ${a.abstractTitle}`, token: a.inviteToken })),
+    ...posters.map(({ a, venue }) => ({ kind: "POSTER" as const, id: a.id, name: a.presentingAuthor, email: a.email, role: "Poster presenter", roleKey: "POSTER", status: a.inviteStatus, reminders: a.reminders, invitedAt: a.invitedAt, respondedAt: a.respondedAt,
+      session: "Poster presentation", when: a.placement || "Poster display and judging: see the released programme", venue: venue ?? "Exhibition Hall (Convention Center)", topic: a.abstractTitle, token: a.inviteToken,
+      date: a.placement || "See the released programme", time: null, department: a.specialty, abstractRef: a.refNo })),
   ];
 }
 
+/** Chairs, co-chairs and moderators get the chair template; speakers, panelists and abstract presenters the speaker template. */
+export const CHAIR_ROLES = ["CHAIR", "CO_CHAIR", "MODERATOR"];
+
 async function mail(i: Invite, token: string, reminder: boolean) {
-  const ev = await getEvent();
-  const url = `${appUrl()}/invite/${token}`;
-  const subject = `${reminder ? "Reminder: " : ""}${ev.name}: invitation as ${i.role}${i.session && i.kind === "PERSON" ? ` · ${i.session}` : ""}`;
-  const html = emailLayout(reminder ? "A reminder about your invitation" : "Invitation", `
-    <p>Dear ${i.name},</p>
-    <p>On behalf of the Scientific Committee, we are pleased to invite you as <b>${i.role}</b> at the ${ev.name}.</p>
-    <table style="font-size:14px;border-collapse:collapse">
-      ${i.session ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6b8c">Session</td><td><b>${i.session}</b></td></tr>` : ""}
-      ${i.topic ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6b8c">Topic</td><td>${i.topic}</td></tr>` : ""}
-      ${i.when ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6b8c">Date and time</td><td>${i.when}</td></tr>` : ""}
-      ${i.venue ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6b8c">Venue</td><td>${i.venue}, ${ev.venue}</td></tr>` : ""}
-    </table>
-    <p>Please confirm whether you accept this invitation.</p>`, { label: "Accept or decline", href: url });
-  return sendEmail(i.email!, subject, html);
+  const key = reminder ? "INVITE_REMINDER" : CHAIR_ROLES.includes(i.roleKey) ? "INVITE_CHAIR" : "INVITE_SPEAKER";
+  return sendTemplate(key, i.email!, {
+    name: i.name, role: i.role, session_name: i.session, session_date: i.date ?? i.when, session_time: i.time, venue: i.venue, department: i.department,
+    abstract_title: i.roleKey === "PRESENTER" || i.kind === "POSTER" ? i.topic : null, abstract_id: i.abstractRef, author_name: i.abstractRef ? i.name : null,
+    status: INVITE_LABEL[i.status], link: `${appUrl()}/invite/${token}`,
+  }, { ref: i.abstractRef ?? i.session });
 }
 
 /** Send to everyone not yet invited (or one person). Returns counts. */

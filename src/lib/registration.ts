@@ -7,25 +7,41 @@ import { nextNumber, pad } from "./counters";
 import { randomToken, appUrl, pkr, fmtDate, processingFee } from "./utils";
 import { registrationPdf } from "./pdf";
 import { sendEmail, sendSms, emailLayout } from "./notify";
+import { PHONE_RE, normaliseCnic } from "./reg-fields";
 
-export const registrationInput = z.object({
-  title: z.string().min(1).max(20),
-  gender: z.enum(["Male", "Female"]),
-  firstName: z.string().trim().min(1).max(60),
-  lastName: z.string().trim().min(1).max(60),
-  email: z.string().trim().toLowerCase().email(),
-  phone: z.string().trim().regex(/^(\+92|0092|0)?3\d{2}[- ]?\d{7}$/, "Use format 03XX-XXXXXXX"),
-  pmdcNo: z.string().trim().max(30).optional().or(z.literal("")),
-  specialty: z.string().trim().max(80).optional().or(z.literal("")),
-  designation: z.string().trim().max(80).optional().or(z.literal("")),
-  institution: z.string().trim().min(2).max(160),
-  address: z.string().trim().max(250).optional().or(z.literal("")),
-  city: z.string().trim().max(60).optional().or(z.literal("")),
+const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
+
+/** Basic information block of the Registration Forms 2027 (participants, guests and volunteers). */
+export const basicInfo = z.object({
+  title: z.string().min(1, "Required").max(20),
+  gender: z.enum(["Male", "Female"], { errorMap: () => ({ message: "Required" }) }),
+  firstName: z.string().trim().min(1, "Required").max(60),
+  lastName: z.string().trim().min(1, "Required").max(60),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  phone: z.string().trim().regex(PHONE_RE, "Use format 03XX-XXXXXXX"),
+  whatsapp: z.string().trim().max(20).optional().or(z.literal("")).refine((v) => !v || PHONE_RE.test(v) || /^\+?\d[\d\s-]{7,18}$/.test(v), "Enter a valid WhatsApp number"),
+  address: z.string().trim().min(5, "Required").max(250),
+  country: z.string().trim().max(60).optional().or(z.literal("")),
+  province: opt(60),
+  city: z.string().trim().min(2, "Required").max(60),
+  cnic: z.string().trim().min(1, "Required").max(25),
+  pmdcNo: opt(30),
+  qualification: opt(120),
+  institution: z.string().trim().min(2, "Required").max(160),
+}).superRefine((d, ctx) => {
+  if (!normaliseCnic(d.cnic, d.country)) ctx.addIssue({ code: "custom", path: ["cnic"], message: !d.country || /^pakistan$/i.test(d.country) ? "Enter the 13-digit CNIC (12345-1234567-1)" : "Enter your passport number" });
+});
+
+export const registrationInput = z.intersection(basicInfo, z.object({
+  specialty: opt(80),
+  designation: z.string().trim().min(1, "Choose your designation").max(80),
+  employeeNo: opt(20),
   categoryId: z.coerce.number().int().positive(),
   sessionIds: z.array(z.string()).max(30).default([]),
+  banquetQty: z.coerce.number().int().min(0).max(10).default(0),
   consent: z.literal(true, { errorMap: () => ({ message: "Please accept the terms" }) }),
   includePass: z.boolean().default(true),
-});
+}));
 export type RegistrationInput = z.infer<typeof registrationInput>;
 
 export class CapacityError extends Error {}
@@ -40,6 +56,8 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
   const result = await db.transaction(async (tx) => {
     const [cat] = await tx.select().from(s.feeCategory).where(and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)));
     if (!cat) throw new Error("Invalid registration category.");
+    if (cat.designations?.length && !cat.designations.includes(input.designation)) throw new Error(`"${input.designation}" is not in the ${cat.label} fee category.`);
+    const banquetQty = Math.max(0, Math.min(ev.banquetMax, input.banquetQty || 0));
     const ids = [...new Set(input.sessionIds)];
     // Lock selected sessions so concurrent registrations can't exceed caps.
     const sess = ids.length
@@ -56,7 +74,8 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
     }
     const conferenceFee = input.includePass === false ? 0 : early ? cat.earlyFee : cat.fee;
     const items = sess.map((x) => ({ sessionId: x.id, fee: early && x.early_fee != null ? x.early_fee : x.fee }));
-    const subtotal = conferenceFee + items.reduce((a, b) => a + b.fee, 0);
+    const banquetFee = banquetQty * ev.banquetFee;
+    const subtotal = conferenceFee + banquetFee + items.reduce((a, b) => a + b.fee, 0);
     const totalFee = subtotal + processingFee(subtotal, ev.processingFeePct);
 
     const n = await nextNumber(`reg-${prefix}-${year}`, tx as any);
@@ -65,6 +84,8 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
       regNo, accountId: opts.accountId ?? null, accessToken: randomToken(), title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
       email: input.email, phone: input.phone, pmdcNo: input.pmdcNo || null, specialty: input.specialty || null, designation: input.designation || null,
       institution: input.institution, address: input.address || null, city: input.city || null, categoryId: cat.id,
+      whatsapp: input.whatsapp || null, cnic: normaliseCnic(input.cnic, input.country), country: input.country || "Pakistan", province: input.province || null,
+      qualification: input.qualification || null, employeeId: input.employeeNo || null, banquetQty, banquetFee,
       conferenceFee, totalFee, earlyBird: early, paymentStatus: totalFee === 0 ? "WAIVED" : "PENDING",
     }).returning();
     if (items.length) await tx.insert(s.registrationItems).values(items.map((i) => ({ ...i, registrationId: reg.id })));
@@ -98,7 +119,8 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
      <p>Thank you for registering for the <b>${ev.name}</b> — <i>${ev.theme}</i>, ${fmtDate(ev.startDate, { day: "numeric", month: "long" })} – ${fmtDate(ev.endDate)} at ${ev.venue}.</p>
      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
        <tr><td style="padding:6px 0;color:#5b6b8c">Registration No.</td><td style="font-weight:700;font-size:18px">${r.regNo}</td></tr>
-       <tr><td style="padding:6px 0;color:#5b6b8c">Category</td><td>${r.category.label}</td></tr>
+       <tr><td style="padding:6px 0;color:#5b6b8c">Category</td><td>${r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label}</td></tr>
+       ${r.banquetQty ? `<tr><td style="padding:6px 0;color:#5b6b8c">Additional banquet pass</td><td>${r.banquetQty} × ${pkr(r.banquetFee / r.banquetQty)}</td></tr>` : ""}
        <tr><td style="padding:6px 0;color:#5b6b8c">Total fee</td><td><b>${pkr(r.totalFee)}</b></td></tr>
        <tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:${confirmed ? "#0b8a4c" : "#c47a00"}">${confirmed ? "CONFIRMED" : "PAYMENT PENDING"}</b></td></tr>
      </table>

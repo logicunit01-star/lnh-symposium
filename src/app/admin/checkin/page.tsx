@@ -25,19 +25,20 @@ export default async function CheckIn({ searchParams }: { searchParams: { q?: st
       <div className="mt-6 space-y-4">
         {q && !results.length && <div className="a-card"><Empty>No registration matches “{q}”.</Empty></div>}
         {results.map((r) => {
-          const ok = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
+          const approval = r.regType !== "PARTICIPANT" && r.approvalStatus !== "APPROVED";
+          const ok = (r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED") && !approval;
           return (
             <div key={r.id} className={`a-card overflow-hidden border-l-4 ${ok ? "border-l-emerald-500" : "border-l-amber-500"}`}>
               <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-mono text-xs font-semibold text-lnh-blue">{r.regNo}</p>
                   <p className="font-display text-xl font-bold">{r.title} {r.firstName} {r.lastName}</p>
-                  <p className="text-sm text-slate-500">{r.institution} · {r.category.label}</p>
-                  <div className="mt-2 flex items-center gap-2"><StatusBadge s={r.paymentStatus} />{!ok && <span className="text-xs font-semibold text-amber-700">Collect payment before issuing kit</span>}</div>
+                  <p className="text-sm text-slate-500">{r.institution} · {r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label}{r.banquetQty ? ` · Banquet × ${r.banquetQty}` : ""}</p>
+                  <div className="mt-2 flex items-center gap-2"><StatusBadge s={r.paymentStatus} />{approval ? <span className="text-xs font-semibold text-rose-700">{r.approvalStatus === "REJECTED" ? "Registration declined — no entry" : "Awaiting approval — no entry yet"}</span> : !ok && <span className="text-xs font-semibold text-amber-700">Collect payment before issuing kit</span>}</div>
                 </div>
                 <div className="flex gap-2">
                   <Link href={`/admin/registrations/${r.id}`} className="a-btn-ghost">Details</Link>
-                  <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)}><button className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red px-6"}>{r.checkedInAt ? "✓ Checked in — undo" : "Check in"}</button></form>
+                  <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)}><button disabled={approval && !r.checkedInAt} className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red px-6 disabled:opacity-40"}>{r.checkedInAt ? "✓ Checked in — undo" : "Check in"}</button></form>
                 </div>
               </div>
               {r.items.length > 0 && (

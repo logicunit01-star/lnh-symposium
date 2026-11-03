@@ -54,7 +54,7 @@ export const DEFAULT_AGENDA_TEMPLATES: Record<string, string> = {
 
 /** HOD abstract scoring sheet: 5 criteria, 1–5 each (max 25). */
 export const SCORE_CRITERIA: [string, string][] = [
-  ["originality", "Originality and relevance to the theme"],
+  ["originality", "Originality and relevance"],
   ["methods", "Methodology / case description"],
   ["results", "Results and conclusions supported"],
   ["clarity", "Clarity, structure and language"],
@@ -62,15 +62,41 @@ export const SCORE_CRITERIA: [string, string][] = [
 ];
 
 export const PREF_LABEL: Record<string, string> = { ORAL: "Oral presentation", POSTER: "Poster presentation", EITHER: "Either (oral preferred)" };
-export const HOD_DECISION_LABEL: Record<string, string> = { ACCEPT_ORAL: "Accept as oral", ACCEPT_POSTER: "Accept as poster", REJECT: "Reject", BACK: "Back to secretariat" };
-/** Decisions offered for a preference (Abstract Submission Form). */
+export const HOD_DECISION_LABEL: Record<string, string> = { ACCEPT_ORAL: "Accept as oral", ACCEPT_POSTER: "Accept as poster", REJECT: "Reject", BACK: "Return to the Symposium Secretariat" };
+/** Short labels for the three review options (SC feedback, 29 Oct 2026): Accept, Reject, Return to the Symposium Secretariat. */
+export const decisionLabel = (d: string, pref: string | null) =>
+  d === "ACCEPT_ORAL" ? (pref === "ORAL" ? "Accept" : "Accept as oral") : d === "ACCEPT_POSTER" ? (pref === "POSTER" ? "Accept" : "Accept as poster") : HOD_DECISION_LABEL[d] ?? d;
+/** Decisions offered for a preference (Abstract Submission Form). "Either" abstracts are accepted as oral or as poster. */
 export const decisionsFor = (pref: string | null) =>
   pref === "POSTER" ? ["ACCEPT_POSTER", "REJECT", "BACK"] : pref === "ORAL" ? ["ACCEPT_ORAL", "REJECT", "BACK"] : ["ACCEPT_ORAL", "ACCEPT_POSTER", "REJECT", "BACK"];
 
+/** Abstract sections with their word limits (SC feedback, 29 Oct 2026; 300 words in total).
+ *  Original research: Introduction 50, Methods 100, Results 100, Conclusion 50. Case report / series: Introduction 70, Case 230. */
 export const SECTIONS: Record<string, [string, string][]> = {
-  ORIGINAL: [["background", "Background / Introduction"], ["methods", "Methods"], ["results", "Results"], ["conclusion", "Conclusion"]],
-  CASE: [["background", "Background / Introduction"], ["cases", "Case / cases"]],
+  ORIGINAL: [["background", "Introduction"], ["methods", "Methods"], ["results", "Results"], ["conclusion", "Conclusion"]],
+  CASE: [["background", "Introduction"], ["cases", "Case report / series"]],
 };
+export const SECTION_LIMITS: Record<string, Record<string, number>> = {
+  ORIGINAL: { background: 50, methods: 100, results: 100, conclusion: 50 },
+  CASE: { background: 70, cases: 230 },
+};
+export const ABSTRACT_TOTAL_WORDS = 300;
+/** Characters allowed per section (guards against pasted text without spaces): about 12 characters per allowed word. */
+export const charLimit = (words: number) => words * 12;
+
+/** Quality-check guidelines shown to HODs during review (editable in Event Settings). */
+export const DEFAULT_QC_GUIDELINES = [
+  "Title: clear, specific and no longer than 35 words; no abbreviations without expansion.",
+  "Structure: every required section is present and within its word limit (300 words in total).",
+  "Introduction states the problem and the aim or research question.",
+  "Methods describe design, setting, participants and analysis (case reports: the clinical course and investigations).",
+  "Results report actual findings with numbers; no \"results will be presented\".",
+  "Conclusion follows from the results and does not overstate them.",
+  "Originality: not previously published or presented in the same form.",
+  "Ethics: approval or waiver is declared where patients or patient data are involved; no identifiable patient details.",
+  "Language: clear and readable; spelling and grammar acceptable for the e-abstract book.",
+  "Decide: Accept, Reject, or Return to the Symposium Secretariat if the abstract belongs to another speciality or needs the committee's view.",
+].join("\n");
 export const KIND_LABEL: Record<string, string> = { ORIGINAL: "Original research", CASE: "Case report / case series" };
 
 export const titleKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();

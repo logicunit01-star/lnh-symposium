@@ -58,7 +58,7 @@ export default async function Home() {
           <div>
             <Reveal>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-lnh-red px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_24px_-4px_#D2192E]">{ev.edition} Edition</span>
+                <span className="rounded-full bg-lnh-red px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_24px_-4px_#B72025]">{ev.edition} Edition</span>
                 <span className="chip gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{eventDaysLabel(ev, "short")}</span>
                 <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />LNH, Karachi</span>
                 <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
@@ -304,7 +304,7 @@ export default async function Home() {
                   const past = new Date(k.d) < new Date();
                   return (
                     <li key={k.t} className="relative">
-                      <span className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-ink ${past ? "bg-slate-600" : "bg-lnh-red shadow-[0_0_14px_#D2192E]"}`} />
+                      <span className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-ink ${past ? "bg-slate-600" : "bg-lnh-red shadow-[0_0_14px_#B72025]"}`} />
                       <p className={`font-display text-lg font-bold ${past ? "text-slate-500 line-through" : "text-white"}`}>{fmtDate(k.d)}</p>
                       <p className="text-sm text-slate-400">{k.t}</p>
                     </li>

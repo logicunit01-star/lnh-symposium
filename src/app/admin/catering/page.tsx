@@ -19,7 +19,7 @@ export default async function Catering() {
   const ev = await getEvent();
   const [regs, workshops, taken, sessions, people, listed] = await Promise.all([
     db.select({
-      status: s.registrations.paymentStatus, source: s.registrations.source,
+      status: s.registrations.paymentStatus, source: s.registrations.source, banquet: s.registrations.banquetQty, type: s.registrations.regType, approval: s.registrations.approvalStatus,
       pass: sql<boolean>`(${s.registrations.conferenceFee} > 0 or not exists (select 1 from registration_items ri where ri.registration_id = ${s.registrations.id}))`,
     }).from(s.registrations).where(inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])),
     db.select({ w: s.sessions, v: s.venues }).from(s.sessions).leftJoin(s.venues, eq(s.venues.id, s.sessions.venueId))
@@ -30,7 +30,11 @@ export default async function Catering() {
     db.select({ sessionId: s.sessionSpeakers.sessionId, speakerId: s.sessionSpeakers.speakerId }).from(s.sessionSpeakers),
   ]);
 
-  const passConfirmed = regs.filter((r) => r.pass && r.status !== "PENDING").length;
+  const live = regs.filter((r) => r.type === "PARTICIPANT" || r.approval === "APPROVED");
+  const banquetConfirmed = live.filter((r) => r.status !== "PENDING").reduce((a, r) => a + (r.banquet ?? 0), 0);
+  const banquetPending = live.filter((r) => r.status === "PENDING").reduce((a, r) => a + (r.banquet ?? 0), 0);
+  const guests = live.filter((r) => r.type === "GUEST").length, volunteers = live.filter((r) => r.type === "VOLUNTEER").length;
+  const passConfirmed = regs.filter((r) => r.pass && r.status !== "PENDING" && (r.type === "PARTICIPANT" || r.approval === "APPROVED")).length;
   const passPending = regs.filter((r) => r.pass && r.status === "PENDING").length;
   const onsite = regs.filter((r) => r.pass && r.source === "ONSITE").length;
 
@@ -62,6 +66,8 @@ export default async function Catering() {
         <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Symposium delegates (confirmed)</p><p className="font-display text-3xl font-bold text-slate-900">{passConfirmed}</p><p className="text-xs text-slate-500">Paid or fee waived</p></div>
         <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Awaiting payment</p><p className="font-display text-3xl font-bold text-slate-900">{passPending}</p><p className="text-xs text-slate-500">May still attend; plan a margin</p></div>
         <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Registered at the onsite desk</p><p className="font-display text-3xl font-bold text-slate-900">{onsite}</p><p className="text-xs text-slate-500">Included in the totals</p></div>
+        <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Additional banquet passes</p><p className="font-display text-3xl font-bold text-slate-900">{banquetConfirmed}</p><p className="text-xs text-slate-500">Paid; {banquetPending} more awaiting payment</p></div>
+        <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Approved guests and volunteers</p><p className="font-display text-3xl font-bold text-slate-900">{guests + volunteers}</p><p className="text-xs text-slate-500">{guests} guests · {volunteers} volunteers (included in delegates)</p></div>
       </div>
 
       <h2 className="mb-2 font-display text-base font-bold text-slate-900">Symposium days</h2>

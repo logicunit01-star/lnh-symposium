@@ -27,7 +27,7 @@ const STATUS: Record<string, string> = {
 };
 export const StatusBadge = ({ s }: { s: string }) => <span className={cn("badge", STATUS[s] ?? "bg-slate-100 text-slate-600")}>{s.replace("_", " ")}</span>;
 
-export function Bars({ data, height = 160, color = "#1560D4" }: { data: { label: string; value: number }[]; height?: number; color?: string }) {
+export function Bars({ data, height = 160, color = "#0089BF" }: { data: { label: string; value: number }[]; height?: number; color?: string }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
     <div className="flex items-end gap-1" style={{ height }}>

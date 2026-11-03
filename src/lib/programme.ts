@@ -3,6 +3,7 @@ import { z } from "zod";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import type { SessionSlot } from "./db/schema";
+import { FLYER_LOCK_EDITORS, POST_LOCK_EDITORS } from "./permissions";
 
 const person = z.object({ name: z.string().trim().min(2, "Name required").max(120), phone: z.string().trim().min(7, "Contact required").max(30), email: z.string().trim().toLowerCase().email("Valid email required") });
 const guest = person.extend({
@@ -59,15 +60,30 @@ export const slotOf = (slots: SessionSlot[], key: string | null | undefined) => 
 export const slotTimes = (sl: SessionSlot) => ({ startsAt: new Date(`${sl.day}T${sl.start}:00+05:00`), endsAt: new Date(`${sl.day}T${sl.end}:00+05:00`) });
 export const dayNumber = (days: string[], day: string) => Math.max(1, days.indexOf(day) + 1);
 
-/** Who may edit a scientific session right now. */
-export function editRule(opts: { role: string; isDept: boolean; ownDept: boolean; lockAt: Date | null; locked: boolean; editGrantUntil: Date | null; now?: Date }) {
+/** Who may edit a scientific session right now (SC feedback, 29 Oct 2026):
+ *  - before the deadline: the department (own sessions) and the committee/secretariat;
+ *  - after the deadline the agenda is locked: only the Scientific Committee (and Super Admin) edit and finalise;
+ *  - once the HOD has approved the session flyer it is locked: only the Scientific Sessions Chairperson (and Super Admin). */
+export function editRule(opts: { role: string; isDept: boolean; ownDept: boolean; lockAt: Date | null; locked: boolean; editGrantUntil?: Date | null; flyerLocked?: boolean; now?: Date }) {
   const now = opts.now ?? new Date();
+  if (opts.flyerLocked) return FLYER_LOCK_EDITORS.includes(opts.role) ? null
+    : "The session flyer has been approved and locked. Changes can be made only through the Scientific Sessions Chairperson.";
   const afterLock = (opts.lockAt && now > opts.lockAt) || opts.locked;
   if (!afterLock) return opts.isDept ? (opts.ownDept ? null : "This session belongs to another department.") : null;
-  if (["SECRETARIAT", "ADMIN", "SUPER_ADMIN"].includes(opts.role) && opts.editGrantUntil && opts.editGrantUntil > now) return null;
+  if (POST_LOCK_EDITORS.includes(opts.role)) return null;
   return opts.isDept
-    ? "The agenda is locked. Changes now need Scientific Committee Chair approval and are made by the secretariat."
-    : "Locked. The Scientific Committee Chair must authorise a change before the secretariat can edit.";
+    ? "The agenda deadline has passed and your submission is locked. Only the Scientific Committee can now edit and finalise it."
+    : "Locked after the agenda deadline. Only the Scientific Committee can edit and finalise sessions.";
+}
+export const flyerLocked = (x: { type: string; proposal: boolean; flyerStatus: string | null }) => x.proposal && x.type !== "WORKSHOP" && x.flyerStatus === "APPROVED";
+
+/** The department's agenda exactly as submitted, kept unchanged for the record (SC feedback). */
+export async function snapshotOriginal(sessionId: string, by: string) {
+  const [ses] = await db.select({ original: s.sessions.originalAgenda }).from(s.sessions).where(eq(s.sessions.id, sessionId));
+  if (!ses || ses.original) return;
+  const data = await proposalInit(sessionId);
+  if (!data) return;
+  await db.update(s.sessions).set({ originalAgenda: { ...data.init, submittedBy: by } as any, originalSubmittedAt: new Date() }).where(eq(s.sessions.id, sessionId));
 }
 
 const keyOf = (p: { email: string | null; name: string }) => (p.email?.toLowerCase().trim() || p.name.toLowerCase().replace(/^(prof|dr|mr|ms|mrs)\.?\s+/i, "").replace(/\s+/g, " ").trim());

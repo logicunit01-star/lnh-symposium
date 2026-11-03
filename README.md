@@ -193,3 +193,16 @@ drizzle/             SQL migrations
 - SMS gateway account (any HTTP-based Pakistani provider works via `SMS_API_URL`).
 - Real content, photos, logo and final fee structure.
 - Optional: abstract file uploads (PDF), multi-reviewer scoring, Urdu translation.
+
+## Scientific Committee feedback, registration forms 2027 and branding (Nov 2026, migration 0007)
+
+- **Abstracts:** live word and character counters; 300 words in total with section limits (original research: Introduction 50, Methods 100, Results 100, Conclusion 50; case report/series: Introduction 70, Case 230). Oral/poster descriptions, the "Posters and review" box and the theme line are removed. Authors see their status (Under review / Accepted / Rejected) on `/abstracts` and My bookings. Window 15 Nov – 15 Dec 2026.
+- **Review:** only in the HOD (department) portal, with quality-check guidelines (editable in Event Settings): Accept, Reject or Return to the Symposium Secretariat. The HOD's decision is final; the admin only reassigns returned abstracts, places venues and emails decisions.
+- **Agenda:** abstract ID fills title, presenting author, contact and co-authors (`/api/admin/abstracts/lookup`). The department's original submission is kept (read-only). After the deadline only the Scientific Committee (and Super Admin) can edit and finalise. HODs are emailed when the agenda is submitted and approved.
+- **Automated emails** (Admin → Automated Emails): editable templates with merge fields, separate chair vs speaker/author invitation templates, dispatch schedule (default: decisions and invitations on 31 Dec 2026), official sender and CC (Event Settings), and a sent log with date and time. Schedule a call to `/api/cron/emails` (Bearer `CRON_SECRET`) every 15–60 minutes; the daily `/api/cron/reminders` also runs due dispatches.
+- **Session flyers:** after the committee approves a session (content approval) a flyer is generated for the HOD (My Department → Session Flyers). HOD approval locks it; only the SC Chair can change the session afterwards.
+- **ID card / pass:** separate QR codes for the Scientific Agenda and the e-abstract book on the pass page and on the ID card page of the registration PDF.
+- **Venue guide map** on `/venues`: the 5 scientific session venues with clickable pins and sessions per day (after release).
+- **Registration forms 2027:** CNIC (or passport), WhatsApp, address, province, city, qualification and LNH employee # at sign-up / checkout / onsite desk; four fee tiers by designation (early bird 1,050 / 2,000 / 3,000 / 5,000; regular 1,500 / 2,500 / 3,500 / 6,000) editable in Event Settings; additional banquet pass PKR 4,000, maximum 2. Guests (`/register/guest`, approved by the HOD) and volunteers (`/register/volunteer`, approved by the new role FACILITATION_CHAIR) register free; their pass is valid after approval.
+- **Branding:** LNH colour codes navy #232667, red #B72025, title gradient #00B8D7 → #0089BF. Flyers use DM Sans at 1080 × 1350 with fully embedded fonts, so text stays editable for social posts and standees.
+- New demo login: `facilitation@lnh.edu.pk` (password = `SEED_ADMIN_PASSWORD`).

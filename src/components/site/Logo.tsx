@@ -14,7 +14,7 @@ export function Logo({ year, variant = "full" }: { year?: number; variant?: "hea
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/lnh-mark.png" alt="LNH" className="theme-light-only h-9 w-auto sm:h-10" />
         <span className="leading-tight">
-          <span className="block font-display text-[14px] font-bold tracking-tight text-white sm:text-[15px]">9<sup className="text-[9px]">th</sup> LNH Symposium</span>
+          <span className="text-lnh-title block font-display text-[14px] font-bold tracking-tight sm:text-[15px]">9<sup className="text-[9px]">th</sup> LNH Symposium</span>
           <span className="block text-[11px] font-medium text-slate-400 hidden sm:block lg:hidden xl:block">Liaquat National Hospital{year ? ` · ${year}` : ""}</span>
         </span>
       </Link>

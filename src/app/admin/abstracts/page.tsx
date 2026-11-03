@@ -4,13 +4,15 @@ import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge, Pager, Empty } from "@/components/admin/ui";
-import { HOD_DECISION_LABEL, PREF_LABEL } from "@/lib/scientific";
+import { PREF_LABEL, decisionLabel } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
 import { assignAbstractVenue, notifyDecisions } from "./actions";
+import { ensureDefaultJobs } from "@/lib/email";
 
 const PER = 25;
 export default async function Abstracts({ searchParams }: { searchParams: { q?: string; status?: string; dept?: string; pref?: string; page?: string; notified?: string } }) {
   const u = await requirePerm("abstracts");
+  await ensureDefaultJobs();
   const page = Math.max(1, Number(searchParams.page) || 1);
   const c: SQL[] = [];
   if (searchParams.q) { const q = `%${searchParams.q}%`; c.push(or(ilike(s.abstracts.refNo, q), ilike(s.abstracts.abstractTitle, q), ilike(s.abstracts.fullName, q), ilike(s.abstracts.presentingAuthor, q), ilike(s.abstracts.authors, q), ilike(s.abstracts.organization, q))!); }
@@ -30,18 +32,20 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
   const here = `/admin/abstracts${Object.keys(searchParams).length ? "?" + new URLSearchParams(searchParams as any).toString() : ""}`;
   const cnt = (k: string) => counts.find((x) => x.k === k)?.n ?? 0;
   const qs = new URLSearchParams(Object.entries(searchParams).filter(([k, v]) => v && k !== "page" && k !== "notified") as any).toString();
-  const stage = [["SUBMITTED", "With departments"], ["UNDER_REVIEW", "Awaiting SC check"], ["BACK", "Back to secretariat"], ["ACCEPTED", "Accepted"], ["REJECTED", "Rejected"]];
+  const stage = [["SUBMITTED", "With departments (HOD review)"], ["BACK", "Returned to secretariat"], ["ACCEPTED", "Accepted"], ["REJECTED", "Rejected"]];
+  const [job] = await db.select().from(s.emailJobs).where(and(eq(s.emailJobs.kind, "ABSTRACT_DECISIONS"), eq(s.emailJobs.status, "SCHEDULED"))).orderBy(asc(s.emailJobs.runAt)).limit(1);
   return (
     <>
-      <PageTitle title="Abstracts" sub="Departments review first (Phase 1), the Scientific Committee checks quality and reassigns returned abstracts (Phase 2), then decisions are emailed."
+      <PageTitle title="Abstracts" sub="Each speciality's HOD reviews and decides in the department portal (Accept, Reject or Return to the Symposium Secretariat). Returned abstracts are reassigned here (Phase 2). Decisions are emailed on the scheduled date."
         actions={<>
           {can(u.role, "venues") && <Link href="/admin/venues" className="a-btn-ghost">Venue master</Link>}
           <a href="/api/admin/export/abstracts" className="a-btn-ghost">Export CSV</a>
           <Link href="/abstracts/book?preview=1" className="a-btn-ghost">e-Abstract book</Link>
-          {can(u.role, "abstracts.review") && unnotified > 0 && <form action={notifyDecisions}><button className="a-btn-red">Email {unnotified} decision{unnotified > 1 ? "s" : ""}</button></form>}
+          {can(u.role, "abstracts.review") && unnotified > 0 && <form action={notifyDecisions}><button className="a-btn-ghost" title={job ? `Scheduled for ${fmtDateTime(job.runAt)}` : undefined}>Email {unnotified} decision{unnotified > 1 ? "s" : ""} now</button></form>}
         </>} />
       {searchParams.notified && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{searchParams.notified} decision email(s) sent.</p>}
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {unnotified > 0 && <p className="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">{unnotified} decided abstract(s) not yet emailed. {job ? <>Decision emails are scheduled for <b>{fmtDateTime(job.runAt)}</b> (after the agenda is finalised). </> : "No decision dispatch is scheduled. "}{can(u.role, "emails") && <Link href="/admin/emails?tab=schedule" className="text-lnh-blue underline">Manage the email schedule</Link>}</p>}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stage.map(([k, l]) => (
           <Link key={k} href={`/admin/abstracts?status=${k}`} className={`a-card p-3 ${searchParams.status === k ? "border-lnh-blue" : ""}`}><p className="font-display text-2xl font-bold text-slate-900">{cnt(k)}</p><p className="text-xs text-slate-500">{l}</p></Link>
         ))}
@@ -55,7 +59,7 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
       </form>
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>ID</th><th>Title</th><th>Presenting author</th><th>Department</th><th>Preferred</th><th>Department decision</th><th>Stage</th><th className="min-w-[260px]">Venue · placement</th></tr></thead>
+          <thead><tr><th>ID</th><th>Title</th><th>Presenting author</th><th>Department</th><th>Preferred</th><th>HOD decision</th><th>Stage</th><th className="min-w-[260px]">Venue · placement</th></tr></thead>
           <tbody>{rows.map((a) => (
             <tr key={a.id}>
               <td><Link href={`/admin/abstracts/${a.id}`} className="font-mono text-xs font-semibold text-lnh-blue">{a.refNo}</Link><p className="text-[10px] text-slate-400">{fmtDateTime(a.createdAt)}</p></td>
@@ -63,7 +67,7 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
               <td className="text-sm">{a.presentingAuthor}<p className="text-xs text-slate-400">{a.organization}</p></td>
               <td className="text-xs text-slate-600">{a.assignedDept ?? a.specialty}{a.phase === 2 && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">P2</span>}</td>
               <td className="text-xs">{PREF_LABEL[a.presentationPref ?? ""] ?? a.type}</td>
-              <td className="text-xs">{a.hodDecision ? <>{HOD_DECISION_LABEL[a.hodDecision]}<span className="text-slate-400"> · {a.hodTotal}/25</span></> : <span className="text-slate-400">—</span>}</td>
+              <td className="text-xs">{a.hodDecision ? <>{decisionLabel(a.hodDecision, a.presentationPref)}<span className="text-slate-400"> · {a.hodTotal}/25</span></> : <span className="text-slate-400">—</span>}</td>
               <td><StatusBadge s={a.status} />{a.acceptedAs && <span className="ml-1 text-[10px] font-bold text-emerald-700">{a.acceptedAs}</span>}</td>
               <td>{a.status === "ACCEPTED" && canAssign ? (
                 <form action={assignAbstractVenue.bind(null, a.id)} className="flex flex-wrap items-center gap-1">

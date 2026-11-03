@@ -1,12 +1,12 @@
 import "server-only";
 import { z } from "zod";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
 import { getEvent, abstractWindow, editionYear } from "./event";
-import { fmtDate, appUrl } from "./utils";
-import { sendEmail, emailLayout } from "./notify";
-import { DEPARTMENTS, SECTIONS, titleKey, words, PREF_LABEL, KIND_LABEL } from "./scientific";
+import { appUrl } from "./utils";
+import { DEPARTMENTS, SECTIONS, SECTION_LIMITS, ABSTRACT_TOTAL_WORDS, charLimit, titleKey, words, slotLabel } from "./scientific";
+import { sendTemplate } from "./email";
 
 const req = (max: number) => z.string().trim().min(1, "Required").max(max);
 
@@ -41,8 +41,15 @@ export async function submitAbstract(input: AbstractInput, accountId: string) {
   const fields = SECTIONS[input.kind];
   for (const [k, label] of fields) if (!input.sections[k]?.trim()) throw new FieldError(`${label} is required`, `s_${k}`);
   const sections = Object.fromEntries(fields.map(([k]) => [k, input.sections[k].trim()]));
+  // SC feedback (29 Oct 2026): word limit per section, 300 words in total
+  for (const [k, label] of fields) {
+    const max = SECTION_LIMITS[input.kind][k], n = words(sections[k]);
+    if (n > max) throw new FieldError(`${label} has ${n} words; the limit is ${max}.`, `s_${k}`);
+    if (sections[k].length > charLimit(max)) throw new FieldError(`${label} is too long (${sections[k].length} characters; at most ${charLimit(max)}).`, `s_${k}`);
+  }
   const wc = Object.values(sections).reduce((a, v) => a + words(v), 0);
-  if (wc > ev.abstractWordLimit) throw new FieldError(`The abstract has ${wc} words; the limit is ${ev.abstractWordLimit} (title, authors and affiliations excluded).`, "sections");
+  const limit = Math.min(ev.abstractWordLimit || ABSTRACT_TOTAL_WORDS, ABSTRACT_TOTAL_WORDS);
+  if (wc > limit) throw new FieldError(`The abstract has ${wc} words; the limit is ${limit} (title, authors and affiliations excluded).`, "sections");
   const key = titleKey(input.abstractTitle);
   const [dup] = await db.select({ refNo: s.abstracts.refNo }).from(s.abstracts).where(eq(s.abstracts.titleKey, key));
   if (dup) throw new FieldError(`An abstract with this title was already submitted (${dup.refNo}). Duplicate submissions are not accepted.`, "abstractTitle");
@@ -58,13 +65,41 @@ export async function submitAbstract(input: AbstractInput, accountId: string) {
     coAuthors: input.coAuthors, authors, presentingAuthor: `${input.title} ${input.fullName}`, abstractTitle: input.abstractTitle.trim(), titleKey: key,
     sections, body, keywords: input.keywords.join(", "), wordCount: wc,
   }).returning();
-  await logAbstract(a.id, a.email, "SUBMITTED", `${PREF_LABEL[input.presentationPref]} · ${input.specialty}`);
-  await sendEmail(a.email, `${ev.name}: abstract received (${refNo})`, emailLayout("Abstract received",
-    `<p>Dear ${a.title} ${a.fullName},</p><p>Your abstract <b>“${a.abstractTitle}”</b> has been received.</p>
-     <p>Abstract ID: <b>${refNo}</b><br>Preferred format: ${PREF_LABEL[input.presentationPref]}<br>Type: ${KIND_LABEL[input.kind]}<br>Speciality: ${input.specialty}</p>
-     <p>The department and the Scientific Committee will review it${ev.abstractDeadline ? ` after the deadline (${fmtDate(ev.abstractDeadline)})` : ""}. All further correspondence will be with you as the presenting author.</p>`,
-    { label: "Track your abstract", href: `${appUrl()}/account/bookings` })).catch(() => {});
+  await logAbstract(a.id, a.email, "SUBMITTED", input.specialty);
+  await sendTemplate("ABSTRACT_RECEIVED", a.email, {
+    name: `${a.title} ${a.fullName}`, abstract_title: a.abstractTitle, abstract_id: refNo, department: input.specialty, author_name: a.presentingAuthor,
+    status: "Under review", link: `${appUrl()}/abstracts#my-abstracts`,
+  }, { ref: refNo }).catch(() => {});
   return a;
+}
+
+/** What the author sees: Under review until the decision is released (emailed), then Accepted or Rejected. */
+export function authorStatus(a: { status: string; acceptedAs: string | null; authorNotifiedAt: Date | null }) {
+  if (a.authorNotifiedAt && a.status === "ACCEPTED") return { label: "Accepted", detail: a.acceptedAs === "POSTER" ? "Poster presentation" : "Oral presentation", tone: "ok" as const };
+  if (a.authorNotifiedAt && a.status === "REJECTED") return { label: "Rejected", detail: "Not accepted this year", tone: "no" as const };
+  return { label: "Under review", detail: "Decisions are emailed after the agenda is finalised", tone: "wait" as const };
+}
+
+/** Email decisions (Accepted / Rejected templates) to presenting authors not yet notified. Returns the number sent. */
+export async function sendDecisionEmails(actor: string) {
+  const ev = await getEvent();
+  const rows = await db.query.abstracts.findMany({ where: and(inArray(s.abstracts.status, ["ACCEPTED", "REJECTED"]), isNull(s.abstracts.authorNotifiedAt)), with: { session: true } });
+  const venues = await db.select({ id: s.venues.id, name: s.venues.name }).from(s.venues);
+  for (const a of rows) {
+    const ok = a.status === "ACCEPTED";
+    const sl = a.session?.slotKey ? ev.sessionSlots.find((x) => x.key === a.session!.slotKey) : null;
+    await sendTemplate(ok ? "ABSTRACT_ACCEPTED" : "ABSTRACT_REJECTED", a.email, {
+      name: `${a.title ?? ""} ${a.fullName ?? a.presentingAuthor}`.trim(), abstract_title: a.abstractTitle, abstract_id: a.refNo, author_name: a.presentingAuthor,
+      department: a.specialty, status: ok ? (a.acceptedAs === "POSTER" ? "accepted as a poster" : "accepted as an oral presentation") : "not accepted",
+      session_name: ok ? (a.session?.title ?? (a.acceptedAs === "POSTER" ? "Poster presentation" : "")) : "",
+      session_date: sl ? slotLabel(sl).split(" · ")[0] : "", session_time: sl ? `${sl.start}–${sl.end}` : "",
+      venue: ok ? (a.session?.hall ?? venues.find((v) => v.id === a.venueId)?.name ?? "") : "",
+      link: ok ? `${appUrl()}/register` : `${appUrl()}/abstracts#my-abstracts`,
+    }, { ref: a.refNo });
+    await db.update(s.abstracts).set({ authorNotifiedAt: new Date() }).where(eq(s.abstracts.id, a.id));
+    await logAbstract(a.id, actor, "Decision emailed to author");
+  }
+  return rows.length;
 }
 
 /** Department review window state. */

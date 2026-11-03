@@ -29,7 +29,7 @@ export default async function Onsite({ searchParams }: { searchParams: { done?: 
 
   return (
     <>
-      <PageTitle title="Onsite registration desk" sub="Register LNH staff and walk-in participants. Staff choose the LNH category and give their employee ID." />
+      <PageTitle title="Onsite registration desk" sub="Register LNH staff and walk-in participants on the Registration Form 2027: designation sets the fee tier; LNH staff give their employee number." />
       {done && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div><p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Registered</p>
@@ -42,7 +42,7 @@ export default async function Onsite({ searchParams }: { searchParams: { done?: 
           </div>
         </div>
       )}
-      <OnsiteForm key={done?.id ?? "new"} cats={cats.map((c) => ({ id: c.id, label: c.label, fee: early ? c.earlyFee : c.fee, tier: c.tier }))} items={items} procPct={ev.processingFeePct} />
+      <OnsiteForm key={done?.id ?? "new"} cats={cats.filter((c) => c.designations?.length).map((c) => ({ id: c.id, label: c.label, fee: early ? c.earlyFee : c.fee, tier: c.tier, designations: c.designations }))} items={items} procPct={ev.processingFeePct} banquet={{ fee: ev.banquetFee, max: ev.banquetMax }} />
       {recent.length > 0 && (
         <>
           <h2 className="mb-3 mt-10 font-display text-lg font-bold">Recent desk registrations</h2>

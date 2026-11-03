@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { z } from "zod";
 import { db, schema as s } from "./db";
+import { normaliseCnic } from "./reg-fields";
 
 export const USER_COOKIE = "lnh_user";
 const key = () => new TextEncoder().encode((process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me") + ":account");
@@ -44,7 +45,16 @@ export const signupInput = z.object({
   specialty: z.string().trim().max(80).optional().or(z.literal("")),
   designation: z.string().trim().max(80).optional().or(z.literal("")),
   institution: z.string().trim().min(2, "Required").max(160),
-  address: z.string().trim().max(300).optional().or(z.literal("")),
+  // Registration Forms 2027
+  address: z.string().trim().min(5, "Required").max(300),
+  city: z.string().trim().min(2, "Required").max(60),
+  province: z.string().trim().max(60).optional().or(z.literal("")),
+  country: z.string().trim().max(60).default("Pakistan"),
+  cnic: z.string().trim().min(1, "Required").max(25),
+  whatsapp: z.string().trim().max(20).optional().or(z.literal("")),
+  qualification: z.string().trim().max(120).optional().or(z.literal("")),
+  employeeNo: z.string().trim().max(20).optional().or(z.literal("")),
   password: passwordRule,
   confirm: z.string(),
-}).refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Passwords do not match" });
+}).refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Passwords do not match" })
+  .refine((d) => !!normaliseCnic(d.cnic, d.country), { path: ["cnic"], message: "Enter the 13-digit CNIC (12345-1234567-1), or your passport number if you are outside Pakistan" });

@@ -38,6 +38,10 @@ export async function regNotes(id: string, f: FormData) {
 }
 export async function regCheckIn(id: string, undo = false) {
   await requirePerm("checkin");
+  if (!undo) {
+    const [r] = await db.select({ t: s.registrations.regType, a: s.registrations.approvalStatus }).from(s.registrations).where(eq(s.registrations.id, id));
+    if (r && r.t !== "PARTICIPANT" && r.a !== "APPROVED") throw new Error("This guest / volunteer registration has not been approved.");
+  }
   await db.update(s.registrations).set({ checkedInAt: undo ? null : new Date() }).where(eq(s.registrations.id, id));
   revalidatePath("/admin/checkin"); revalidatePath(`/admin/registrations/${id}`);
 }
@@ -126,14 +130,17 @@ export async function saveSettings(f: FormData) {
       .map((m) => { const tags = (m![4] || "").toLowerCase(); return { key: `${m![1]}|${m![2]}`, day: m![1], start: m![2], end: m![3], optional: tags.includes("optional"), ...(tags.includes("plenary") ? { special: "PLENARY" as const } : tags.includes("debate") ? { special: "DEBATE" as const } : {}) }; })
       .sort((a, b) => a.key.localeCompare(b.key)),
     abstractP1Open: d("abstractP1Open"), abstractP1Close: d("abstractP1Close"), abstractP2Open: d("abstractP2Open"), abstractP2Close: d("abstractP2Close"),
-    sciLockAt: d("sciLockAt"),
+    sciLockAt: d("sciLockAt"), qcGuidelines: str(f, "qcGuidelines"),
+    banquetFee: Math.max(0, num(f, "banquetFee") ?? 4000), banquetMax: Math.max(0, Math.min(10, num(f, "banquetMax") ?? 2)),
+    emailFrom: str(f, "emailFrom"), emailCc: str(f, "emailCc"),
     agendaTemplates: Object.fromEntries([...f.entries()].filter(([k]) => k.startsWith("tpl_")).map(([k, v]) => [k.slice(4), String(v)])),
   }).where(eq(s.event.id, 1));
   revalidatePath("/", "layout");
 }
 export async function saveFee(id: number | null, f: FormData) {
   await requirePerm("settings");
-  const data = { code: str(f, "code")!.toUpperCase(), label: str(f, "label")!, fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee") ?? 0, note: str(f, "note"), order: num(f, "order") ?? 0, active: bool(f, "active"), tier: str(f, "tier") || "GENERAL" };
+  const data = { code: str(f, "code")!.toUpperCase(), label: str(f, "label")!, fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee") ?? 0, note: str(f, "note"), order: num(f, "order") ?? 0, active: bool(f, "active"),
+    designations: (str(f, "designations") || "").split(",").map((x) => x.trim()).filter(Boolean) };
   if (id) await db.update(s.feeCategory).set(data).where(eq(s.feeCategory.id, id)); else await db.insert(s.feeCategory).values(data);
   revalidatePath("/admin/settings"); revalidatePath("/register");
 }

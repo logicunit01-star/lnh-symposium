@@ -7,10 +7,11 @@ import { currentUser, requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { logAbstract } from "@/lib/abstracts";
-import { dayNumber, editRule, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes } from "@/lib/programme";
+import { dayNumber, editRule, flyerLocked, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes, snapshotOriginal } from "@/lib/programme";
+import { notifyDept } from "@/lib/dept-notify";
 import { sendEmail, emailLayout } from "@/lib/notify";
 import { appUrl } from "@/lib/utils";
-import { formatToType, isSpecialFormat, SPECIAL_DEPT } from "@/lib/scientific";
+import { formatToType, isSpecialFormat, SPECIAL_DEPT, slotLabel } from "@/lib/scientific";
 
 export type ProposalResult = { error?: string; fields?: Record<string, string> } | null;
 
@@ -51,9 +52,9 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
   if (id) {
     [existing] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
     if (!existing?.proposal) return { error: "Session not found." };
-    const block = editRule({ role: u.role, isDept, ownDept: existing.department === dept, lockAt: ev.sciLockAt, locked: existing.locked, editGrantUntil: existing.editGrantUntil });
+    const block = editRule({ role: u.role, isDept, ownDept: existing.department === dept, lockAt: ev.sciLockAt, locked: existing.locked, flyerLocked: flyerLocked(existing) });
     if (block) return { error: block };
-  } else if (isDept && ev.sciLockAt && new Date() > ev.sciLockAt) return { error: "The agenda deadline has passed. Contact the symposium secretariat." };
+  } else if (ev.sciLockAt && new Date() > ev.sciLockAt && !["SC_CHAIR", "SCIENTIFIC_COMMITTEE", "SUPER_ADMIN"].includes(u.role)) return { error: "The agenda deadline has passed. Only the Scientific Committee can add sessions now." };
 
   // Presenters may reference accepted oral abstracts by ID
   const presenters = [];
@@ -75,11 +76,16 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     ...(existing?.slotKey ? {} : { ...times, day: first ? dayNumber(ev.eventDays, first.day) : 1 }),
   };
   let sid = id;
+  let firstSubmit = false;
   if (existing) {
     const completing = existing.status === "DRAFT";
+    firstSubmit = completing;
+    const afterDeadline = !!ev.sciLockAt && new Date() > ev.sciLockAt;
     await db.update(s.sessions).set({ ...data, ...(completing ? { status: "SUBMITTED", submittedAt: new Date() } : {}) }).where(eq(s.sessions.id, existing.id));
-    await log(existing.id, u, existing.status, completing ? "SUBMITTED" : existing.status, completing ? "Programme details completed" : existing.editGrantUntil && !isDept ? "Edited under SC Chair authorisation" : "Agenda edited");
+    await log(existing.id, u, existing.status, completing ? "SUBMITTED" : existing.status,
+      completing ? "Programme details completed" : flyerLocked(existing) ? "Changed by the Scientific Sessions Chairperson after flyer approval" : afterDeadline && !isDept ? "Edited by the Scientific Committee after the deadline" : "Agenda edited");
   } else {
+    firstSubmit = true;
     const slug = `sci-${d.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 6)}`;
     const [row] = await db.insert(s.sessions).values({ ...data, ...times, day: first ? dayNumber(ev.eventDays, first.day) : 1, slug, proposal: true, status: "SUBMITTED", registrable: false, submittedAt: new Date(), proposedById: u.sub } as any).returning({ id: s.sessions.id });
     sid = row.id;
@@ -95,6 +101,11 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     await db.update(s.abstracts).set({ sessionId: sid }).where(eq(s.abstracts.id, pr.abstractId));
     await logAbstract(pr.abstractId, u.name, "Added to session", d.title);
   }
+  // Keep the department's original submission and tell the HOD it was received
+  if (firstSubmit && !special) {
+    if (isDept) await snapshotOriginal(sid!, u.name);
+    await notifyDept(d.department, "AGENDA_SUBMITTED", { session_name: d.title, department: d.department, status: "Submitted, awaiting Scientific Committee review", link: `${appUrl()}/admin/dept/sessions` }).catch(() => {});
+  }
   revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
   redirect(isDept ? `/admin/dept/sessions?saved=1` : `/admin/programme/${sid}?saved=1`);
 }
@@ -104,7 +115,7 @@ export async function allotSession(id: string, f: FormData) {
   const u = await requirePerm("programme.edit");
   const ev = await getEvent();
   const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
-  const block = editRule({ role: u.role, isDept: false, ownDept: true, lockAt: null, locked: ses.locked, editGrantUntil: ses.editGrantUntil });
+  const block = editRule({ role: u.role, isDept: false, ownDept: true, lockAt: ev.sciLockAt, locked: ses.locked, flyerLocked: flyerLocked(ses) });
   if (block) redirect(`/admin/programme/${id}?err=locked`);
   const slotKey = String(f.get("slotKey") || ""), venueId = String(f.get("venueId") || "");
   const sl = slotOf(ev.sessionSlots, slotKey);
@@ -126,23 +137,49 @@ export async function decideSession(id: string, f: FormData) {
   const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
   if (ses.status === "DRAFT" && to === "APPROVED") redirect(`/admin/programme/${id}?err=draft`);
   if (to === "APPROVED" && (!ses.slotKey || !ses.venueId)) redirect(`/admin/programme/${id}?err=unallotted`);
-  await db.update(s.sessions).set({ status: to, reviewedAt: new Date(), reviewedById: u.sub, reviewNote: String(f.get("note") || "") || ses.reviewNote }).where(eq(s.sessions.id, id));
+  const special = isSpecialFormat(ses.sessionFormat);
+  // Content approval (SC) is separate from the final flyer approval (HOD): approving generates the flyer for the HOD
+  const flyer = to === "APPROVED" && !special && ses.flyerStatus !== "APPROVED" ? { flyerStatus: "PENDING", flyerNote: null } : {};
+  await db.update(s.sessions).set({ status: to, reviewedAt: new Date(), reviewedById: u.sub, reviewNote: String(f.get("note") || "") || ses.reviewNote, ...flyer }).where(eq(s.sessions.id, id));
   await log(id, u, ses.status, to, String(f.get("note") || "") || null);
+  if (to === "APPROVED" && ses.status !== "APPROVED" && !special && ses.department) {
+    const ev = await getEvent();
+    const sl = slotOf(ev.sessionSlots, ses.slotKey);
+    const vars = { session_name: ses.title, department: ses.department, session_date: sl ? slotLabel(sl).split(" · ")[0] : "", session_time: sl ? `${sl.start}–${sl.end}` : "", venue: ses.hall, status: "Approved by the Scientific Committee" };
+    await notifyDept(ses.department, "AGENDA_APPROVED", { ...vars, link: `${appUrl()}/admin/dept/sessions` }).catch(() => {});
+    if ("flyerStatus" in flyer) {
+      await log(id, u, null, "FLYER_PENDING", "Session flyer generated and sent to the HOD for final approval");
+      await notifyDept(ses.department, "SESSION_FLYER_READY", { ...vars, link: `${appUrl()}/admin/dept/flyers?s=${id}` }).catch(() => {});
+    }
+  }
   revalidatePath("/admin/programme", "layout"); revalidatePath("/", "layout");
   redirect(`/admin/programme/${id}?saved=1`);
 }
 
-/** SC Chair authorises the secretariat to change a locked session for 48 hours. */
-export async function grantEdit(id: string, f: FormData) {
-  const u = await requirePerm("programme.approve");
-  const until = new Date(Date.now() + 48 * 3600e3);
-  await db.update(s.sessions).set({ editGrantUntil: until }).where(eq(s.sessions.id, id));
-  await log(id, u, null, "EDIT_AUTHORISED", `Secretariat may edit until ${until.toISOString().slice(0, 16).replace("T", " ")} UTC${f.get("note") ? ` — ${f.get("note")}` : ""}`);
+/** After the HOD asked for flyer changes and the committee updated the content: send the regenerated flyer back to the HOD. */
+export async function resendFlyer(id: string) {
+  const u = await requirePerm("programme.edit");
+  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  if (!ses || ses.status !== "APPROVED" || ses.flyerStatus === "APPROVED") redirect(`/admin/programme/${id}`);
+  await db.update(s.sessions).set({ flyerStatus: "PENDING" }).where(eq(s.sessions.id, id));
+  await log(id, u, null, "FLYER_PENDING", "Updated flyer sent to the HOD for approval");
+  if (ses.department) await notifyDept(ses.department, "SESSION_FLYER_READY", { session_name: ses.title, department: ses.department, link: `${appUrl()}/admin/dept/flyers?s=${id}` }).catch(() => {});
   revalidatePath(`/admin/programme/${id}`);
+  redirect(`/admin/programme/${id}?saved=1`);
+}
+
+async function guardEdit(u: { role: string }, sessionId: string) {
+  const ev = await getEvent();
+  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, sessionId));
+  if (!ses) throw new Error("Session not found");
+  const block = editRule({ role: u.role, isDept: false, ownDept: true, lockAt: ev.sciLockAt, locked: ses.locked, flyerLocked: flyerLocked(ses) });
+  if (block) redirect(`/admin/programme/${sessionId}?err=locked`);
+  return ses;
 }
 
 export async function detachAbstract(abstractId: string, sessionId: string) {
   const u = await requirePerm("programme.edit");
+  await guardEdit(u, sessionId);
   await db.update(s.abstracts).set({ sessionId: null, sessionOrder: null }).where(eq(s.abstracts.id, abstractId));
   await db.delete(s.sessionPeople).where(and(eq(s.sessionPeople.abstractId, abstractId), eq(s.sessionPeople.sessionId, sessionId), eq(s.sessionPeople.inviteStatus, "NOT_SENT")));
   await logAbstract(abstractId, u.name, "Removed from session");
@@ -153,7 +190,7 @@ export async function detachAbstract(abstractId: string, sessionId: string) {
 export async function attachAbstracts(sessionId: string, f: FormData) {
   const u = await requirePerm("programme.edit");
   const refs = String(f.get("refs") || "").toUpperCase().split(/[\s,;]+/).filter(Boolean);
-  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, sessionId));
+  const ses = await guardEdit(u, sessionId);
   const bad: string[] = [];
   for (const ref of refs) {
     const [a] = await db.select().from(s.abstracts).where(eq(s.abstracts.refNo, ref));

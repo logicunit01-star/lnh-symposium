@@ -1,29 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
-import { getEvent } from "@/lib/event";
-import { logAbstract } from "@/lib/abstracts";
-import { sendEmail, emailLayout } from "@/lib/notify";
-import { appUrl } from "@/lib/utils";
+import { logAbstract, sendDecisionEmails } from "@/lib/abstracts";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
-
-/** Scientific Committee quality check: final decision. */
-export async function scFinalize(id: string, f: FormData) {
-  const u = await requirePerm("abstracts.review");
-  const d = str(f, "final");
-  if (!["ORAL", "POSTER", "REJECT"].includes(d)) throw new Error("Choose a decision");
-  await db.update(s.abstracts).set({
-    status: d === "REJECT" ? "REJECTED" : "ACCEPTED", acceptedAs: d === "REJECT" ? null : d, type: d === "POSTER" ? "POSTER" : "ORAL",
-    scNotes: str(f, "scNotes") || null, decidedAt: new Date(), reviewerId: u.sub,
-  }).where(eq(s.abstracts.id, id));
-  await logAbstract(id, u.name, d === "REJECT" ? "SC: rejected" : `SC: accepted as ${d.toLowerCase()}`, str(f, "scNotes") || null);
-  revalidatePath("/admin/abstracts", "layout");
-  redirect(`/admin/abstracts/${id}?saved=1`);
-}
 
 /** Phase 2: send an abstract (usually "back to secretariat") to another department, reopening that department's portal. */
 export async function scReassign(id: string, f: FormData) {
@@ -48,23 +31,12 @@ export async function reopenDept(deptId: number, phase: number) {
   revalidatePath("/admin/departments"); revalidatePath("/admin/abstracts", "layout");
 }
 
-/** Email final decisions to presenting authors not yet notified. */
+/** Email decisions now (normally sent by the scheduled dispatch on 31 December). */
 export async function notifyDecisions() {
   const u = await requirePerm("abstracts.review");
-  const ev = await getEvent();
-  const rows = await db.select().from(s.abstracts).where(and(inArray(s.abstracts.status, ["ACCEPTED", "REJECTED"]), isNull(s.abstracts.authorNotifiedAt)));
-  for (const a of rows) {
-    const ok = a.status === "ACCEPTED";
-    await sendEmail(a.email, `${ev.name}: decision on abstract ${a.refNo}`, emailLayout("Abstract decision",
-      `<p>Dear ${a.title ?? ""} ${a.fullName ?? a.presentingAuthor},</p>${ok
-        ? `<p>We are pleased to inform you that your abstract <b>“${a.abstractTitle}”</b> (${a.refNo}) has been <b>accepted as ${a.acceptedAs === "POSTER" ? "a poster" : "an oral presentation"}</b>.</p><p>Session details, date, time and venue will follow once the programme is released. The presenting author must register for the symposium.</p>`
-        : `<p>Thank you for submitting <b>“${a.abstractTitle}”</b> (${a.refNo}). After review by the department and the Scientific Committee, we regret that it could not be accepted this year.</p>`}`,
-      ok ? { label: "Register for the symposium", href: `${appUrl()}/register` } : undefined));
-    await db.update(s.abstracts).set({ authorNotifiedAt: new Date() }).where(eq(s.abstracts.id, a.id));
-    await logAbstract(a.id, u.name, "Decision emailed to author");
-  }
+  const n = await sendDecisionEmails(u.name);
   revalidatePath("/admin/abstracts", "layout");
-  redirect(`/admin/abstracts?notified=${rows.length}`);
+  redirect(`/admin/abstracts?notified=${n}`);
 }
 
 /** Abstract grid: assign a venue and the placement details (poster board, slot, remarks). */

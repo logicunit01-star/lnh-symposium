@@ -5,14 +5,15 @@ import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
-import { acceptedOralFor, alsoAppearsIn, editRule, proposalInit, slotOf, templateFiles } from "@/lib/programme";
+import { acceptedOralFor, alsoAppearsIn, editRule, flyerLocked, proposalInit, slotOf, templateFiles } from "@/lib/programme";
 import { PageTitle } from "@/components/admin/ui";
 import { WpStatus } from "@/components/admin/wp";
 import { SessionProposalForm } from "@/components/admin/SessionProposalForm";
 import { INVITE_LABEL, PEOPLE_ROLES, SESSION_FORMATS, slotLabel } from "@/lib/scientific";
 import { cn, fmtDateTime } from "@/lib/utils";
 import { AbstractDropZone } from "@/components/admin/AbstractDropZone";
-import { allotSession, attachAbstracts, decideSession, detachAbstract, grantEdit } from "../actions";
+import { allotSession, attachAbstracts, decideSession, detachAbstract, resendFlyer } from "../actions";
+import { OriginalAgenda } from "@/components/admin/OriginalAgenda";
 
 const SC_BUILDINGS = ["Convention Center", "College of Nursing", "BSMT", "LNMC", "Radiology"];
 
@@ -30,8 +31,10 @@ export default async function ProgrammeSession({ params, searchParams }: { param
   ]);
   const sl = slotOf(ev.sessionSlots, ses.slotKey);
   const afterLock = (!!ev.sciLockAt && new Date() > ev.sciLockAt) || ses.locked;
-  const block = can(u.role, "programme.edit") ? editRule({ role: u.role, isDept: false, ownDept: true, lockAt: ev.sciLockAt, locked: ses.locked, editGrantUntil: ses.editGrantUntil }) : "Read only for your role.";
-  const errMsg = searchParams.err === "room" ? `That room is already booked in this slot for “${searchParams.with}”.` : searchParams.err === "allot" ? "Choose a slot and a room." : searchParams.err === "unallotted" ? "Allot a slot and a venue before approving." : searchParams.err === "locked" ? "Locked: the Scientific Committee Chair must authorise changes." : searchParams.err === "draft" ? "The department has not completed this session yet." : searchParams.err === "special" ? "The plenary and debate slots are reserved for those two sessions; speciality sessions use the other slots." : null;
+  const fLocked = flyerLocked(ses);
+  const block = can(u.role, "programme.edit") ? editRule({ role: u.role, isDept: false, ownDept: true, lockAt: ev.sciLockAt, locked: ses.locked, flyerLocked: fLocked }) : "Read only for your role.";
+  const special = ses.sessionFormat === "PLENARY" || ses.sessionFormat === "DEBATE";
+  const errMsg = searchParams.err === "room" ? `That room is already booked in this slot for “${searchParams.with}”.` : searchParams.err === "allot" ? "Choose a slot and a room." : searchParams.err === "unallotted" ? "Allot a slot and a venue before approving." : searchParams.err === "locked" ? (block ?? "Locked.") : searchParams.err === "draft" ? "The department has not completed this session yet." : searchParams.err === "special" ? "The plenary and debate slots are reserved for those two sessions; speciality sessions use the other slots." : null;
   const people = ses.people.sort((a, b) => a.order - b.order);
   const prefer = new Set(ses.preferredSlots);
 
@@ -41,6 +44,7 @@ export default async function ProgrammeSession({ params, searchParams }: { param
       <PageTitle title={ses.title} sub={`${ses.department} · ${SESSION_FORMATS[ses.sessionFormat ?? ""]}${ses.formatOther ? ` (${ses.formatOther})` : ""} · ${ses.expectedAudience} expected`} />
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved.</p>}
       {errMsg && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">{errMsg}</p>}
+      {!errMsg && block && can(u.role, "programme.edit") && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{block}</p>}
       {searchParams.bad && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">Not added (not an accepted oral abstract): {searchParams.bad}</p>}
       {also.length > 0 && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">People also in other sessions: {also.map((a) => `${a.name} → “${a.title}”${a.slotKey ? ` (${slotOf(ev.sessionSlots, a.slotKey) ? slotLabel(slotOf(ev.sessionSlots, a.slotKey)!) : a.slotKey})` : ""}`).join("; ")}</p>}
 
@@ -49,7 +53,8 @@ export default async function ProgrammeSession({ params, searchParams }: { param
           <div className="a-card p-5">
             <div className="flex flex-wrap items-center gap-3"><WpStatus s={ses.status} locked={afterLock} />
               {sl ? <span className="text-sm font-semibold text-slate-800">{slotLabel(sl)} · {ses.venue?.name ?? ses.hall}</span> : <span className="text-sm text-amber-700">No slot or venue yet</span>}
-              {ses.editGrantUntil && ses.editGrantUntil > new Date() && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Secretariat may edit until {fmtDateTime(ses.editGrantUntil)}</span>}</div>
+              {afterLock && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">Locked after deadline · Scientific Committee edits only</span>}
+              {fLocked && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">Flyer approved by HOD · SC Chairperson edits only</span>}</div>
             <ul className="mt-4 divide-y divide-slate-100 text-sm">
               {people.map((p) => (
                 <li key={p.id} className={cn("flex flex-wrap items-start justify-between gap-2 py-2", p.inviteStatus === "WITHDRAWN" && "opacity-50")}>
@@ -77,6 +82,8 @@ export default async function ProgrammeSession({ params, searchParams }: { param
                   .from(s.abstracts).where(and(eq(s.abstracts.status, "ACCEPTED"), eq(s.abstracts.acceptedAs, "ORAL"), isNull(s.abstracts.sessionId))))} />
             )}
           </div>
+
+          {ses.originalAgenda && <OriginalAgenda data={ses.originalAgenda as any} at={ses.originalSubmittedAt} slots={ev.sessionSlots} />}
 
           <details className="a-card p-5">
             <summary className="cursor-pointer font-semibold">Programme details form{block ? " (read only)" : " (edit)"}</summary>
@@ -108,13 +115,15 @@ export default async function ProgrammeSession({ params, searchParams }: { param
               </div>
             </form>
           )}
-          {can(u.role, "programme.approve") && afterLock && (
-            <form action={grantEdit.bind(null, ses.id)} className="a-card space-y-2 p-5">
-              <p className="font-semibold">Authorise a change after lock</p>
-              <p className="text-xs text-slate-500">Lets the secretariat edit this session for 48 hours. Logged in the history.</p>
-              <input name="note" placeholder="What is changing" className="a-input" />
-              <button className="a-btn-ghost w-full">Authorise secretariat edit</button>
-            </form>
+          {!special && ses.status === "APPROVED" && (
+            <div className="a-card space-y-2 p-5">
+              <p className="font-semibold">Session flyer · final approval by HOD</p>
+              <p className="text-xs text-slate-500">Content approval (above) and final flyer approval (department HOD) are separate steps. Once the HOD approves, the flyer is locked; only the Scientific Sessions Chairperson can make changes.</p>
+              <p className="text-sm"><span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", ses.flyerStatus === "APPROVED" ? "bg-emerald-100 text-emerald-800" : ses.flyerStatus === "CHANGES" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800")}>{ses.flyerStatus === "APPROVED" ? "Approved and locked" : ses.flyerStatus === "CHANGES" ? "HOD asked for changes" : "Waiting for HOD approval"}</span></p>
+              {ses.flyerReviewedAt && <p className="text-xs text-slate-500">{ses.flyerReviewedBy}, {fmtDateTime(ses.flyerReviewedAt)}{ses.flyerNote ? ` · “${ses.flyerNote}”` : ""}</p>}
+              <a href={`/api/sessions/${ses.slug}/flyer`} target="_blank" className="a-btn-ghost w-full">Open flyer (PDF)</a>
+              {ses.flyerStatus === "CHANGES" && can(u.role, "programme.edit") && <form action={resendFlyer.bind(null, ses.id)}><button className="a-btn-primary w-full">Send updated flyer to the HOD</button></form>}
+            </div>
           )}
           <div className="a-card p-5">
             <p className="font-semibold">History</p>

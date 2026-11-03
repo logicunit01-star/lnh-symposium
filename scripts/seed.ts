@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, schema as s } from "../src/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { DEMO_STAFF, EVENT_DEFAULTS, VENUES, seedDemoContent, seedDepartments } from "../src/lib/demo-content";
+import { DEFAULT_TIERS } from "../src/lib/reg-fields";
 
 
 async function main() {
@@ -17,13 +18,11 @@ async function main() {
     videos: [],
   }).onConflictDoNothing();
 
+  // Registration Forms 2027 fee tiers (early bird / regular) — also created by migration 0007 on existing databases
   await db.insert(s.feeCategory).values([
-    { code: "FACULTY", label: "Consultants / Faculty", fee: 8000, earlyFee: 6000, order: 1, tier: "GENERAL" },
-    { code: "MO", label: "Medical Officers / Residents / GPs", fee: 5000, earlyFee: 4000, order: 2, tier: "GENERAL" },
-    { code: "NURSE", label: "Nurses & Allied Health", fee: 3000, earlyFee: 2500, order: 3, tier: "GENERAL" },
-    { code: "STUDENT", label: "Students (valid ID required)", fee: 2000, earlyFee: 1500, order: 4, tier: "STUDENT", note: "Show a valid student ID at the registration desk." },
-    { code: "LNH", label: "LNH Faculty & Staff", fee: 2500, earlyFee: 2000, order: 5, tier: "EMPLOYEE", note: "LNH employee ID is verified at the desk." },
-    { code: "FOREIGN", label: "Foreign Delegates", fee: 28000, earlyFee: 22400, order: 6, tier: "FOREIGN", note: "Approx. USD 100 (early bird USD 80); charged in PKR." },
+    ...DEFAULT_TIERS.map((t, i) => ({ code: t.code, label: `Tier ${i + 1}: ${t.designations.join(", ")}`, fee: t.regular, earlyFee: t.early, order: i + 1, tier: "GENERAL", designations: t.designations })),
+    { code: "GUEST", label: "Guest (invited speaker, chairperson, moderator, panelist)", fee: 0, earlyFee: 0, order: 90, tier: "GENERAL", active: false },
+    { code: "VOLUNTEER", label: "Volunteer", fee: 0, earlyFee: 0, order: 91, tier: "GENERAL", active: false },
   ]).onConflictDoNothing();
 
   const email = process.env.SEED_ADMIN_EMAIL || "admin@lnh.edu.pk";
@@ -43,6 +42,13 @@ async function main() {
   if (!nv) await db.insert(s.venues).values(VENUES).onConflictDoNothing();
 
   await seedDepartments(db);
+  // SC feedback: official sender for automated emails, and the default dispatch schedule (31 Dec)
+  await db.execute(sql`update event set email_from = 'Scientific Committee, 9th LNH Symposium <' || contact_email || '>' where email_from is null`);
+  const [{ nj }] = await db.select({ nj: sql<number>`count(*)::int` }).from(s.emailJobs);
+  if (!nj) await db.insert(s.emailJobs).values([
+    { kind: "ABSTRACT_DECISIONS", runAt: new Date("2026-12-31T10:00:00+05:00"), createdBy: "Default schedule (SC feedback)", note: "After finalisation of the agenda" },
+    { kind: "INVITATIONS", runAt: new Date("2026-12-31T10:30:00+05:00"), createdBy: "Default schedule (SC feedback)", note: "After finalisation of the agenda" },
+  ]);
   if (ev && !ev.sessionSlots?.length) {
     const { sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt } = EVENT_DEFAULTS;
     await db.update(s.event).set({ sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt }).where(eq(s.event.id, 1));
