@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import QRCode from "qrcode";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { feedbackStats } from "@/lib/feedbackStats";
 import { PageTitle, Stat, StatusBadge, Empty } from "@/components/admin/ui";
 import { LiveFeedback } from "@/components/admin/LiveFeedback";
-import { appUrl, fmtDate, fmtTime, pkr, SESSION_TYPE_LABEL } from "@/lib/utils";
+import { fmtDate, fmtTime, pkr, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { itemAttend } from "../../actions";
 
 export default async function SessionDash({ params }: { params: { id: string } }) {
@@ -19,8 +18,6 @@ export default async function SessionDash({ params }: { params: { id: string } }
   const active = items.filter((i) => ["PENDING", "PAID", "WAIVED"].includes(i.registration.paymentStatus));
   const paid = active.filter((i) => i.registration.paymentStatus !== "PENDING");
   const attended = items.filter((i) => i.attendedAt).length;
-  const fbUrl = `${appUrl()}/feedback/${x.slug}`;
-  const qr = await QRCode.toDataURL(fbUrl, { margin: 1, width: 480, color: { dark: "#232667", light: "#ffffff" } });
   const stats = await feedbackStats(x.id);
   return (
     <>
@@ -40,15 +37,9 @@ export default async function SessionDash({ params }: { params: { id: string } }
           <p className="mb-4 text-sm font-semibold text-slate-700">Real-time feedback</p>
           <LiveFeedback sessionId={x.id} initial={stats} />
         </div>
-        <div className="a-card p-5 text-center">
-          <p className="text-sm font-semibold text-slate-700">Feedback QR code</p>
-          <p className="text-xs text-slate-500">Display on screen or print for the hall</p>
-          <img src={qr} alt="Feedback QR" className="mx-auto mt-4 w-56" />
-          <p className="mt-2 break-all font-mono text-[10px] text-slate-400">{fbUrl}</p>
-          <div className="mt-4 flex justify-center gap-2">
-            <a href={qr} download={`feedback-${x.slug}.png`} className="a-btn-ghost text-xs">Download PNG</a>
-            <Link href={`/admin/sessions/${x.id}/qr`} target="_blank" className="a-btn-ghost text-xs">Full-screen / print</Link>
-          </div>
+        <div className="a-card p-5 text-sm text-slate-600">
+          <p className="font-semibold text-slate-700">Feedback</p>
+          <p className="mt-2">Participants reach this session's feedback form from the QR code on the back of their registration ID card.</p>
           {!x.feedbackOpen && <p className="mt-3 text-xs font-semibold text-rose-600">Feedback is closed for this session</p>}
         </div>
       </div>

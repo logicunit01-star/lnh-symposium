@@ -109,7 +109,7 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: rgb(0.95, 0.96, 0.99) });
   page.drawText(safe(`${ev.venue}  |  ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} - ${fmtDate(ev.endDate)}`), { x: 40, y: 42, size: 8, font: f, color: GREY });
   page.drawText(safe(`Find your tickets: ${appUrl()}/my-registrations`), { x: 40, y: 28, size: 8, font: f, color: GREY });
-  if (!awaiting && (r.hasPass ?? true)) await idCardPage(doc, r, ev, f, b);
+  if (!awaiting && (r.hasPass ?? true)) { await idCardPage(doc, r, ev, f, b); await idCardBack(doc, f, b); }
   // one page per workshop ticket, each with its own QR (release 3, D4)
   if (!awaiting) for (const it of [...r.items].sort((x, z) => +x.session.startsAt - +z.session.startsAt)) await ticketPage(doc, r, it, f, b);
   return doc.save();
@@ -146,6 +146,25 @@ async function idCardPage(doc: PDFDocument, r: RegForPdf, ev: { name: string }, 
   p.drawLine({ start: { x: 20, y: 110 }, end: { x: W - 20, y: 110 }, thickness: 0.4, color: rgb(0.85, 0.88, 0.94) });
   const bq = ((r.hasPass ?? true) && (r.regType ?? "PARTICIPANT") === "PARTICIPANT" ? 1 : 0) + (r.banquetQty ?? 0);
   c((r.hasPass ?? true) ? `Symposium Pass${bq ? `  |  Banquet x ${bq}` : ""}` : "Workshop ticket(s) only", 6, 7, b, RED);
+}
+
+/** Back of the ID card (4 x 6 in): the session feedback QR (Dashboard Instructions, revised 06-11-2026:
+ *  "Remove Feedback QR code from dashboard, it will be added on the back of the attendee's registration ID card"). */
+async function idCardBack(doc: PDFDocument, f: PDFFont, b: PDFFont) {
+  const W = 288, H = 432;
+  const p = doc.addPage([W, H]);
+  p.drawRectangle({ x: 0, y: H - 70, width: W, height: 70, color: NAVY });
+  p.drawRectangle({ x: 0, y: H - 74, width: W, height: 4, color: RED });
+  const c = (t: string, y: number, size: number, font: PDFFont, color = INK) => p.drawText(t, { x: (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color });
+  c("ID CARD - BACK", H - 30, 9, b, rgb(0.75, 0.82, 1));
+  c("Your feedback matters", H - 52, 13, b, rgb(1, 1, 1));
+  const q = await qrPng(doc, `${appUrl()}/feedback`);
+  p.drawImage(q, { x: (W - 160) / 2, y: 150, width: 160, height: 160 });
+  c("Session feedback", 132, 11, b, NAVY);
+  c("Scan to rate the sessions and workshops", 114, 8.5, f, GREY);
+  c("you attended. It takes under a minute.", 102, 8.5, f, GREY);
+  c(safe(`${appUrl().replace(/^https?:\/\//, "")}/feedback`), 70, 8, f, BLUE);
+  c("Please wear your ID card at all times on campus.", 28, 7.5, f, GREY);
 }
 
 /** Workshop ticket (4 x 6 in): one per workshop, with the ticket's own QR for that workshop's door. */

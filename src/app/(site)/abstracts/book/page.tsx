@@ -52,7 +52,13 @@ export default async function AbstractBook({ searchParams }: { searchParams: { q
                     <article key={a.id} id={a.refNo} className="card break-inside-avoid p-6">
                       <p className="mono text-xs text-lnh-sky">{a.refNo} · {a.acceptedAs === "POSTER" ? "Poster" : "Oral presentation"}{a.session ? ` · ${a.session.title}` : ""}{sl ? ` · ${slotLabel(sl)}` : ""}</p>
                       <h3 className="mt-2 font-display text-xl font-bold text-white">{a.abstractTitle}</h3>
-                      <p className="mt-2 text-sm text-slate-300"><b>{a.presentingAuthor}</b> ({a.organization}){(a.coAuthors ?? []).map((c) => `, ${c.name} (${c.affiliation})`).join("")}</p>
+                      {/* Order set by the Dashboard Instructions (revised 06-11-2026): Title, Presenting author, Affiliation, Co-authors, Email */}
+                      <dl className="mt-2 space-y-0.5 text-sm text-slate-300">
+                        <div><dt className="inline text-slate-400">Presenting author: </dt><dd className="inline font-semibold text-white">{a.presentingAuthor}</dd></div>
+                        <div><dt className="inline text-slate-400">Affiliation: </dt><dd className="inline">{[a.department, a.organization].filter(Boolean).join(", ")}</dd></div>
+                        {(a.coAuthors ?? []).length > 0 && <div><dt className="inline text-slate-400">Co-authors: </dt><dd className="inline">{(a.coAuthors ?? []).map((c) => `${c.name} (${c.affiliation})`).join("; ")}</dd></div>}
+                        <div><dt className="inline text-slate-400">Email: </dt><dd className="inline"><a href={`mailto:${a.email}`} className="text-lnh-sky underline">{a.email}</a></dd></div>
+                      </dl>
                       <details className="mt-3 group"><summary className="inline-flex min-h-[44px] cursor-pointer items-center text-sm font-semibold text-lnh-sky">Read the abstract</summary>
                       <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-300">
                         {a.sections ? (SECTIONS[a.kind ?? "ORIGINAL"] ?? []).map(([k, l]) => a.sections?.[k] ? <p key={k}><b className="text-white">{l}:</b> {a.sections[k]}</p> : null) : <p className="whitespace-pre-wrap">{a.body}</p>}

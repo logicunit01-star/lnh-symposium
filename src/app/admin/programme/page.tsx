@@ -40,6 +40,7 @@ export default async function Programme({ searchParams }: { searchParams: { day?
         actions={<>
           {can(u.role, "programme.edit") && <Link href="/admin/programme/new" className="a-btn-ghost">+ Session for a department</Link>}
           {can(u.role, "programme.edit") && <Link href="/admin/programme/new?format=PLENARY" className="a-btn-ghost">+ Plenary / debate</Link>}
+          {can(u.role, "programme.edit") && <Link href="/admin/programme/pages" className="a-btn-ghost">Webinar &amp; Meet the Experts</Link>}
           {can(u.role, "invitations") && <Link href="/admin/invitations" className="a-btn-ghost"><Megaphone className="h-4 w-4" />Invitations</Link>}
           {can(u.role, "programme.approve") && <form action={releaseProgramme.bind(null, !ev.programmeReleasedAt)}><button className={ev.programmeReleasedAt ? "a-btn-ghost" : "a-btn-red"}>{ev.programmeReleasedAt ? "Withdraw release" : "Release approved programme"}</button></form>}
         </>} />

@@ -22,7 +22,8 @@ export const sessionProposalInput = z.object({
   title: z.string().trim().max(200).default(""), // optional (Dashboard Instructions, revised 06-11-2026)
   sessionFormat: z.enum(["INVITED_PAPERS", "PAPERS_ONLY", "GUEST_ONLY", "PANEL", "CASE_BASED", "OTHER", "PLENARY", "DEBATE"]),
   formatOther: z.string().trim().max(120).optional(),
-  preferredSlots: z.array(z.string()).min(1, "Choose at least one day and time slot"),
+  // HODs no longer choose a day/slot (Dashboard Instructions, revised 06-11-2026); the committee still does when it enters a session
+  preferredSlots: z.array(z.string()).default([]),
   expectedAudience: z.coerce.number().int().min(1, "Expected participants required").max(2000),
   chair: loose.default(blank), coChair: loose.default(blank), moderator: loose.default(blank),
   panelists: z.array(guest).max(12),

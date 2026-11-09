@@ -6,6 +6,8 @@ import { getProgrammeItem } from "@/lib/queries";
 import { appUrl, fmtDate, fmtTime, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { TYPE_STYLE } from "@/components/site/SessionCard";
+import { SessionAgenda } from "@/components/site/SessionAgenda";
+import { publicPeople } from "@/lib/programme-pages";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const s = await getProgrammeItem(params.slug);
@@ -19,6 +21,7 @@ export default async function SessionPage({ params }: { params: { slug: string }
   const [ev, s] = await Promise.all([getEvent(), getProgrammeItem(params.slug)]);
   if (!s || s.type === "WORKSHOP" || s.type === "BREAK") notFound();
   const flyer = s.proposal && s.flyerStatus === "APPROVED" && ev.programmeReleasedAt;
+  const people = s.proposal ? (await publicPeople([s.id]))[s.id] ?? [] : [];
   return (
     <section className="relative overflow-hidden pb-10 pt-36">
       <div className="container-x max-w-4xl">
@@ -35,6 +38,7 @@ export default async function SessionPage({ params }: { params: { slug: string }
           {s.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{s.venueId ? <a href={`/venues#${s.venueId}`} className="underline">{s.hall}</a> : s.hall}</li>}
         </ul>
         {s.description && <div className="prose-lnh mt-8"><p>{s.description}</p></div>}
+        <SessionAgenda people={people} />
         {s.speakers.length > 0 && (
           <div className="mt-8">
             <h2 className="font-display text-xl font-bold text-white">Speakers</h2>

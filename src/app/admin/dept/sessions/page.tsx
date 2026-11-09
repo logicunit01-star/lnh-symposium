@@ -50,7 +50,7 @@ export default async function DeptSessions({ searchParams }: { searchParams: { e
             <div key={r.id} className="a-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div><p className="font-display text-lg font-bold text-slate-900">{r.title}</p>
-                  <p className="text-sm text-slate-500">{SESSION_FORMATS[r.sessionFormat ?? ""]} · {r.expectedAudience} expected · preferred {r.preferredSlots.map((k) => { const x = slotOf(ev.sessionSlots, k); return x ? slotLabel(x) : k; }).join(" / ")}</p>
+                  <p className="text-sm text-slate-500">{SESSION_FORMATS[r.sessionFormat ?? ""]} · {r.expectedAudience} expected · day, time slot and venue allotted by the Scientific Committee</p>
                   {released && r.status === "APPROVED" && sl && <p className="mt-1 text-sm font-semibold text-emerald-700">Scheduled: {slotLabel(sl)} · {r.venue?.name}</p>}</div>
                 <div className="flex items-center gap-2">{r.status === "DRAFT" ? <span className="badge bg-amber-100 text-amber-800">To complete</span> : <WpStatus s={released || r.status === "SUBMITTED" ? r.status : "UNDER_REVIEW"} />}<Link href={`/admin/dept/sessions?edit=${r.id}`} className={r.status === "DRAFT" && !locked ? "a-btn-red py-1.5 text-xs" : "a-btn-ghost py-1.5 text-xs"}>{locked || flyerLocked(r) ? "View" : r.status === "DRAFT" ? "Complete details" : "Edit"}</Link></div>
               </div>

@@ -609,3 +609,32 @@ export type Role = (typeof roleEnum.enumValues)[number];
 export type Account = typeof accounts.$inferSelect;
 export type Abstract = typeof abstracts.$inferSelect;
 export type SessionPerson = typeof sessionPeople.$inferSelect;
+
+/** Programme pages managed by the Scientific Committee (Dashboard Instructions, revised 06-11-2026):
+ *  WEBINAR = Pre-Symposium Webinar / Panel Discussion, EXPERTS = Meet the Experts. */
+export const programmePages = pgTable("programme_pages", {
+  key: text("key").primaryKey(), // WEBINAR | EXPERTS
+  title: text("title").notNull(),
+  dateText: text("date_text"),
+  format: text("format"),
+  description: text("description"),
+  published: boolean("published").notNull().default(false),
+  updatedBy: text("updated_by"),
+  updatedAt: updated(),
+});
+
+/** Guests shown on a programme page: photo, name, affiliation, qualification. Photo stored base64 (max 1 MB) or as a URL. */
+export const programmeGuests = pgTable("programme_guests", {
+  id: id(),
+  pageKey: text("page_key").notNull().references(() => programmePages.key, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  affiliation: text("affiliation"),
+  qualification: text("qualification"),
+  topic: text("topic"),
+  photoUrl: text("photo_url"),
+  photoMime: text("photo_mime"),
+  photoData: text("photo_data"),
+  order: integer("order").notNull().default(0),
+  createdAt: created(),
+}, (t) => ({ pIdx: index("pg_page_idx").on(t.pageKey) }));
+export type ProgrammeGuest = typeof programmeGuests.$inferSelect;

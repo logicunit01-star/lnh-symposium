@@ -23,8 +23,12 @@ const NAV: Item[] = [
     label: "Programme",
     children: [
       { label: "Agenda", href: "/agenda", desc: "Full schedule, day by day" },
+      { label: "Plenary Session", href: "/programme/plenary", desc: "Day 1 keynote, panelists & moderator" },
+      { label: "Debate Session", href: "/programme/debate", desc: "Day 2 keynote, panelists & moderator" },
+      { label: "Scientific Sessions", href: "/programme/scientific", desc: "Every session with its full agenda" },
+      { label: "Pre-Symposium Webinar / Panel Discussion", href: "/programme/webinar", desc: "Ahead of the symposium" },
+      { label: "Meet the Experts", href: "/programme/meet-the-experts", desc: "Our guest experts" },
       { label: "Speakers", href: "/speakers", desc: "Keynotes, panelists & faculty" },
-      { label: "Scientific & Plenary", href: "/sessions", desc: "Plenaries & oral abstracts" },
     ],
   },
   { label: "Workshops", href: "/workshops" },

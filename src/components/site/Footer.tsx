@@ -13,7 +13,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
   ].filter((s) => s.href);
   const cols = [
     { t: "Participate", l: [["Symposium Pass", "/register"], ["Workshops", "/workshops"], ["Abstract Submission", "/abstracts"], ["My tickets", "/account/bookings"], ["Find my tickets", "/my-registrations"], ["E-certificates", "/certificates"], ["Guest registration", "/register/guest"], ["Volunteer registration", "/register/volunteer"]] },
-    { t: "Programme", l: [["Agenda", "/agenda"], ["Speakers", "/speakers"], ["Scientific & Plenary", "/sessions"], ["Awards", "/awards"]] },
+    { t: "Programme", l: [["Agenda", "/agenda"], ["Scientific Sessions", "/programme/scientific"], ["Meet the Experts", "/programme/meet-the-experts"], ["Speakers", "/speakers"], ["Awards", "/awards"]] },
     { t: "Symposium", l: [["About", "/about"], ["Organizing Committee", "/committee"], ["Contact Us", "/contact"]] },
   ];
   return (

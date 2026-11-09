@@ -18,7 +18,7 @@ export default async function Sessions() {
   }).from(s.sessions).orderBy(asc(s.sessions.day), asc(s.sessions.startsAt));
   return (
     <>
-      <PageTitle title="Sessions & workshops" sub="Each session has its own dashboard with participants, attendance, live feedback and QR code."
+      <PageTitle title="Sessions & workshops" sub="Each session has its own dashboard with participants, attendance and live feedback."
         actions={can(u.role, "sessions.edit") && <Link href="/admin/sessions/new" className="a-btn-primary">+ New session</Link>} />
       <div className="a-card overflow-x-auto">
         <table className="a-table">

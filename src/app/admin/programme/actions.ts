@@ -44,6 +44,8 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     const fixed = ev.sessionSlots.filter((x) => x.special === d.sessionFormat).map((x) => x.key);
     if (!fixed.length) return { error: `No ${d.sessionFormat.toLowerCase()} slot is defined in Event Settings.` };
     d.preferredSlots = fixed;
+  } else if (!isDept && !d.preferredSlots.length && !f.get("id")) {
+    return { error: "Please complete the highlighted fields.", fields: { preferredSlots: "Choose at least one day and time slot" } };
   } else if (d.preferredSlots.some((k) => ev.sessionSlots.find((x) => x.key === k)?.special)) {
     return { error: "The plenary and debate slots are reserved for the committee's sessions.", fields: { preferredSlots: "Choose one of the speciality session slots" } };
   }

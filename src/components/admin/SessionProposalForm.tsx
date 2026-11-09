@@ -108,6 +108,12 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
         <p className="text-xs text-slate-500 sm:col-span-2">4 · Venue is allotted by the Scientific Committee.</p>
       </section>
 
+      {fixedDept && !special ? (
+      <section className="a-card p-6">
+        <p className="a-label">5 · Session day and time slot</p>
+        <p className="text-sm text-slate-700">The venue, day and time slot are allotted by the Scientific Committee.</p>
+      </section>
+      ) : (
       <section className="a-card p-6">
         <p className="a-label">5 · {special ? "Session day and time (fixed)" : "Preferred session day(s) and time slot(s) *"}</p>
         {special ? (
@@ -120,6 +126,7 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
             ))}</div>
         ))}</div>}{err("preferredSlots")}
       </section>
+      )}
 
       {!pre && <>
       <section className="a-card space-y-4 p-6">
