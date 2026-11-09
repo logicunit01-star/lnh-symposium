@@ -188,7 +188,7 @@ export default async function Home() {
       <section className="relative overflow-hidden border-y border-white/10 bg-ink-800/50 py-28">
         <div className="circuit absolute inset-0 opacity-60" />
         <div className="container-x relative">
-          <SectionHead eyebrow="Pre-conference · limited seats" title={<>Hands-on <span className="text-holo">workshops</span></>}
+          <SectionHead eyebrow="Pre-conference · limited seats" title={<>Pre-symposium <span className="text-holo">workshops</span></>}
             sub="Simulation labs, AI tools and skills stations. Each workshop is a separate ticket with its own fee; no Symposium Pass needed."
             action={<Link href="/workshops" className="btn-blue shrink-0">Open workshop portal <ArrowRight className="h-4 w-4" /></Link>} />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -324,7 +324,7 @@ export default async function Home() {
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
             <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/70">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-5xl text-white sm:text-7xl">Be part of the new era</h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add hands-on workshops as separate tickets and pay once.</p>
+            <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="btn-light px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Browse workshops</Link>

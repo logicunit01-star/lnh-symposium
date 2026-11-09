@@ -10,7 +10,7 @@ export default function FindMyTickets() {
   return (
     <>
       <PageHero eyebrow="Find my tickets" title={<>Find my <span className="text-grad">tickets</span></>}
-        sub="For registrations made at the desk, as a guest or volunteer, or without an account. Have an account? Sign in to see everything in My tickets." >
+        sub="For registrations made as a guest or volunteer, or without an account. Have an account? Sign in to see everything in My tickets." >
         <div className="mt-6"><Link href="/account?next=/account/bookings" className="btn-ghost btn-sm">Sign in instead</Link></div>
       </PageHero>
       <div className="container-x grid max-w-5xl gap-8 lg:grid-cols-2">

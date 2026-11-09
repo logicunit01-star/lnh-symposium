@@ -23,7 +23,8 @@ export default async function Checkout({ searchParams }: { searchParams: { welco
       <div className="container-x relative">
         <span className="eyebrow">Checkout</span>
         <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">Review and <span className="text-holo">pay</span></h1>
-        <p className="mt-3 text-slate-300">Signed in as <b className="text-white">{a.title} {a.firstName} {a.lastName}</b> · {a.email} · {a.phone}</p>
+        <p className="mt-3 text-slate-300">Full name (Mr./Mrs./Dr./Prof.), as printed on your certificate: <b className="text-white">{a.title} {a.firstName} {a.lastName}</b> · {a.email} · {a.phone}</p>
+        <p className="mt-1 text-sm text-slate-400">Please use the same email address for Symposium and Workshop registration.</p>
         <CheckoutClient welcome={!!searchParams.welcome} contact={ev.contactEmail} catalog={catalog as any} categories={cats.filter((c) => c.designations?.length).map((c) => ({ id: c.id, label: c.label, fee: early ? c.earlyFee : c.fee, note: c.note, designations: c.designations }))}
           processingPct={ev.processingFeePct} early={early} banquet={{ fee: ev.banquetFee, max: ev.banquetMax }}
           account={{ gender: a.gender ?? "", institution: a.institution ?? "", specialty: a.specialty ?? "", whatsapp: a.whatsapp ?? "", cnic: a.cnic ?? "", address: a.address ?? "", city: a.city ?? "", province: a.province ?? "", country: a.country ?? "Pakistan", qualification: a.qualification ?? "", employeeNo: a.employeeNo ?? "", pmdcNo: a.pmdcNo ?? "" }} />

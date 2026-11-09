@@ -85,7 +85,7 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
           {k.clashes > 0 && <p className="mt-2 text-xs font-semibold text-rose-600">{k.clashes} venue/time clash{k.clashes > 1 ? "es" : ""} to resolve</p>}
         </div>
         <div className="a-card p-5">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500"><Wallet className="h-4 w-4 text-emerald-600" />Workshop income</p>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500"><Wallet className="h-4 w-4 text-emerald-600" />Workshop ticket income (paid)</p>
           <p className="mt-2 font-display text-3xl font-bold text-slate-900">{pkr(k.income)}</p>
           <p className="text-xs text-slate-500">≈ {usd(k.income, ev.usdRate)} · {k.waiting} on waitlists</p>
         </div>
@@ -93,7 +93,7 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="a-card p-5">
-          <div className="flex items-baseline justify-between"><h2 className="font-display text-base font-bold">Revenue by registrant type</h2><p className="text-xs text-slate-500">Paid registrations · {pkr(tierTotal)} · 1 USD = {ev.usdRate} PKR</p></div>
+          <div className="flex items-baseline justify-between"><h2 className="font-display text-base font-bold">Revenue by registrant type</h2><p className="text-xs text-slate-500">Paid orders incl. Symposium Pass and banquet · {pkr(tierTotal)} · 1 USD = {ev.usdRate} PKR</p></div>
           <ul className="mt-4 space-y-3">
             {tiers.map((t, i) => (
               <li key={t.tier}>

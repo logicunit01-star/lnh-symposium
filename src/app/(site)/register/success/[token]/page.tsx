@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Award, CalendarPlus, CheckCircle2, Clock, Download, MapPin, Plus, Ticket, Utensils, Wrench } from "lucide-react";
 import QRCode from "qrcode";
-import { loadRegistration, banquetTotal } from "@/lib/registration";
+import { loadRegistration, banquetTotal, WORKSHOP_EMAIL } from "@/lib/registration";
 import { getEvent } from "@/lib/event";
 import { provider, BANK_DETAILS } from "@/lib/payments";
 import { appUrl, cn, fmtDate, fmtTime, pkr } from "@/lib/utils";
@@ -123,6 +123,7 @@ export default async function Success({ params, searchParams }: { params: { toke
           </div>
         </details>
         <p className="text-center text-xs text-slate-300">A confirmation with the PDF went to {r.email} and an SMS to {r.phone}. Bookmark this page: it is your private link to your tickets.</p>
+        {items.length > 0 && <p className="text-center text-xs text-slate-300">Please keep your registration confirmation email with you all the time during the workshop. Workshop questions: <a href={`mailto:${WORKSHOP_EMAIL}`} className="text-lnh-sky underline">{WORKSHOP_EMAIL}</a></p>}
       </div>
     </section>
   );

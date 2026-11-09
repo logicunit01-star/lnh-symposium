@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "9th LNH Symposium 2027 — Shaping the New Era of Healthcare", template: "%s · 9th LNH Symposium" },
-  description: "9th LNH Symposium, 29–31 January 2027, Liaquat National Hospital, Karachi. Shaping the New Era of Healthcare: Convergence of AI, Robotics & Digitization — keynotes, scientific sessions and hands-on workshops.",
+  description: "9th LNH Symposium, 29–31 January 2027, Liaquat National Hospital, Karachi. Shaping the New Era of Healthcare: Convergence of AI, Robotics & Digitization — keynotes, scientific sessions and pre-symposium workshops.",
   icons: { icon: "/favicon.svg" },
   openGraph: { images: ["/brand/symposium-poster.jpg"] },
 };

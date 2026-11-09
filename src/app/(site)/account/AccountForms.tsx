@@ -47,6 +47,7 @@ export function AccountForms({ next, initialMode }: { next: string; initialMode:
           <Field label="Email address" name="email" required error={check.fields.email}>
             <input id="email" type="email" autoComplete="email" inputMode="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
           </Field>
+          <p className="-mt-2 text-xs text-slate-400">Please use the same email address for Symposium and Workshop registration.</p>
           <button className="btn-primary w-full" disabled={check.loading || !email}>{check.loading ? "Checking…" : "Continue"}</button>
         </form>
       )}

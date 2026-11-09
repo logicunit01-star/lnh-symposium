@@ -12,6 +12,9 @@ import { PHONE_RE, normaliseCnic } from "./reg-fields";
 const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
 
 /** Basic information block of the Registration Forms 2027 (participants, guests and volunteers). */
+/** Workshop support address (Final LNH Workshop Registration 2027 form). */
+export const WORKSHOP_EMAIL = "workshop.lnhsymposium2027@lnh.edu.pk";
+
 export const basicInfo = z.object({
   title: z.string().min(1, "Required").max(20),
   gender: z.enum(["Male", "Female"], { errorMap: () => ({ message: "Required" }) }),
@@ -167,7 +170,8 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
        <tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:${confirmed ? "#0b8a4c" : "#c47a00"}">${confirmed ? "CONFIRMED" : "PAYMENT PENDING"}</b></td></tr>
      </table>
      ${rows ? `<p style="margin-bottom:4px">Workshop tickets (separate from the Symposium Pass):</p><ul style="margin-top:0">${rows}</ul>` : ""}
-     <p>A PDF with all the details you submitted is attached. Please bring it (or the QR code) to the registration desk.</p>`,
+     <p>A PDF with all the details you submitted is attached. Please bring it (or the QR code) to the registration desk.</p>
+     ${rows ? `<p>Please bring record of this registration confirmation email and keep it with you all the time during the workshop. Workshop questions: <a href="mailto:${WORKSHOP_EMAIL}">${WORKSHOP_EMAIL}</a></p>` : ""}`,
     { label: confirmed ? "View registration" : "Complete payment", href: link }
   );
   await sendEmail(r.email, `${ev.name} — ${confirmed ? "Registration confirmed" : "Registration received"} (${r.regNo})`, html, [

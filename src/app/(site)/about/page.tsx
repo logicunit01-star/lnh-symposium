@@ -24,7 +24,7 @@ export default async function About() {
             <li>Examine robotic surgery and automation: outcomes, training and economics.</li>
             <li>Plan the digital hospital: records, telemedicine, interoperability and data governance.</li>
             <li>Keep cost and quality at the centre of every technology decision.</li>
-            <li>Showcase local research through oral and poster presentations, and build skills in hands-on workshops.</li>
+            <li>Showcase local research through oral and poster presentations, and build skills in workshops.</li>
           </ul>
           <h3>Format</h3>
           <p>Pre-conference workshops run from December to January, followed by three symposium days ({eventDaysLabel(ev)}): Day 1 on artificial intelligence, Day 2 on robotics and Day 3 on digitization.</p>

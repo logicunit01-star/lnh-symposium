@@ -28,15 +28,16 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
 }) {
   const router = useRouter();
   const { items: cart, pass, held, remove, setPass, clear, ready } = useCart();
-  const [det, setDet] = useState<Details>(account);
+  const [det, setDet] = useState<Details>({ ...account, cnic: (account.country || "Pakistan") === "Pakistan" ? account.cnic.replace(/\D/g, "").slice(0, 13) : account.cnic });
   const [method, setMethod] = useState("card");
   const [agree, setAgree] = useState(false);
+  const [wsTerms, setWsTerms] = useState(false);
   // Workshop-only buyers without a pass still give a designation: it prints on the receipt and certificate
   const [wsDesignation, setWsDesignation] = useState("");
   const { submit, loading, error, fields } = useSubmit<{ accessToken: string; regNo: string }>("/api/checkout");
   const setD = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setDet((p) => ({ ...p, [k]: k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? maskCnic(e.target.value) : k === "whatsapp" ? maskPhone(e.target.value) : e.target.value }));
-  const detailsOk = !!det.gender && det.institution.trim().length >= 2 && !!det.cnic.trim() && det.address.trim().length >= 5 && det.city.trim().length >= 2;
+    setDet((p) => ({ ...p, [k]: k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? e.target.value.replace(/\D/g, "").slice(0, 13) : k === "whatsapp" ? maskPhone(e.target.value) : e.target.value }));
+  const detailsOk = !!det.gender && det.institution.trim().length >= 2 && ((det.country || "Pakistan") === "Pakistan" ? /^\d{13}$/.test(det.cnic) : !!det.cnic.trim()) && det.address.trim().length >= 5 && det.city.trim().length >= 2;
   const fe = (k: string) => fields[k] || fields[`details.${k}`];
 
   const lines = cart.map((c) => ({ id: c.id, cartTitle: c.title, live: catalog[c.id] }));
@@ -52,10 +53,10 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const proc = processingFee(subtotal, processingPct);
   const total = subtotal + proc;
   const empty = !pass && lines.length === 0;
-  const canPay = ready && !empty && !!categoryId && !!designation && (!pass || !!passCat) && detailsOk && agree && invalid.length === 0;
+  const canPay = ready && !empty && !!categoryId && !!designation && (!pass || !!passCat) && detailsOk && agree && (valid.length === 0 || wsTerms) && invalid.length === 0;
 
   async function pay() {
-    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: method, details: det });
+    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: method, details: { ...det, cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
     if (r) { clear(); router.push(`/register/success/${r.accessToken}?checkout=1`); }
   }
 
@@ -144,16 +145,32 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
             <label className="block"><span className="label">Hospital / institution <span className="text-lnh-red">*</span></span><input className="input" value={det.institution} onChange={setD("institution")} autoComplete="organization" />{fe("institution") && <span className="err">{fe("institution")}</span>}</label>
             <label className="block"><span className="label">Specialty</span><input className="input" list="specialties" value={det.specialty} onChange={setD("specialty")} /><datalist id="specialties">{SPECIALTIES.map((x) => <option key={x} value={x} />)}</datalist></label>
             <label className="block"><span className="label">Country</span><select className="input" value={det.country || "Pakistan"} onChange={setD("country")}>{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></label>
-            <label className="block"><span className="label">{(det.country || "Pakistan") === "Pakistan" ? "CNIC no." : "Passport no."} <span className="text-lnh-red">*</span></span><input className="input mono" inputMode={(det.country || "Pakistan") === "Pakistan" ? "numeric" : "text"} placeholder={(det.country || "Pakistan") === "Pakistan" ? "12345-1234567-1" : ""} value={det.cnic} onChange={setD("cnic")} />{fe("cnic") && <span className="err">{fe("cnic")}</span>}</label>
+            <label className="block"><span className="label">{(det.country || "Pakistan") === "Pakistan" ? "CNIC (13 digits, no dashes)" : "Passport no."} <span className="text-lnh-red">*</span></span><input className="input mono" inputMode={(det.country || "Pakistan") === "Pakistan" ? "numeric" : "text"} placeholder={(det.country || "Pakistan") === "Pakistan" ? "4210112345671" : ""} value={det.cnic} onChange={setD("cnic")} />{fe("cnic") && <span className="err">{fe("cnic")}</span>}</label>
             <label className="block sm:col-span-2"><span className="label">Address <span className="text-lnh-red">*</span></span><input className="input" value={det.address} onChange={setD("address")} autoComplete="street-address" />{fe("address") && <span className="err">{fe("address")}</span>}</label>
             <label className="block"><span className="label">Province</span>{(det.country || "Pakistan") === "Pakistan" ? <select className="input" value={det.province} onChange={setD("province")}><option value="">Choose…</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select> : <input className="input" value={det.province} onChange={setD("province")} />}</label>
             <label className="block"><span className="label">City <span className="text-lnh-red">*</span></span><input className="input" value={det.city} onChange={setD("city")} />{fe("city") && <span className="err">{fe("city")}</span>}</label>
             <label className="block"><span className="label">WhatsApp no.</span><input className="input mono" inputMode="numeric" placeholder="03XX-XXXXXXX" value={det.whatsapp} onChange={setD("whatsapp")} />{fe("whatsapp") && <span className="err">{fe("whatsapp")}</span>}</label>
             <label className="block"><span className="label">PMDC no. (medical doctors only)</span><input className="input" value={det.pmdcNo} onChange={setD("pmdcNo")} /></label>
             <label className="block"><span className="label">Highest academic qualification</span><input className="input" value={det.qualification} onChange={setD("qualification")} placeholder="e.g. MBBS, FCPS" /></label>
-            <label className="block"><span className="label">Employee # (LNH staff only)</span><input className="input mono" value={det.employeeNo} onChange={setD("employeeNo")} /></label>
+            <label className="block"><span className="label">Emp # / Student ID (only for LNH)</span><input className="input mono" value={det.employeeNo} onChange={setD("employeeNo")} /></label>
           </div>
         </div>
+
+        {/* workshop terms: Final LNH Workshop Registration 2027 form */}
+        {valid.length > 0 && (
+          <div className="hud p-6">
+            <p className="eyebrow">Workshop registration · dear participants</p>
+            <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-slate-200">
+              <li>Please use same email address for registration of &quot;Symposium&quot; and &quot;Workshops&quot;.</li>
+              <li>Please ensure that all information provided is accurate, as it will be used for issuing the certificate.</li>
+              <li>Registration fees is non-refundable and non-transferable.</li>
+              <li>Registration will be considered complete only after the payment proof is received.</li>
+              <li>Please bring record of your registration confirmation email and keep it with you all the time during the workshop.</li>
+              <li>If you encounter any issues while submitting the form, please do not hesitate to reach out to <a href="mailto:workshop.lnhsymposium2027@lnh.edu.pk" className="text-lnh-sky underline">workshop.lnhsymposium2027@lnh.edu.pk</a></li>
+            </ol>
+            <label className="mt-4 flex cursor-pointer gap-3 text-sm text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={wsTerms} onChange={(e) => setWsTerms(e.target.checked)} />I accept the terms listed above.</label>
+          </div>
+        )}
 
         {/* payment */}
         <div className="hud p-6">
@@ -184,9 +201,9 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
             <div className="flex items-baseline justify-between border-t border-white/10 pt-4"><span className="font-semibold uppercase tracking-wider text-white">Total</span><span className="font-display text-3xl font-bold text-lnh-rose">{pkr(total)}</span></div>
             <p className="mono pt-2 text-xs text-slate-400">{held ? `This order is added to your registration ${held.regNo}.` : "A registration number (SYM-YYYY-NNNNN) is issued when you confirm."}</p>
             {error && <Alert className="mt-3">{error}</Alert>}
-            <label className="mt-3 flex cursor-pointer gap-3 text-xs text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm my details are correct and agree to the registration terms.</label>
+            <label className="mt-3 flex cursor-pointer gap-3 text-xs text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm that the above information provided is correct.</label>
             <button onClick={pay} disabled={!canPay || loading} className="btn-primary mt-4 w-full py-4"><Lock className="h-4 w-4" />{loading ? "Creating registration…" : `Confirm and pay ${pkr(total)}`}</button>
-            {ready && !canPay && <p className="text-center text-xs text-slate-400">{!designation ? "Choose your designation" : !detailsOk ? "Complete the registration details (gender, institution, CNIC, address, city)" : invalid.length ? "Remove the unavailable workshop(s)" : !agree ? "Tick the confirmation box" : ""}{(!designation || !detailsOk || invalid.length || !agree) ? " to continue." : ""}</p>}
+            {ready && !canPay && <p className="text-center text-xs text-slate-400">{!designation ? "Choose your designation" : !detailsOk ? "Complete the registration details (gender, institution, CNIC of 13 digits, address, city)" : invalid.length ? "Remove the unavailable workshop(s)" : valid.length && !wsTerms ? "Accept the workshop terms" : !agree ? "Tick the confirmation box" : ""}{(!designation || !detailsOk || invalid.length || !agree || (valid.length && !wsTerms)) ? " to continue." : ""}</p>}
           </div>
         </div>
       </aside>
