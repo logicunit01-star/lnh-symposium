@@ -33,7 +33,7 @@ export default async function Home() {
   const keyDates = [
     ev.abstractOpen && { d: ev.abstractOpen, t: "Abstract submission opens" },
     ev.abstractDeadline && { d: ev.abstractDeadline, t: "Abstract submission deadline" },
-    ev.earlyBirdUntil && { d: ev.earlyBirdUntil, t: "Early-bird registration ends" },
+    ev.earlyBirdUntil && { d: ev.earlyBirdUntil, t: "Symposium Pass early-bird ends" },
     wsFirst && { d: wsFirst, t: "Pre-conference workshops begin" },
     { d: days[0], t: "Symposium Day 1" },
   ].filter(Boolean).sort((a: any, b: any) => +new Date(a.d) - +new Date(b.d)) as { d: Date; t: string }[];
@@ -56,48 +56,48 @@ export default async function Home() {
 
         <div className="container-x relative z-10 grid items-center gap-10 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div>
-            <Reveal>
+            <div className="hero-in">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-lnh-red px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_24px_-4px_#B72025]">{ev.edition} Edition</span>
                 <span className="chip gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{eventDaysLabel(ev, "short")}</span>
                 <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />LNH, Karachi</span>
                 <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
               </div>
-            </Reveal>
-            <Reveal delay={120}>
+            </div>
+            <div className="hero-in" style={{ animationDelay: "120ms" }}>
               <p className="mono mt-8 text-xs uppercase tracking-[0.35em] text-lnh-sky">{ev.name} · {mainA}</p>
               <h1 className="h-display mt-4 text-[12vw] leading-[0.9] text-white sm:text-[8.5vw] lg:text-[5.2rem] xl:text-[5.6rem]">
                 <span className="block">Shaping the</span>
                 <span className="text-holo block">new era</span>
                 <span className="block">of healthcare</span>
               </h1>
-            </Reveal>
-            <Reveal delay={220}>
+            </div>
+            <div className="hero-in" style={{ animationDelay: "220ms" }}>
               <div className="mt-7 flex flex-wrap gap-2">
                 {pillars.map(({ I, short, accent }) => (
                   <span key={short} className="hud flex items-center gap-2 rounded-full px-4 py-2 font-display text-sm font-semibold text-white"><I className={`h-4 w-4 ${accent}`} />{short}</span>
                 ))}
               </div>
               <p className="mt-6 max-w-xl text-lg text-slate-300"><span className="font-semibold text-white">{mainB || ev.theme}.</span> {ev.tagline}</p>
-            </Reveal>
-            <Reveal delay={320} className="mt-9 flex flex-wrap gap-3">
-              <Link href="/register" className="btn-primary px-8 py-4 text-base">Register Now <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="hero-in mt-9 flex flex-wrap gap-3" style={{ animationDelay: "320ms" }}>
+              <Link href="/register" className="btn-primary px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/agenda" className="btn-ghost px-7 py-4 text-base">View Agenda</Link>
               <Link href="/speakers" className="btn-ghost px-7 py-4 text-base">Explore Speakers</Link>
-            </Reveal>
-            <Reveal delay={420} className="mt-12">
+            </div>
+            <div className="hero-in mt-12" style={{ animationDelay: "420ms" }}>
               <p className="mono mb-3 text-[11px] uppercase tracking-[0.3em] text-slate-500">T-minus to Day 1 · {fmtDate(days[0], { weekday: "long", day: "numeric", month: "long" })}</p>
               <Countdown to={days[0].toISOString()} />
-            </Reveal>
+            </div>
           </div>
-          <Reveal delay={200} className="relative">
+          <div className="hero-in relative" style={{ animationDelay: "200ms" }}>
             <div className="relative mx-auto w-full max-w-[720px] lg:-mr-16 lg:w-[115%] xl:-mr-24">
               <div className="pointer-events-none absolute inset-x-6 bottom-6 top-1/3 rounded-[50%] bg-lnh-sky/25 blur-3xl" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/campus-scene.webp" alt="Liaquat National Hospital, Karachi, with robotics and digital health imagery" width={1232} height={560} className="relative w-full drop-shadow-[0_30px_40px_rgba(4,11,30,.45)]" />
               <p className="mono relative mt-2 text-center text-[10px] uppercase tracking-[0.3em] text-slate-500">Liaquat National Hospital · Stadium Road, Karachi</p>
             </div>
-          </Reveal>
+          </div>
         </div>
         <div className="mono absolute bottom-6 left-1/2 hidden -translate-x-1/2 text-[10px] uppercase tracking-[0.4em] text-slate-500 sm:block">Scroll ↓</div>
       </section>
@@ -151,7 +151,7 @@ export default async function Home() {
           <NeuralField density={0.35} interactive={false} className="opacity-60" />
           <p className="eyebrow relative">The road to the symposium</p>
           <ol className="relative mt-10 grid gap-8 md:grid-cols-4">
-            <span className="absolute left-0 right-0 top-[11px] hidden h-px bg-gradient-to-r from-lnh-gold via-lnh-sky to-lnh-red md:block" />
+            <li aria-hidden="true" className="absolute left-0 right-0 top-[11px] hidden h-px list-none bg-gradient-to-r from-lnh-gold via-lnh-sky to-lnh-red md:block" />
             {[
               { k: "Pre-conference", t: "Workshops", d: wsFirst && wsLast ? `${fmtDate(wsFirst, { day: "numeric", month: "short" })} – ${fmtDate(wsLast, { day: "numeric", month: "short" })}` : "To be announced", I: Wrench, c: "bg-lnh-gold", href: "/workshops" },
               ...days.slice(0, 3).map((d, i) => ({ k: `Day ${i + 1}`, t: DAY_THEMES[i + 1] ?? "Symposium", d: fmtDate(d, { weekday: "short", day: "numeric", month: "short" }), I: [BrainCircuit, Bot, Network][i] ?? Sparkles, c: ["bg-lnh-sky", "bg-lnh-rose", "bg-lnh-blue"][i] ?? "bg-white", href: "/agenda" })),
@@ -189,7 +189,7 @@ export default async function Home() {
         <div className="circuit absolute inset-0 opacity-60" />
         <div className="container-x relative">
           <SectionHead eyebrow="Pre-conference · limited seats" title={<>Hands-on <span className="text-holo">workshops</span></>}
-            sub="Simulation labs, AI tools and skills stations. Tick several workshops across weeks, then check out once."
+            sub="Simulation labs, AI tools and skills stations. Each workshop is a separate ticket with its own fee; no Symposium Pass needed."
             action={<Link href="/workshops" className="btn-blue shrink-0">Open workshop portal <ArrowRight className="h-4 w-4" /></Link>} />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {workshops.slice(0, 3).map((w, i) => (
@@ -211,7 +211,7 @@ export default async function Home() {
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 animate-scan bg-gradient-to-b from-transparent via-white/10 to-transparent opacity-0 transition group-hover:opacity-100" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-                  <p className="mono text-[10px] uppercase tracking-[0.2em] text-lnh-sky">{s.institution}</p>
+                  <p className="mono hidden text-[10px] uppercase tracking-[0.2em] text-lnh-sky sm:line-clamp-1">{s.institution}</p>
                   <p className="mt-1 font-display text-lg font-bold text-white sm:text-2xl">{s.title} {s.name}</p>
                   <p className="mt-1 hidden text-sm text-slate-300 sm:block">{s.topic}</p>
                 </div>
@@ -243,13 +243,14 @@ export default async function Home() {
                       {date && <p className="text-right font-display text-sm text-lnh-sky">{fmtDate(date, { weekday: "short" })}<br /><span className="text-2xl font-bold text-white">{fmtDate(date, { day: "2-digit", month: "short" })}</span></p>}
                     </div>
                     <ul className="mt-5 space-y-4">
-                      {items.slice(0, 6).map((p) => (
+                      {items.slice(0, 4).map((p) => (
                         <li key={p.id} className="flex gap-4">
                           <span className="mono w-16 shrink-0 pt-0.5 text-xs text-slate-500">{fmtTime(p.startsAt)}</span>
-                          <div><p className="text-sm font-medium leading-snug text-white">{p.title}</p><p className="text-[11px] uppercase tracking-wider text-slate-500">{SESSION_TYPE_LABEL[p.type]}{p.hall ? ` · ${p.hall}` : ""}</p></div>
+                          <div><p className="text-sm font-medium leading-snug text-white"><Link href={`/sessions/${p.slug}`} className="hover:text-lnh-sky hover:underline">{p.title}</Link></p><p className="text-[11px] uppercase tracking-wider text-slate-500">{SESSION_TYPE_LABEL[p.type]}{p.hall ? ` · ${p.hall}` : ""}</p></div>
                         </li>
                       ))}
                     </ul>
+                    {items.length > 4 && <Link href={`/agenda?day=${d}`} className="mt-5 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-lnh-sky">All {items.length} sessions on Day {d} <ArrowRight className="h-4 w-4" /></Link>}
                   </div>
                 </Reveal>
               );
@@ -258,8 +259,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ================= VIDEOS ================= */}
-      <section className="container-x py-28">
+      {/* ================= VIDEOS (shown once videos are added in Event Settings; audit H3) ================= */}
+      {ev.videos.length > 0 && <section className="container-x py-28">
         <SectionHead eyebrow="Watch" title={<>Moments from <span className="text-holo">past editions</span></>} />
         <div className="grid gap-4 md:grid-cols-3">
           {(ev.videos.length ? ev.videos : [null, null, null]).slice(0, 3).map((v, i) => {
@@ -279,7 +280,7 @@ export default async function Home() {
             );
           })}
         </div>
-      </section>
+      </section>}
 
       {/* ================= ABSTRACTS + KEY DATES ================= */}
       <section className="container-x">
@@ -291,8 +292,7 @@ export default async function Home() {
               <h3 className="h-display relative mt-6 text-4xl text-white sm:text-5xl">Call for abstracts</h3>
               <p className="relative mt-4 max-w-lg text-slate-300">Share your research on AI, robotics, digitization, cost and quality of care. Selected work is presented as oral papers or posters and competes for the symposium awards.</p>
               <div className="relative mt-8 flex flex-wrap gap-3">
-                <Link href="/abstracts?type=ORAL" className="btn-primary">Submit scientific paper</Link>
-                <Link href="/abstracts?type=POSTER" className="btn-ghost">Submit poster</Link>
+                <Link href="/abstracts" className="btn-primary">Submit an abstract</Link>
               </div>
             </div>
           </Reveal>
@@ -322,11 +322,11 @@ export default async function Home() {
           <div className="noise relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-lnh-navy via-lnh-blue to-lnh-navy px-8 py-16 text-center sm:px-16 sm:py-24">
             <NeuralField density={0.5} interactive={false} />
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
-            <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/70">{early ? "Early-bird rates available" : "Registration open"}</p>
+            <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/70">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-5xl text-white sm:text-7xl">Be part of the new era</h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-white/80">One account, one cart: pick your sessions and workshops, pay securely, and get your QR pass by email and SMS.</p>
+            <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add hands-on workshops as separate tickets and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="btn-light px-8 py-4 text-base">Register Now <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/register" className="btn-light px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Browse workshops</Link>
             </div>
           </div>

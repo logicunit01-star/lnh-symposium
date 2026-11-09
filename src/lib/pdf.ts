@@ -5,7 +5,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fmtDate, fmtDateTime, fmtTime, fmtTime24, pkr, appUrl } from "./utils";
-import { qrPayload } from "./qr-payload";
+import { qrPayload, ticketPayload } from "./qr-payload";
 
 // LNH colour codes (Nov 2026): navy #232667, red #B72025, cyan #00B8D7 → #0089BF
 const NAVY = rgb(0x23 / 255, 0x26 / 255, 0x67 / 255);
@@ -34,9 +34,9 @@ type RegForPdf = {
   pmdcNo: string | null; specialty: string | null; designation: string | null; institution: string; address: string | null; city: string | null;
   conferenceFee: number; totalFee: number; earlyBird: boolean; paymentStatus: string; createdAt: Date;
   whatsapp?: string | null; cnic?: string | null; country?: string | null; province?: string | null; qualification?: string | null; employeeId?: string | null;
-  banquetQty?: number; banquetFee?: number; regType?: string; guestRole?: string | null; guestSession?: string | null; department?: string | null; approvalStatus?: string | null;
+  banquetQty?: number; banquetFee?: number; hasPass?: boolean; regType?: string; guestRole?: string | null; guestSession?: string | null; department?: string | null; approvalStatus?: string | null;
   category: { label: string };
-  items: { fee: number; session: { title: string; startsAt: Date; endsAt: Date; hall: string | null; type: string } }[];
+  items: { fee: number; ticketNo?: string | null; session: { title: string; startsAt: Date; endsAt: Date; hall: string | null; type: string } }[];
 };
 
 export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: string; venue: string; startDate: Date; endDate: Date }) {
@@ -84,14 +84,17 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   row("Category", r.regType === "GUEST" ? `Guest: ${r.guestRole ?? ""} · ${r.guestSession ?? ""}` : r.category.label);
   y -= 8;
   section("Participation & fee summary");
-  page.drawText(`Conference registration${r.earlyBird ? " (early-bird)" : ""}`, { x: 40, y, size: 10, font: f, color: INK });
-  page.drawText(pkr(r.conferenceFee), { x: W - 40 - b.widthOfTextAtSize(pkr(r.conferenceFee), 10), y, size: 10, font: b, color: INK }); y -= 17;
+  const pass = r.hasPass ?? true;
+  if (pass) {
+    page.drawText(`Symposium Pass, all sessions${r.earlyBird ? " (early-bird)" : ""} - includes 1 banquet pass`, { x: 40, y, size: 10, font: f, color: INK });
+    page.drawText(pkr(r.conferenceFee), { x: W - 40 - b.widthOfTextAtSize(pkr(r.conferenceFee), 10), y, size: 10, font: b, color: INK }); y -= 17;
+  }
   if (r.banquetQty) {
-    page.drawText(`Additional banquet pass x ${r.banquetQty}`, { x: 40, y, size: 10, font: f, color: INK });
+    page.drawText(`Extra banquet pass x ${r.banquetQty}`, { x: 40, y, size: 10, font: f, color: INK });
     page.drawText(pkr(r.banquetFee ?? 0), { x: W - 40 - b.widthOfTextAtSize(pkr(r.banquetFee ?? 0), 10), y, size: 10, font: b, color: INK }); y -= 17;
   }
   for (const it of r.items) {
-    const line = `${it.session.title}`;
+    const line = `Workshop ticket: ${it.session.title}`;
     const lines = wrap(safe(line), f, 10, 360);
     page.drawText(lines[0], { x: 40, y, size: 10, font: f, color: INK });
     const fee = it.fee ? pkr(it.fee) : "Included";
@@ -105,8 +108,10 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
 
   page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: rgb(0.95, 0.96, 0.99) });
   page.drawText(safe(`${ev.venue}  |  ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} - ${fmtDate(ev.endDate)}`), { x: 40, y: 42, size: 8, font: f, color: GREY });
-  page.drawText(safe(`Manage your registration: ${appUrl()}/register/status`), { x: 40, y: 28, size: 8, font: f, color: GREY });
-  if (!awaiting) await idCardPage(doc, r, ev, f, b);
+  page.drawText(safe(`Find your tickets: ${appUrl()}/my-registrations`), { x: 40, y: 28, size: 8, font: f, color: GREY });
+  if (!awaiting && (r.hasPass ?? true)) await idCardPage(doc, r, ev, f, b);
+  // one page per workshop ticket, each with its own QR (release 3, D4)
+  if (!awaiting) for (const it of [...r.items].sort((x, z) => +x.session.startsAt - +z.session.startsAt)) await ticketPage(doc, r, it, f, b);
   return doc.save();
 }
 
@@ -139,7 +144,28 @@ async function idCardPage(doc: PDFDocument, r: RegForPdf, ev: { name: string }, 
   p.drawText("Scientific Agenda", { x: 70 - b.widthOfTextAtSize("Scientific Agenda", 7.5) / 2, y: 20, size: 7.5, font: b, color: NAVY });
   p.drawText("e-Abstract book", { x: W - 70 - b.widthOfTextAtSize("e-Abstract book", 7.5) / 2, y: 20, size: 7.5, font: b, color: NAVY });
   p.drawLine({ start: { x: 20, y: 110 }, end: { x: W - 20, y: 110 }, thickness: 0.4, color: rgb(0.85, 0.88, 0.94) });
-  if (r.banquetQty) c(`Banquet pass x ${r.banquetQty}`, 6, 7, b, RED);
+  const bq = ((r.hasPass ?? true) && (r.regType ?? "PARTICIPANT") === "PARTICIPANT" ? 1 : 0) + (r.banquetQty ?? 0);
+  c((r.hasPass ?? true) ? `Symposium Pass${bq ? `  |  Banquet x ${bq}` : ""}` : "Workshop ticket(s) only", 6, 7, b, RED);
+}
+
+/** Workshop ticket (4 x 6 in): one per workshop, with the ticket's own QR for that workshop's door. */
+async function ticketPage(doc: PDFDocument, r: RegForPdf, it: RegForPdf["items"][number], f: PDFFont, b: PDFFont) {
+  const W = 288, H = 432, GOLD = rgb(0.76, 0.52, 0.08);
+  const p = doc.addPage([W, H]);
+  p.drawRectangle({ x: 0, y: H - 70, width: W, height: 70, color: NAVY });
+  p.drawRectangle({ x: 0, y: H - 74, width: W, height: 4, color: GOLD });
+  const c = (t: string, y: number, size: number, font: PDFFont, color = INK) => p.drawText(t, { x: (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color });
+  c("WORKSHOP TICKET", H - 30, 11, b, rgb(1, 1, 1));
+  c("Separate from the Symposium Pass", H - 48, 8, f, rgb(0.85, 0.9, 1));
+  let y = H - 100;
+  for (const line of wrap(safe(it.session.title), b, 13, W - 36).slice(0, 3)) { c(line, y, 13, b); y -= 17; }
+  c(safe(`${fmtDate(it.session.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}, ${fmtTime(it.session.startsAt)}-${fmtTime(it.session.endsAt)}`), y - 2, 9, f, GREY); y -= 15;
+  if (it.session.hall) c(safe(it.session.hall).slice(0, 52), y - 2, 9, f, GREY);
+  const q = await qrPng(doc, ticketPayload(r as any, it));
+  p.drawImage(q, { x: (W - 140) / 2, y: 92, width: 140, height: 140 });
+  c("Show at the workshop door", 80, 7, f, GREY);
+  c(safe(`${r.title} ${r.firstName} ${r.lastName}`).slice(0, 40), 54, 12, b);
+  c(it.ticketNo ?? r.regNo, 36, 10, b, BLUE);
 }
 
 export async function certificatePdf(p: { name: string; certificateNo: string; eventName: string; theme: string; dates: string; items: string[]; cme?: number }) {
@@ -323,7 +349,7 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
       ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time"],
       ["Venue", w.hall ?? "-", w.building ?? undefined],
       ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
-      ["Fee", pkr(w.fee), w.earlyFee != null && w.earlyFee < w.fee ? `Early bird ${pkr(w.earlyFee)}` : undefined],
+      ["Fee", pkr(w.fee), "Separate ticket, no Symposium Pass needed"],
       ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
     ],
     people: w.leadFaculty ? [{ label: "Lead faculty", name: w.leadFaculty, note: w.facultyDegrees }] : [],

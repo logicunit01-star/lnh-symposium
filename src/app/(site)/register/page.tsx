@@ -1,71 +1,53 @@
 import Link from "next/link";
-import { ArrowRight, Wrench } from "lucide-react";
-import { getEvent, getFeeCategories, isEarlyBird, eventDays, DAY_THEMES } from "@/lib/event";
+import { getEvent, getFeeCategories, isEarlyBird } from "@/lib/event";
 import { getProgramme, seatsTaken } from "@/lib/queries";
+import { toWorkshopDTO } from "@/lib/workshops";
 import { fmtDate } from "@/lib/utils";
 import { PageHero } from "@/components/ui/PageHero";
 import { Alert } from "@/components/ui/Field";
-import { SessionCard } from "@/components/site/SessionCard";
 import { CartPanel } from "@/components/cart/CartPanel";
+import { OrderBar } from "@/components/cart/CartDrawer";
+import { WorkshopCatalog } from "../workshops/WorkshopCatalog";
+import { PassStep, ProductCards, type Tier } from "./PassStep";
 
 export const metadata = { title: "Registration" };
 
+/** Registration redesign, release 1: two products (Symposium Pass, workshop tickets), one order summary, pay once. */
 export default async function Register() {
-  const [ev, cats, prog, taken] = await Promise.all([getEvent(), getFeeCategories(), getProgramme({ registrable: true }), seatsTaken()]);
+  const [ev, cats, prog, taken] = await Promise.all([getEvent(), getFeeCategories(), getProgramme({ types: ["WORKSHOP"], registrable: true }), seatsTaken()]);
   const early = isEarlyBird(ev);
-  const days = eventDays(ev);
-  const sessions = prog.filter((p) => p.type !== "WORKSHOP");
-  const workshops = prog.filter((p) => p.type === "WORKSHOP");
+  const tiers: Tier[] = cats.filter((c) => c.designations?.length).map((c) => ({ id: c.id, code: c.code, designations: c.designations, fee: early ? c.earlyFee : c.fee, regular: c.fee }));
+  const workshops = prog.map((w) => toWorkshopDTO(w, taken, early));
+  const earlyUntil = early && ev.earlyBirdUntil ? fmtDate(ev.earlyBirdUntil) : null;
   return (
     <>
-      <PageHero eyebrow="Registration" title={<>Build your <span className="text-holo">registration</span></>}
-        sub="One account, one cart. Add the scientific sessions and workshops you want, choose your symposium pass at checkout, then pay once. LNH staff register onsite at the registration desk." />
-      <div className="container-x grid gap-8 lg:grid-cols-12">
-        <div className="space-y-10 lg:col-span-8">
+      <PageHero eyebrow="Registration" title={<>Register for the <span className="text-holo">symposium</span></>}
+        sub={`Choose your Symposium Pass, add any hands-on workshops, then pay once.${earlyUntil ? ` Early-bird pass prices until ${earlyUntil}.` : ""} LNH staff register at the registration desk.`} />
+      <div className="container-x grid gap-8 pb-28 lg:grid-cols-12 lg:pb-0">
+        <div className="min-w-0 space-y-14 lg:col-span-8">
           {!ev.registrationOpen && <Alert>Registration is currently closed.</Alert>}
-          <section>
-            <p className="eyebrow">Step 1 · Symposium pass fees</p>
-            <div className="hud mt-4 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead><tr className="mono text-left text-[10px] uppercase tracking-widest text-slate-500"><th className="px-5 py-3 font-medium">Designation</th><th className="px-5 py-3 text-right font-medium">Early-bird</th><th className="px-5 py-3 text-right font-medium">Regular</th></tr></thead>
-                <tbody>{cats.filter((c) => c.designations?.length).map((c) => (
-                  <tr key={c.id} className="border-t border-white/10"><td className="px-5 py-3 text-slate-200">{c.designations.join(" · ")}</td>
-                    <td className={`px-5 py-3 text-right ${early ? "font-bold text-white" : "text-slate-500"}`}>Rs {c.earlyFee.toLocaleString()}</td>
-                    <td className={`px-5 py-3 text-right ${!early ? "font-bold text-white" : "text-slate-500"}`}>Rs {c.fee.toLocaleString()}</td></tr>
-                ))}</tbody>
-                <tfoot><tr className="border-t border-white/10"><td className="px-5 py-3 text-slate-300">Additional banquet pass (optional, maximum {ev.banquetMax})</td><td colSpan={2} className="px-5 py-3 text-right font-bold text-white">Rs {ev.banquetFee.toLocaleString()} each</td></tr></tfoot>
-              </table>
-            </div>
-            <p className="mt-2 text-xs text-slate-500">{early && ev.earlyBirdUntil ? `Early-bird rates apply until ${fmtDate(ev.earlyBirdUntil)}. ` : ""}Your pass covers keynotes, panels and ceremonies on all symposium days. You choose your designation at checkout. Invited guests and volunteers use the <Link href="/register/guest" className="text-lnh-sky underline">guest</Link> and <Link href="/register/volunteer" className="text-lnh-sky underline">volunteer</Link> registration forms.</p>
+          <ProductCards fromFee={Math.min(...tiers.map((t) => t.fee))} early={early} />
+
+          <section id="pass" className="scroll-mt-28">
+            <p className="eyebrow">Step 1</p>
+            <h2 className="h-display mt-2 text-3xl text-white">Your Symposium Pass</h2>
+            <div className="mt-5"><PassStep tiers={tiers} early={early} earlyUntil={earlyUntil} banquet={{ fee: ev.banquetFee, max: ev.banquetMax }} open={ev.registrationOpen} /></div>
           </section>
 
-          <section>
-            <p className="eyebrow">Step 2 · Scientific & plenary sessions (seat-limited)</p>
-            {[1, 2, 3].map((d) => {
-              const list = sessions.filter((s) => s.day === d);
-              if (!list.length) return null;
-              return (
-                <div key={d} className="mt-6">
-                  <p className="mono mb-3 text-xs uppercase tracking-[0.2em] text-lnh-sky">Day {d} · {DAY_THEMES[d]}{days[d - 1] ? ` · ${fmtDate(days[d - 1], { weekday: "short", day: "numeric", month: "short" })}` : ""}</p>
-                  <div className="grid gap-4 md:grid-cols-2">{list.map((s) => <SessionCard key={s.id} s={s} taken={taken[s.id]} early={early} />)}</div>
-                </div>
-              );
-            })}
+          <section id="workshops" className="scroll-mt-28">
+            <p className="eyebrow">Step 2 · optional</p>
+            <h2 className="h-display mt-2 text-3xl text-white">Add workshop tickets</h2>
+            <p className="mt-2 mb-5 text-sm text-slate-300">Each workshop is a separate ticket with its own fee and seats. You can buy workshops with or without a Symposium Pass, now or later.</p>
+            <WorkshopCatalog items={workshops} embedded />
           </section>
 
-          <section>
-            <p className="eyebrow">Step 3 · Pre-conference workshops</p>
-            <div className="hud mt-4 flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-4">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-lnh-gold/15"><Wrench className="h-6 w-6 text-lnh-gold" /></span>
-                <div><p className="font-display text-lg font-bold text-white">{workshops.length} approved workshops</p><p className="text-sm text-slate-400">Filter by week, date, department and format in the workshop portal.</p></div>
-              </div>
-              <Link href="/workshops" className="btn-blue shrink-0">Open workshop portal <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-          </section>
+          <p className="rounded-2xl border border-dashed border-white/25 px-5 py-4 text-sm text-slate-300">
+            Invited guest or volunteer? Use the free <Link href="/register/guest" className="text-lnh-sky underline">guest</Link> or <Link href="/register/volunteer" className="text-lnh-sky underline">volunteer</Link> registration form.
+          </p>
         </div>
-        <aside className="lg:col-span-4"><div className="lg:sticky lg:top-28"><CartPanel /></div></aside>
+        <aside className="hidden lg:col-span-4 lg:block"><div className="lg:sticky lg:top-28"><CartPanel /></div></aside>
       </div>
+      <OrderBar />
     </>
   );
 }

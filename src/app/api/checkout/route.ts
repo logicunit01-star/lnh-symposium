@@ -19,6 +19,8 @@ const input = z.object({
     whatsapp: z.string().max(20).default(""), cnic: z.string().max(25).default(""), address: z.string().max(250).default(""), city: z.string().max(60).default(""),
     province: z.string().max(60).default(""), country: z.string().max(60).default("Pakistan"), qualification: z.string().max(120).default(""), employeeNo: z.string().max(20).default(""),
     pmdcNo: z.string().max(30).default(""),
+    // asked at checkout since the short sign-up (release 2)
+    gender: z.string().max(10).default(""), institution: z.string().max(160).default(""), specialty: z.string().max(80).default(""),
   }),
 });
 
@@ -29,12 +31,12 @@ export async function POST(req: Request) {
   if (!a) return fail("Please sign in to continue.", 401);
   const p = input.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
-  if (!p.data.includePass && p.data.sessionIds.length === 0) return fail("Your cart is empty.");
+  if (!p.data.includePass && p.data.sessionIds.length === 0) return fail("Your order is empty.");
   const d = p.data.details;
   const reg = registrationInput.safeParse({
-    title: a.title, gender: a.gender, firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone,
+    title: a.title, gender: d.gender || a.gender || "", firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone,
     whatsapp: d.whatsapp, cnic: d.cnic, address: d.address, city: d.city, province: d.province, country: d.country || "Pakistan", qualification: d.qualification,
-    pmdcNo: d.pmdcNo || a.pmdcNo || "", specialty: a.specialty ?? "", designation: p.data.designation, employeeNo: d.employeeNo, institution: a.institution,
+    pmdcNo: d.pmdcNo || a.pmdcNo || "", specialty: d.specialty || a.specialty || "", designation: p.data.designation, employeeNo: d.employeeNo, institution: d.institution || a.institution || "",
     categoryId: p.data.categoryId, sessionIds: p.data.sessionIds, consent: true, includePass: p.data.includePass, banquetQty: p.data.banquetQty,
   });
   if (!reg.success) return zodFail(reg.error);
@@ -42,6 +44,7 @@ export async function POST(req: Request) {
   await db.update(s.accounts).set({
     whatsapp: d.whatsapp || null, cnic: normaliseCnic(d.cnic, d.country), address: d.address, city: d.city, province: d.province || null, country: d.country || "Pakistan",
     qualification: d.qualification || null, employeeNo: d.employeeNo || null, pmdcNo: d.pmdcNo || a.pmdcNo,
+    gender: reg.data.gender, institution: reg.data.institution, specialty: reg.data.specialty || a.specialty,
   }).where(eq(s.accounts.id, a.id));
   try {
     const r = await createRegistration(reg.data, { accountId: a.id });

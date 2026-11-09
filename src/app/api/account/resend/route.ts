@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const { otpId } = await req.json().catch(() => ({}));
   const [row] = await db.select().from(s.otpCodes).where(eq(s.otpCodes.id, String(otpId || "")));
   if (!row) return fail("Start again.", 404);
-  const to = row.purpose === "SIGNUP" ? { email: (row.payload as any)?.email, phone: (row.payload as any)?.phone } : { phone: row.target, email: (row.payload as any)?.email };
+  const to = row.purpose === "LOOKUP" ? { phone: row.target, email: (row.payload as any)?.email } : { email: (row.payload as any)?.email, phone: (row.payload as any)?.phone };
   const r = await resendOtp(row.id, to);
   if ("error" in r && r.error) return fail(r.error, 429);
   return ok({ sent: true, demoCode: r.demoCode });

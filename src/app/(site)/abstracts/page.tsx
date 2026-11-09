@@ -75,7 +75,7 @@ export default async function Abstracts() {
                 </div>
               </div>
             ) : <AbstractForm wordLimit={ev.abstractWordLimit} departments={depts.map((d) => d.name)}
-                account={{ title: a.title, name: `${a.firstName} ${a.lastName}`, email: a.email, phone: a.phone, institution: a.institution, designation: a.designation ?? "", city: a.city ?? "" }} />}
+                account={{ title: a.title, name: `${a.firstName} ${a.lastName}`, email: a.email, phone: a.phone, institution: a.institution ?? "", designation: a.designation ?? "", city: a.city ?? "" }} />}
         </div>
       </div>
     </>

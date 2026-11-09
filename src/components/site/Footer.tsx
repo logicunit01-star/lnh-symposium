@@ -12,9 +12,9 @@ export function Footer({ ev }: { ev: EventSettings }) {
     { href: ev.linkedin, Icon: Linkedin, label: "LinkedIn" }, { href: ev.youtube, Icon: Youtube, label: "YouTube" }, { href: ev.x, Icon: Twitter, label: "X" },
   ].filter((s) => s.href);
   const cols = [
-    { t: "Participate", l: [["Registration", "/register"], ["Workshop portal", "/workshops"], ["Abstract Submission", "/abstracts"], ["My bookings", "/account/bookings"], ["Find my registrations", "/my-registrations"], ["E-certificates", "/certificates"]] },
+    { t: "Participate", l: [["Symposium Pass", "/register"], ["Workshops", "/workshops"], ["Abstract Submission", "/abstracts"], ["My tickets", "/account/bookings"], ["Find my tickets", "/my-registrations"], ["E-certificates", "/certificates"], ["Guest registration", "/register/guest"], ["Volunteer registration", "/register/volunteer"]] },
     { t: "Programme", l: [["Agenda", "/agenda"], ["Speakers", "/speakers"], ["Scientific & Plenary", "/sessions"], ["Awards", "/awards"]] },
-    { t: "Symposium", l: [["About", "/about"], ["Organizing Committee", "/committee"], ["Contact Us", "/contact"], ["Staff login", "/admin"]] },
+    { t: "Symposium", l: [["About", "/about"], ["Organizing Committee", "/committee"], ["Contact Us", "/contact"]] },
   ];
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-white/10 bg-ink-900">
@@ -40,7 +40,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
           {cols.map((c) => (
             <div key={c.t}>
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">{c.t}</p>
-              <ul className="space-y-2.5">{c.l.map(([l, h]) => <li key={h}><Link href={h} className="text-sm text-slate-400 transition hover:text-lnh-sky">{l}</Link></li>)}</ul>
+              <ul className="space-y-0.5">{c.l.map(([l, h]) => <li key={h}><Link href={h} className="inline-block py-1.5 text-sm text-slate-300 transition hover:text-lnh-sky">{l}</Link></li>)}</ul>
             </div>
           ))}
         </div>
@@ -51,7 +51,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
               src="https://www.google.com/maps?q=Liaquat+National+Hospital,+Stadium+Road,+Karachi&output=embed" />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {["Convention Center", "College of Nursing", "LNMC", "BSMT", "Radiology", "Clinical Skills Centre"].map((h) => <a key={h} href="/venues" className="chip hover:text-white">{h}</a>)}
+            {["Convention Center", "College of Nursing", "LNMC", "BSMT", "Radiology", "Clinical Skills Centre"].map((h) => <a key={h} href="/venues" className="chip min-h-[32px] hover:text-white">{h}</a>)}
           </div>
         </div>
       </div>

@@ -15,14 +15,14 @@ export default async function Onsite({ searchParams }: { searchParams: { done?: 
   const [ev, cats, prog, taken] = await Promise.all([
     getEvent(),
     db.select().from(s.feeCategory).where(eq(s.feeCategory.active, true)).orderBy(asc(s.feeCategory.order)),
-    getProgramme({ registrable: true }),
+    getProgramme({ types: ["WORKSHOP"], registrable: true }),
     seatsTaken(),
   ]);
   const early = isEarlyBird(ev);
   const items = prog.map((p) => ({
     id: p.id, title: p.title, kind: p.type === "WORKSHOP" ? "WORKSHOP" : "SESSION",
     when: `${fmtDate(p.startsAt, { weekday: "short", day: "numeric", month: "short" })} · ${fmtTime24(p.startsAt)}`,
-    fee: early && p.earlyFee != null ? p.earlyFee : p.fee, left: p.capacity == null ? null : Math.max(0, p.capacity - (taken[p.id] ?? 0)),
+    fee: p.fee, left: p.capacity == null ? null : Math.max(0, p.capacity - (taken[p.id] ?? 0)),
   }));
   const done = searchParams.done ? await db.query.registrations.findFirst({ where: eq(s.registrations.id, searchParams.done), with: { items: { with: { session: true } } } }) : null;
   const recent = await db.select().from(s.registrations).where(and(eq(s.registrations.source, "ONSITE"))).orderBy(desc(s.registrations.createdAt)).limit(8);

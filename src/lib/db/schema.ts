@@ -283,14 +283,15 @@ export const accounts = pgTable("accounts", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   title: text("title").notNull(),
-  gender: text("gender").notNull(),
+  // Asked at checkout since release 2 (short sign-up)
+  gender: text("gender"),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phone: text("phone").notNull(),
   pmdcNo: text("pmdc_no"),
   specialty: text("specialty"),
   designation: text("designation"),
-  institution: text("institution").notNull(),
+  institution: text("institution"),
   address: text("address"),
   city: text("city"),
   whatsapp: text("whatsapp"),
@@ -352,10 +353,14 @@ export const registrations = pgTable("registrations", {
   notes: text("notes"),
   employeeId: text("employee_id"), // LNH staff registered onsite
   source: text("source").notNull().default("ONLINE"), // ONLINE | ONSITE
+  // Symposium Pass held by this registration (admits to all symposium sessions; includes one banquet pass). Workshop-only orders: false.
+  hasPass: boolean("has_pass").notNull().default(false),
+  // Later orders of the same delegate point at their first registration (shown under one registration number)
+  primaryRegId: text("primary_reg_id"),
   remindedAt: timestamp("reminded_at", { withTimezone: true }),
   createdAt: created(),
   updatedAt: updated(),
-}, (t) => ({ emailIdx: index("reg_email_idx").on(t.email), payIdx: index("reg_pay_idx").on(t.paymentStatus) }));
+}, (t) => ({ emailIdx: index("reg_email_idx").on(t.email), payIdx: index("reg_pay_idx").on(t.paymentStatus), accIdx: index("reg_account_idx").on(t.accountId) }));
 
 export const registrationItems = pgTable("registration_items", {
   id: id(),
@@ -363,6 +368,9 @@ export const registrationItems = pgTable("registration_items", {
   sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "restrict" }),
   fee: integer("fee").notNull(),
   attendedAt: timestamp("attended_at", { withTimezone: true }),
+  // Release 3 (D4): each workshop ticket has its own number and QR, e.g. SYM-2027-00012-W1
+  ticketNo: text("ticket_no").unique(),
+  remindedAt: timestamp("reminded_at", { withTimezone: true }),
 }, (t) => ({ uq: uniqueIndex("reg_item_uq").on(t.registrationId, t.sessionId) }));
 
 export const payments = pgTable("payments", {
@@ -518,7 +526,7 @@ export const emailJobs = pgTable("email_jobs", {
 /** One-time codes (sign-up verification, registration look-up). Codes are stored hashed. */
 export const otpCodes = pgTable("otp_codes", {
   id: id(),
-  purpose: text("purpose").notNull(), // SIGNUP | LOOKUP
+  purpose: text("purpose").notNull(), // SIGNUP | LOOKUP | SIGNIN | RESET
   target: text("target").notNull(), // email or normalised phone
   codeHash: text("code_hash").notNull(),
   payload: jsonb("payload"),

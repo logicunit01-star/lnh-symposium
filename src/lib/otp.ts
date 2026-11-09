@@ -14,23 +14,32 @@ const newCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
 /** Demo mode: when neither email nor SMS delivery is configured, the code is shown on screen. */
 export const otpDemoMode = () => process.env.OTP_DEMO === "1" || (!process.env.SMTP_HOST && !process.env.SMS_API_URL && process.env.OTP_DEMO !== "0");
+/** Email or SMS delivery is configured. */
+export const codeDelivery = () => !!(process.env.SMTP_HOST || process.env.SMS_API_URL);
+/**
+ * Codes that grant access to an existing account or its registrations (SIGNIN, RESET, LOOKUP) are shown on screen only when
+ * OTP_DEMO=1 is set explicitly (private demos). Otherwise anyone could read the code for someone else's email or mobile.
+ */
+const showsCode = (purpose: string) => (purpose === "SIGNUP" ? otpDemoMode() : process.env.OTP_DEMO === "1");
+/** Account-access codes can be used only when a real delivery channel exists (or in an explicit demo). */
+export const accessCodesAvailable = () => codeDelivery() || process.env.OTP_DEMO === "1";
 
 export const maskEmail = (e: string) => e.replace(/^(.)(.*)(.@.*)$/, (_, a, b, c) => a + "*".repeat(Math.max(1, b.length)) + c);
 export const maskPhone = (p: string) => { const d = p.replace(/\D/g, ""); return d.length > 4 ? `${"*".repeat(d.length - 4)}${d.slice(-4)}` : d; };
 export const phoneDigits = (p: string) => { let d = p.replace(/\D/g, ""); if (d.startsWith("0092")) d = d.slice(2); if (d.startsWith("92")) d = "0" + d.slice(2); return d; };
 
 async function deliver(code: string, to: { email?: string; phone?: string }, purpose: string) {
-  const what = purpose === "SIGNUP" ? "verify your account" : "view your registrations";
+  const what = purpose === "SIGNUP" ? "verify your account" : purpose === "SIGNIN" ? "sign in to your account" : purpose === "RESET" ? "set a new password" : "view your registrations";
   if (to.email) await sendEmail(to.email, `Your LNH Symposium code: ${code}`, emailLayout("Your one-time code", `<p>Use this code to ${what}:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 5 minutes. If you did not ask for it, ignore this email.</p>`));
   if (to.phone) await sendSms(to.phone, `LNH Symposium: your code is ${code}. It expires in 5 minutes. Do not share it.`);
 }
 
-export async function issueOtp(purpose: "SIGNUP" | "LOOKUP", target: string, to: { email?: string; phone?: string }, payload?: unknown) {
+export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET", target: string, to: { email?: string; phone?: string }, payload?: unknown) {
   const code = newCode();
   const [row] = await db.insert(s.otpCodes).values({ purpose, target, codeHash: "pending", payload: payload ?? null, expiresAt: new Date(Date.now() + OTP_TTL_MS) }).returning({ id: s.otpCodes.id });
   await db.update(s.otpCodes).set({ codeHash: hash(row.id, code) }).where(eq(s.otpCodes.id, row.id));
   await deliver(code, to, purpose);
-  return { id: row.id, demoCode: otpDemoMode() ? code : undefined };
+  return { id: row.id, demoCode: showsCode(purpose) ? code : undefined };
 }
 
 export async function resendOtp(id: string, to: { email?: string; phone?: string }) {
@@ -41,7 +50,7 @@ export async function resendOtp(id: string, to: { email?: string; phone?: string
   const code = newCode();
   await db.update(s.otpCodes).set({ codeHash: hash(row.id, code), attempts: 0, sends: row.sends + 1, expiresAt: new Date(Date.now() + OTP_TTL_MS) }).where(eq(s.otpCodes.id, id));
   await deliver(code, to, row.purpose);
-  return { demoCode: otpDemoMode() ? code : undefined };
+  return { demoCode: showsCode(row.purpose) ? code : undefined };
 }
 
 /** Checks a code; on success marks it used and returns the row (with its payload). */

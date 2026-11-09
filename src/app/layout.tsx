@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* apply the visitor's saved theme before paint (public site only; admin ignores it) */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("lnh-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add("js");try{var t=localStorage.getItem("lnh-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}` }} />
       </head>
       <body>{children}</body>
     </html>

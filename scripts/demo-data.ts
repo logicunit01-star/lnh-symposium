@@ -14,7 +14,7 @@ async function main() {
   for (let i = 0; i < 120; i++) {
     const cat = pick(cats);
     const chosen = [...new Set(Array.from({ length: Math.floor(Math.random() * 3) }, () => pick(sess)))];
-    const items = chosen.map((x) => ({ sessionId: x.id, fee: x.earlyFee ?? x.fee }));
+    const items = chosen.map((x) => ({ sessionId: x.id, fee: x.fee }));
     const total = cat.earlyFee + items.reduce((a, b) => a + b.fee, 0);
     const st = Math.random() < 0.7 ? "PAID" : Math.random() < 0.85 ? "PENDING" : "WAIVED";
     const fn = pick(first), ln = pick(last);
@@ -22,10 +22,10 @@ async function main() {
     const [r] = await db.insert(s.registrations).values({
       regNo: `LNH27-${pad(await nextNumber("reg-27"))}`, accessToken: crypto.randomUUID().replace(/-/g, ""), title: pick(["Dr.", "Dr.", "Prof.", "Mr.", "Ms."]), gender: pick(["Male", "Female"]),
       firstName: fn, lastName: ln, email: `${fn}.${ln}${i}@example.com`.toLowerCase(), phone: `03${Math.floor(10 + Math.random() * 40)}-${Math.floor(1e6 + Math.random() * 9e6)}`,
-      institution: pick(inst), city: "Karachi", categoryId: cat.id, conferenceFee: cat.earlyFee, totalFee: total, earlyBird: true,
+      institution: pick(inst), city: "Karachi", categoryId: cat.id, conferenceFee: cat.earlyFee, totalFee: total, earlyBird: true, hasPass: true,
       paymentStatus: st as any, paymentMethod: st === "PAID" ? pick(["mock", "Bank transfer", "Cash at desk"]) : null, paidAt: st === "PAID" ? created : null, createdAt: created,
     }).returning();
-    if (items.length) await db.insert(s.registrationItems).values(items.map((x) => ({ ...x, registrationId: r.id })));
+    if (items.length) await db.insert(s.registrationItems).values(items.map((x, n) => ({ ...x, registrationId: r.id, ticketNo: `${r.regNo}-W${n + 1}` })));
   }
   const titles = ["Cost of diagnostic imaging in a tertiary care hospital", "Impact of an early warning score on ICU transfers", "Telemedicine follow-up for diabetic patients in Karachi", "Out-of-pocket expenditure on cancer care", "Hand hygiene compliance after a QI intervention", "Use of AI for chest X-ray triage", "Patient satisfaction with e-prescriptions", "Medication errors in paediatric wards"];
   for (let i = 0; i < 24; i++) {

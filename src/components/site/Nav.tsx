@@ -3,7 +3,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, Menu, UserRound, X } from "lucide-react";
-import { CartButton } from "@/components/cart/CartDrawer";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -33,7 +32,7 @@ const NAV: Item[] = [
   { label: "Contact", href: "/contact" },
 ];
 
-export function Nav({ year, account }: { year: number; account?: { name: string } | null }) {
+export function Nav({ year, account }: { year: number; account?: { name: string; hasPass?: boolean } | null }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [drop, setDrop] = useState<string | null>(null);
@@ -86,13 +85,14 @@ export function Nav({ year, account }: { year: number; account?: { name: string 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:ml-0">
             <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-1">
               <ThemeToggle bare />
-              <CartButton bare />
-              <Link href={account ? "/account/bookings" : "/account"} title={account ? "My bookings" : "Sign in"}
+              <Link href={account ? "/account/bookings" : "/account"} title={account ? "My tickets" : "Sign in"}
                 className="hidden h-9 items-center gap-2 rounded-full px-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white md:inline-flex">
                 <UserRound className="h-[18px] w-[18px]" /><span className="hidden max-w-[110px] truncate xl:inline">{account ? account.name.split(" ")[0] : "Sign in"}</span>
               </Link>
             </div>
-            <Link href="/register" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex"><span>Register<span className="hidden xl:inline">&nbsp;Now</span></span></Link>
+            {account?.hasPass
+              ? <Link href="/account/bookings" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex">My tickets</Link>
+              : <Link href="/register" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex">Get your pass</Link>}
             <button className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/15 text-white sm:h-11 sm:w-11 lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu" aria-expanded={open}>
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -112,8 +112,8 @@ export function Nav({ year, account }: { year: number; account?: { name: string 
               )}
             </div>
           ))}
-          <Link href={account ? "/account/bookings" : "/account"} className="btn-ghost mt-8 w-full">{account ? "My bookings" : "Sign in / Create account"}</Link>
-          <Link href="/register" className="btn-primary mt-3 w-full">Register Now</Link>
+          <Link href={account ? "/account/bookings" : "/account"} className="btn-ghost mt-8 w-full">{account ? "My tickets" : "Sign in / Create account"}</Link>
+          {!account?.hasPass && <Link href="/register" className="btn-primary mt-3 w-full">Get your pass</Link>}
         </div>
       </div>
     </header>

@@ -202,8 +202,8 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
     const [row] = await db.insert(s.sessions).values({
       slug: `${x.day ? "d" + x.day : "ws"}-${slugify(x.title)}`, type: x.type as any, title: x.title, description: x.desc, track: x.track,
       department: x.dept, format: x.format, status: x.status ?? "APPROVED", day: x.day,
-      startsAt: at(x.s), endsAt: at(x.e), hall: x.hall, capacity: x.cap ?? null, fee: x.fee ?? 0, earlyFee: x.efee ?? null,
-      registrable: !!x.reg, cmeHours: x.cme ?? null, venueId: venueId(x.hall),
+      startsAt: at(x.s), endsAt: at(x.e), hall: x.hall, capacity: x.cap ?? null, fee: x.fee ?? 0, earlyFee: null,
+      registrable: !!x.reg && x.type === "WORKSHOP", cmeHours: x.cme ?? null, venueId: venueId(x.hall),
       ...(x.type === "WORKSHOP" && (x.status ?? "APPROVED") === "APPROVED" ? { flyerStatus: "APPROVED", flyerReviewedBy: "Marketing Department (demo)" } : {}),
       ...(x.type === "WORKSHOP" ? workshopExtra(x, x.sp?.[0] != null ? SPEAKERS[x.sp[0]] : undefined) : {}),
     }).returning({ id: s.sessions.id });

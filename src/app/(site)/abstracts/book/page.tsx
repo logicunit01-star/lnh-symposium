@@ -38,8 +38,13 @@ export default async function AbstractBook({ searchParams }: { searchParams: { q
               <button className="btn-primary">Search</button>
             </form>
             <p className="mono mb-6 text-sm text-slate-400"><BookOpen className="mr-2 inline h-4 w-4" />{rows.length} abstract{rows.length === 1 ? "" : "s"}</p>
+            {depts.length > 1 && (
+              <nav aria-label="Specialities" className="mb-10 flex flex-wrap gap-2">
+                {depts.map((d) => <a key={d} href={`#sp-${d.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`} className="inline-flex min-h-[40px] items-center rounded-full border border-white/20 px-4 text-sm text-slate-200 hover:border-white/50">{d} ({rows.filter((r) => r.specialty === d).length})</a>)}
+              </nav>
+            )}
             {depts.map((d) => (
-              <section key={d} className="mb-12">
+              <section key={d} id={`sp-${d.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`} className="mb-12 scroll-mt-28">
                 <h2 className="h-display mb-4 border-b border-white/10 pb-3 text-2xl text-white">{d}</h2>
                 <div className="space-y-5">{rows.filter((r) => r.specialty === d).map((a) => {
                   const sl = a.session ? slotOf(ev.sessionSlots, a.session.slotKey) : null;
@@ -48,10 +53,12 @@ export default async function AbstractBook({ searchParams }: { searchParams: { q
                       <p className="mono text-xs text-lnh-sky">{a.refNo} · {a.acceptedAs === "POSTER" ? "Poster" : "Oral presentation"}{a.session ? ` · ${a.session.title}` : ""}{sl ? ` · ${slotLabel(sl)}` : ""}</p>
                       <h3 className="mt-2 font-display text-xl font-bold text-white">{a.abstractTitle}</h3>
                       <p className="mt-2 text-sm text-slate-300"><b>{a.presentingAuthor}</b> ({a.organization}){(a.coAuthors ?? []).map((c) => `, ${c.name} (${c.affiliation})`).join("")}</p>
-                      <div className="mt-4 space-y-2 text-sm leading-relaxed text-slate-300">
+                      <details className="mt-3 group"><summary className="inline-flex min-h-[44px] cursor-pointer items-center text-sm font-semibold text-lnh-sky">Read the abstract</summary>
+                      <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-300">
                         {a.sections ? (SECTIONS[a.kind ?? "ORIGINAL"] ?? []).map(([k, l]) => a.sections?.[k] ? <p key={k}><b className="text-white">{l}:</b> {a.sections[k]}</p> : null) : <p className="whitespace-pre-wrap">{a.body}</p>}
                       </div>
                       {a.keywords && <p className="mt-3 text-xs text-slate-500">Keywords: {a.keywords}</p>}
+                      </details>
                     </article>
                   );
                 })}</div>

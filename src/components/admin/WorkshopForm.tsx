@@ -90,7 +90,7 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
             <div className="grid gap-4 sm:grid-cols-4">
               <div><L>Seat cap</L><input type="number" name="capacity" min={1} max={v?.capacity} required value={cap} onChange={(e) => setCap(Number(e.target.value))} className="a-input" /></div>
               <div><L>Fee (PKR)</L><input type="number" name="fee" min={0} step={100} defaultValue={init.fee ?? 2000} className="a-input" /></div>
-              <div><L hint="(optional)">Early-bird fee</L><input type="number" name="earlyFee" min={0} step={100} defaultValue={init.earlyFee ?? ""} className="a-input" /></div>
+              
               <div><L>CME hours</L><select name="cmeHours" defaultValue={String(init.cmeHours ?? 3)} className="a-input">{[1, 2, 3, 3.5, 4, 5, 6, 7, 8].map((x) => <option key={x} value={x}>{x}</option>)}</select></div>
             </div>
           </div>

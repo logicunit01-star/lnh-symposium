@@ -29,7 +29,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {[["Type", r.regType === "GUEST" ? `Guest · ${r.guestRole ?? ""} · ${r.guestSession ?? ""} (${r.department ?? ""})` : r.regType === "VOLUNTEER" ? `Volunteer · ${r.department ?? ""} · ${r.academicYear ?? ""}` : "Participant"], ...(r.regType !== "PARTICIPANT" ? [["Approval", `${r.approvalStatus ?? "PENDING"}${r.approvedBy ? ` · ${r.approvedBy}` : ""}`]] : []),
                 ["Email", r.email], ["Contact", r.phone], ["WhatsApp", r.whatsapp], ["CNIC / passport", r.cnic], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Qualification", r.qualification], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution],
-                ["Address", [r.address, r.city, r.province, r.country].filter(Boolean).join(", ")], ["Category", r.category.label], ["Banquet passes", r.banquetQty ? `${r.banquetQty} (${r.banquetFee.toLocaleString()} PKR)` : "None"], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee #", r.employeeId]].map(([k, v]) => (
+                ["Address", [r.address, r.city, r.province, r.country].filter(Boolean).join(", ")], ["Category", r.category.label], ["Symposium Pass", r.hasPass ? "Yes (all symposium sessions)" : "No (workshop tickets only)"], ["Banquet passes", r.hasPass || r.banquetQty ? `${(r.hasPass && r.regType === "PARTICIPANT" ? 1 : 0) + r.banquetQty} (${r.hasPass && r.regType === "PARTICIPANT" ? "1 included" : "none included"}${r.banquetQty ? ` + ${r.banquetQty} extra, ${r.banquetFee.toLocaleString()} PKR` : ""})` : "None"], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee #", r.employeeId]].map(([k, v]) => (
                 <div key={k as string}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{v || "—"}</dd></div>
               ))}
             </dl>
@@ -39,7 +39,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
             <table className="a-table">
               <thead><tr><th>Session</th><th>Fee</th><th>Attended</th></tr></thead>
               <tbody>
-                <tr><td>Conference registration</td><td>{pkr(r.conferenceFee)}</td><td /></tr>
+                {r.hasPass && <tr><td>Symposium Pass</td><td>{pkr(r.conferenceFee)}</td><td /></tr>}
                 {r.items.map((i) => (
                   <tr key={i.id}>
                     <td>{i.session.title}<p className="text-xs text-slate-400">{fmtDateTime(i.session.startsAt)} · {i.session.hall}</p></td>

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema as s } from "./db";
 import { getEvent, isEarlyBird, editionYear } from "./event";
@@ -46,55 +46,97 @@ export type RegistrationInput = z.infer<typeof registrationInput>;
 
 export class CapacityError extends Error {}
 
+const LIVE = ["PENDING", "PAID", "WAIVED"] as const;
+
+/** The delegate's registrations: first (primary) registration and the one holding a Symposium Pass, if any. */
+export async function delegateStatus(accountId: string) {
+  const regs = await db.select({ id: s.registrations.id, regNo: s.registrations.regNo, accessToken: s.registrations.accessToken, hasPass: s.registrations.hasPass,
+    paymentStatus: s.registrations.paymentStatus, designation: s.registrations.designation, categoryId: s.registrations.categoryId, banquetQty: s.registrations.banquetQty,
+    primaryRegId: s.registrations.primaryRegId, createdAt: s.registrations.createdAt })
+    .from(s.registrations).where(and(eq(s.registrations.accountId, accountId), inArray(s.registrations.paymentStatus, [...LIVE]))).orderBy(asc(s.registrations.createdAt));
+  const primary = regs.find((r) => !r.primaryRegId) ?? regs[0] ?? null;
+  const pass = regs.find((r) => r.hasPass) ?? null;
+  return { primary, pass, orders: regs };
+}
+
 export async function createRegistration(input: RegistrationInput, opts: { accountId?: string; processingFee?: boolean } = {}) {
   const ev = await getEvent();
   if (!ev.registrationOpen) throw new Error("Registration is currently closed.");
   const early = isEarlyBird(ev);
   const year = String(editionYear(ev));
   const prefix = (ev.regPrefix || "SYM").toUpperCase();
+  const wantPass = input.includePass !== false;
+  const ids = [...new Set(input.sessionIds)];
+  if (!wantPass && !ids.length) throw new Error("Choose a Symposium Pass or at least one workshop ticket.");
 
   const result = await db.transaction(async (tx) => {
     const [cat] = await tx.select().from(s.feeCategory).where(and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)));
     if (!cat) throw new Error("Invalid registration category.");
     if (cat.designations?.length && !cat.designations.includes(input.designation)) throw new Error(`"${input.designation}" is not in the ${cat.label} fee category.`);
-    const banquetQty = Math.max(0, Math.min(ev.banquetMax, input.banquetQty || 0));
-    const ids = [...new Set(input.sessionIds)];
-    // Lock selected sessions so concurrent registrations can't exceed caps.
+    // One Symposium Pass per delegate; later orders are linked to the delegate's first registration (D1)
+    let primary: { id: string; regNo: string } | null = null;
+    if (opts.accountId) {
+      const mine = await tx.select({ id: s.registrations.id, regNo: s.registrations.regNo, hasPass: s.registrations.hasPass, primaryRegId: s.registrations.primaryRegId })
+        .from(s.registrations).where(and(eq(s.registrations.accountId, opts.accountId), inArray(s.registrations.paymentStatus, [...LIVE]))).orderBy(asc(s.registrations.createdAt)).for("update");
+      const held = mine.find((r) => r.hasPass);
+      if (wantPass && held) throw new Error(`You already hold a Symposium Pass (${held.regNo}). Add workshop tickets only, or open My tickets to pay or view it.`);
+      primary = mine.find((r) => !r.primaryRegId) ?? mine[0] ?? null;
+    }
+    // Extra banquet passes (one is included with every pass, D3); none with workshop-only orders
+    const banquetQty = wantPass ? Math.max(0, Math.min(ev.banquetMax, input.banquetQty || 0)) : 0;
+    // Only workshop tickets are booked as items: scientific and plenary sessions are covered by the pass
     const sess = ids.length
-      ? await tx.select({ id: s.sessions.id, title: s.sessions.title, capacity: s.sessions.capacity, fee: s.sessions.fee, early_fee: s.sessions.earlyFee, registrable: s.sessions.registrable, status: s.sessions.status })
+      ? await tx.select({ id: s.sessions.id, title: s.sessions.title, type: s.sessions.type, startsAt: s.sessions.startsAt, capacity: s.sessions.capacity, fee: s.sessions.fee, registrable: s.sessions.registrable, status: s.sessions.status })
           .from(s.sessions).where(inArray(s.sessions.id, ids)).for("update")
       : [];
-    if (sess.length !== ids.length || sess.some((x) => !x.registrable || x.status !== "APPROVED")) throw new Error("One or more selected sessions are not open for registration.");
+    if (sess.length !== ids.length || sess.some((x) => x.type !== "WORKSHOP" || !x.registrable || x.status !== "APPROVED")) throw new Error("One or more selected workshops are not open for registration.");
+    if (opts.accountId && sess.length) {
+      const dup = await tx.select({ t: s.sessions.title }).from(s.registrationItems)
+        .innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId)).innerJoin(s.sessions, eq(s.sessions.id, s.registrationItems.sessionId))
+        .where(and(eq(s.registrations.accountId, opts.accountId), inArray(s.registrations.paymentStatus, [...LIVE]), inArray(s.registrationItems.sessionId, ids)));
+      if (dup.length) throw new Error(`You already have a ticket for "${dup[0].t}". Remove it to continue.`);
+    }
     for (const x of sess) {
       if (x.capacity == null) continue;
       const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems)
         .innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId))
-        .where(and(eq(s.registrationItems.sessionId, x.id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
-      if (n >= x.capacity) throw new CapacityError(`"${x.title}" is full. Please deselect it to continue.`);
+        .where(and(eq(s.registrationItems.sessionId, x.id), inArray(s.registrations.paymentStatus, [...LIVE])));
+      if (n >= x.capacity) throw new CapacityError(`"${x.title}" is full. Please remove it to continue.`);
     }
-    const conferenceFee = input.includePass === false ? 0 : early ? cat.earlyFee : cat.fee;
-    const items = sess.map((x) => ({ sessionId: x.id, fee: early && x.early_fee != null ? x.early_fee : x.fee }));
+    // Early-bird pricing applies to the Symposium Pass only; workshops have one price (D2)
+    const conferenceFee = wantPass ? (early ? cat.earlyFee : cat.fee) : 0;
+    const items = [...sess].sort((a, b) => +a.startsAt - +b.startsAt).map((x) => ({ sessionId: x.id, fee: x.fee }));
     const banquetFee = banquetQty * ev.banquetFee;
     const subtotal = conferenceFee + banquetFee + items.reduce((a, b) => a + b.fee, 0);
     const totalFee = subtotal + processingFee(subtotal, ev.processingFeePct);
 
-    const n = await nextNumber(`reg-${prefix}-${year}`, tx as any);
-    const regNo = `${prefix}-${year}-${pad(n, 5)}`;
+    let regNo: string;
+    if (primary) {
+      const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(s.registrations).where(eq(s.registrations.primaryRegId, primary.id));
+      regNo = `${primary.regNo}-${n + 2}`;
+    } else {
+      const n = await nextNumber(`reg-${prefix}-${year}`, tx as any);
+      regNo = `${prefix}-${year}-${pad(n, 5)}`;
+    }
     const [reg] = await tx.insert(s.registrations).values({
       regNo, accountId: opts.accountId ?? null, accessToken: randomToken(), title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
       email: input.email, phone: input.phone, pmdcNo: input.pmdcNo || null, specialty: input.specialty || null, designation: input.designation || null,
       institution: input.institution, address: input.address || null, city: input.city || null, categoryId: cat.id,
       whatsapp: input.whatsapp || null, cnic: normaliseCnic(input.cnic, input.country), country: input.country || "Pakistan", province: input.province || null,
-      qualification: input.qualification || null, employeeId: input.employeeNo || null, banquetQty, banquetFee,
-      conferenceFee, totalFee, earlyBird: early, paymentStatus: totalFee === 0 ? "WAIVED" : "PENDING",
+      qualification: input.qualification || null, employeeId: input.employeeNo || null, banquetQty, banquetFee, hasPass: wantPass, primaryRegId: primary?.id ?? null,
+      conferenceFee, totalFee, earlyBird: wantPass && early, paymentStatus: totalFee === 0 ? "WAIVED" : "PENDING",
     }).returning();
-    if (items.length) await tx.insert(s.registrationItems).values(items.map((i) => ({ ...i, registrationId: reg.id })));
+    // each workshop ticket gets its own number and QR (D4)
+    if (items.length) await tx.insert(s.registrationItems).values(items.map((i, n) => ({ ...i, registrationId: reg.id, ticketNo: `${regNo}-W${n + 1}` })));
     return reg;
   });
 
   await sendRegistrationNotice(result.id, "created").catch((e) => console.error("notify failed", e));
   return result;
 }
+
+/** Banquet passes held by a registration: one included with the pass plus the paid extras (D3). */
+export const banquetTotal = (r: { hasPass: boolean; banquetQty: number }) => (r.hasPass ? 1 : 0) + (r.banquetQty || 0);
 
 export async function loadRegistration(where: { id?: string; regNo?: string; accessToken?: string }) {
   const cond = where.id ? eq(s.registrations.id, where.id) : where.regNo ? eq(s.registrations.regNo, where.regNo) : eq(s.registrations.accessToken, where.accessToken!);
@@ -112,19 +154,19 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
   const pdf = await registrationPdf(r, ev);
   const confirmed = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
   const link = `${appUrl()}/register/success/${r.accessToken}`;
-  const rows = r.items.map((i) => `<li>${i.session.title}</li>`).join("");
+  const rows = r.items.map((i) => `<li>${i.session.title} · ${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })}${i.session.hall ? ` · ${i.session.hall}` : ""}</li>`).join("");
   const html = emailLayout(
     confirmed ? "Your registration is confirmed" : "Registration received — payment pending",
     `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p>
      <p>Thank you for registering for the <b>${ev.name}</b> — <i>${ev.theme}</i>, ${fmtDate(ev.startDate, { day: "numeric", month: "long" })} – ${fmtDate(ev.endDate)} at ${ev.venue}.</p>
      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
        <tr><td style="padding:6px 0;color:#5b6b8c">Registration No.</td><td style="font-weight:700;font-size:18px">${r.regNo}</td></tr>
-       <tr><td style="padding:6px 0;color:#5b6b8c">Category</td><td>${r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label}</td></tr>
-       ${r.banquetQty ? `<tr><td style="padding:6px 0;color:#5b6b8c">Additional banquet pass</td><td>${r.banquetQty} × ${pkr(r.banquetFee / r.banquetQty)}</td></tr>` : ""}
+       ${r.hasPass ? `<tr><td style="padding:6px 0;color:#5b6b8c">Symposium Pass</td><td>${r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label} · all symposium sessions, ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} – ${fmtDate(ev.endDate)}</td></tr>
+       <tr><td style="padding:6px 0;color:#5b6b8c">Banquet passes</td><td>${banquetTotal(r)} (1 included${r.banquetQty ? ` + ${r.banquetQty} extra × ${pkr(r.banquetFee / r.banquetQty)}` : ""})</td></tr>` : ""}
        <tr><td style="padding:6px 0;color:#5b6b8c">Total fee</td><td><b>${pkr(r.totalFee)}</b></td></tr>
        <tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:${confirmed ? "#0b8a4c" : "#c47a00"}">${confirmed ? "CONFIRMED" : "PAYMENT PENDING"}</b></td></tr>
      </table>
-     ${rows ? `<p style="margin-bottom:4px">Sessions / workshops:</p><ul style="margin-top:0">${rows}</ul>` : ""}
+     ${rows ? `<p style="margin-bottom:4px">Workshop tickets (separate from the Symposium Pass):</p><ul style="margin-top:0">${rows}</ul>` : ""}
      <p>A PDF with all the details you submitted is attached. Please bring it (or the QR code) to the registration desk.</p>`,
     { label: confirmed ? "View registration" : "Complete payment", href: link }
   );

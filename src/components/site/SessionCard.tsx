@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Clock, MapPin, Users, Award } from "lucide-react";
+import { Clock, MapPin, Users, Award, Ticket } from "lucide-react";
 import type { ProgrammeSession } from "@/lib/queries";
 import { cn, fmtDate, fmtTime, pkr, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
-import { AddToCart } from "@/components/cart/CartDrawer";
+import { AddTicket } from "@/components/cart/CartDrawer";
 
 export const TYPE_STYLE: Record<string, string> = {
   KEYNOTE: "bg-lnh-red/15 text-lnh-rose border-lnh-red/30",
@@ -15,9 +15,11 @@ export const TYPE_STYLE: Record<string, string> = {
   BREAK: "bg-white/5 text-slate-400 border-white/10",
 };
 
-export function SessionCard({ s, taken, early, showDate, cta }: { s: ProgrammeSession; taken?: number; early?: boolean; showDate?: boolean; cta?: { href: string; label: string } }) {
+export function SessionCard({ s, taken, early, showDate, cta, href }: { s: ProgrammeSession; taken?: number; early?: boolean; showDate?: boolean; cta?: { href: string; label: string }; href?: string }) {
   const left = s.capacity != null ? Math.max(0, s.capacity - (taken ?? 0)) : null;
-  const fee = early && s.earlyFee != null ? s.earlyFee : s.fee;
+  // Workshops are separate tickets with one price (D1, D2); every other session is covered by the Symposium Pass
+  const ws = s.type === "WORKSHOP";
+  const fee = s.fee;
   return (
     <article className="hud group relative flex h-full flex-col overflow-hidden p-6 transition duration-500 hover:-translate-y-1 sm:p-7">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lnh-sky/60 to-transparent opacity-0 transition group-hover:opacity-100" />
@@ -26,18 +28,13 @@ export function SessionCard({ s, taken, early, showDate, cta }: { s: ProgrammeSe
         {s.track && <span className="chip">{s.track}</span>}
         {s.cmeHours ? <span className="chip gap-1"><Award className="h-3 w-3" />{s.cmeHours} CME</span> : null}
       </div>
-      <h3 className="mt-4 font-display text-xl font-semibold leading-snug text-white">{s.title}</h3>
+      <h3 className="mt-4 font-display text-xl font-semibold leading-snug text-white">{href ? <Link href={href} className="hover:text-lnh-sky hover:underline">{s.title}</Link> : s.title}</h3>
       {s.description && <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-400">{s.description}</p>}
       <ul className="mt-5 space-y-1.5 text-sm text-slate-300">
         <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-lnh-sky" />{showDate && <>{fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" })} · </>}{fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}</li>
         {s.hall && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 text-lnh-sky" />{s.hall}</li>}
-        {s.capacity != null && <li className="flex items-center gap-2"><Users className="h-4 w-4 text-lnh-sky" />{left === 0 ? <span className="font-semibold text-lnh-rose">Fully booked</span> : <>{left} of {s.capacity} seats left</>}</li>}
+        {ws && s.capacity != null && <li className="flex items-center gap-2"><Users className="h-4 w-4 text-lnh-sky" />{left === 0 ? <span className="font-semibold text-lnh-rose">Fully booked</span> : <>{left} seats left</>}</li>}
       </ul>
-      {s.capacity != null && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-gradient-to-r from-lnh-sky to-lnh-red" style={{ width: `${Math.min(100, ((taken ?? 0) / s.capacity) * 100)}%` }} />
-        </div>
-      )}
       {s.speakers.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-3 border-t border-white/10 pt-5">
           {s.speakers.map(({ speaker, role }) => (
@@ -51,10 +48,15 @@ export function SessionCard({ s, taken, early, showDate, cta }: { s: ProgrammeSe
           ))}
         </div>
       )}
-      {(s.fee > 0 || cta || s.registrable) && (
-        <div className="mt-auto flex items-center justify-between gap-4 pt-6">
-          {s.fee > 0 ? <div><p className="text-[10px] uppercase tracking-widest text-slate-500">Fee</p><p className="font-display text-lg font-bold text-white">{pkr(fee)}{early && s.earlyFee != null && s.earlyFee < s.fee && <span className="ml-2 text-xs font-normal text-slate-500 line-through">{pkr(s.fee)}</span>}</p></div> : <span />}
-          {s.registrable ? <AddToCart disabled={left === 0} item={{ id: s.id, title: s.title, kind: s.type === "WORKSHOP" ? "WORKSHOP" : "SESSION", fee, when: fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" }), tag: s.department ?? s.track }} /> : cta && <Link href={cta.href} className="btn-primary btn-sm">{cta.label}</Link>}
+      {ws ? (
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
+          <div><p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop ticket</p><p className="font-display text-lg font-bold text-white">{pkr(fee)}</p></div>
+          {s.registrable && <AddTicket disabled={left === 0} item={{ id: s.id, title: s.title, kind: "WORKSHOP", fee, when: fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" }), tag: s.department ?? s.track }} />}
+        </div>
+      ) : s.type !== "BREAK" && (
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-lnh-sky/40 bg-lnh-sky/10 px-3 py-1.5 text-xs font-semibold text-lnh-sky"><Ticket className="h-3.5 w-3.5" />Covered by your Symposium Pass</span>
+          {cta && <Link href={cta.href} className="btn-ghost btn-sm">{cta.label}</Link>}
         </div>
       )}
     </article>

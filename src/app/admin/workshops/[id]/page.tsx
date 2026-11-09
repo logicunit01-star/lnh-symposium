@@ -70,7 +70,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
               <F l="Date" v={fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} />
               <F l="Time (24h)" v={<span className="font-mono">{row.time}</span>} />
               <F l="Venue" v={venue ? `${venue.name}, ${venue.building}` : w.hall} />
-              <F l="Seat cap" v={w.capacity} /><F l="Fee" v={`${pkr(w.fee)}${w.earlyFee != null ? ` (early ${pkr(w.earlyFee)})` : ""}`} /><F l="CME hours" v={w.cmeHours} />
+              <F l="Seat cap" v={w.capacity} /><F l="Fee" v={pkr(w.fee)} /><F l="CME hours" v={w.cmeHours} />
               <F l="Format" v={w.format} /><F l="Contributing departments" v={w.contributors} /><F l="Submitted" v={w.submittedAt ? fmtDateTime(w.submittedAt) : null} />
             </dl>
             {w.description && <p className="mt-5 border-t border-slate-100 pt-4 text-sm text-slate-600">{w.description}</p>}

@@ -12,6 +12,9 @@
   --c-sky: 63 184 240; --c-rose: 255 77 94; --c-gold: 245 185 66;
 }
 
+/* public site, dark theme: muted greys raised so small text meets WCAG AA contrast on navy (audit M1) */
+.site { --c-slate-500: 148 163 184; --c-slate-600: 120 136 160; }
+
 /* ---------- public site: light theme (toggle in the nav; stored per visitor) ---------- */
 html[data-theme="light"] .site {
   color-scheme: light;
@@ -88,14 +91,19 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
   select.input { @apply appearance-none bg-no-repeat pr-10; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>"); background-size: 14px; background-position: right 14px center; }
   .err { @apply mt-1 text-xs text-lnh-rose; }
 
-  .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); }
-  .reveal.in { opacity: 1; transform: none; }
+  /* scroll reveal hides content only once scripts run (html.js), so text shows without JS, in print and on slow phones (audit M3) */
+  .js .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  /* hero: CSS-only entrance, no script needed (audit M2) */
+  .hero-in { animation: hero-in .7s cubic-bezier(.2,.7,.2,1) both; }
 
   .prose-lnh p { @apply mb-4 leading-relaxed text-slate-300; }
   .prose-lnh h3 { @apply mb-3 mt-8 font-display text-xl font-semibold text-white; }
   .prose-lnh ul { @apply mb-4 list-disc space-y-1.5 pl-5 text-slate-300; }
 }
 
+@keyframes hero-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media print { .reveal { opacity: 1 !important; transform: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .reveal { opacity: 1; transform: none; }

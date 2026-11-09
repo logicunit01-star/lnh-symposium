@@ -6,8 +6,14 @@ export default function NotFound() {
       <div className="relative">
         <p className="h-display text-[30vw] leading-none text-white/5 sm:text-[14rem]">404</p>
         <h1 className="h-display -mt-10 text-4xl text-white">Page not found</h1>
-        <p className="mt-3 text-slate-400">The page you’re looking for doesn’t exist or has moved.</p>
-        <Link href="/" className="btn-primary mt-8">Back to home</Link>
+        <p className="mt-3 text-slate-300">The page you’re looking for doesn’t exist or has moved.</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/" className="btn-primary">Home</Link>
+          <Link href="/agenda" className="btn-ghost">Agenda</Link>
+          <Link href="/workshops" className="btn-ghost">Workshops</Link>
+          <Link href="/register" className="btn-ghost">Get your pass</Link>
+          <Link href="/my-registrations" className="btn-ghost">Find my tickets</Link>
+        </div>
       </div>
     </div>
   );

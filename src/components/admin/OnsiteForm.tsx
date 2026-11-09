@@ -25,7 +25,7 @@ export function OnsiteForm({ cats, items, procPct, banquet }: { cats: Cat[]; ite
   const [phone, setPhone] = useState("");
   const [pay, setPay] = useState("CASH");
   const cat = cats.find((c) => c.id === catId);
-  const sub = (pass ? cat?.fee ?? 0 : 0) + banq * banquet.fee + items.filter((i) => sel.includes(i.id)).reduce((a, i) => a + i.fee, 0);
+  const sub = (pass ? cat?.fee ?? 0 : 0) + (pass ? banq : 0) * banquet.fee + items.filter((i) => sel.includes(i.id)).reduce((a, i) => a + i.fee, 0);
   const total = sub + Math.round((sub * (procPct || 0)) / 100);
   const fe = state?.fields ?? {};
   const err = (k: string) => fe[k] && <p className="mt-1 text-xs text-rose-600">{fe[k]}</p>;
@@ -63,7 +63,7 @@ export function OnsiteForm({ cats, items, procPct, banquet }: { cats: Cat[]; ite
               <input type="hidden" name="categoryId" value={catId ?? ""} />
               <select name="designation" value={designation} onChange={(e) => setDesignation(e.target.value)} className="a-input">{cats.map((c) => <optgroup key={c.id} label={pkr(c.fee)}>{c.designations.map((d) => <option key={d}>{d}</option>)}</optgroup>)}</select>{err("designation")}</div>
             <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="includePass" checked={pass} onChange={(e) => setPass(e.target.checked)} />Symposium pass {cat && `(${pkr(cat.fee)})`}</label>
-            <div><label className="a-label">Banquet passes ({pkr(banquet.fee)} each)</label><select name="banquetQty" value={banq} onChange={(e) => setBanq(Number(e.target.value))} className="a-input w-28">{Array.from({ length: banquet.max + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n === 0 ? "No" : n}</option>)}</select></div>
+            <div><label className="a-label">Extra banquet passes ({pkr(banquet.fee)} each; 1 included with the pass)</label><select name="banquetQty" disabled={!pass} value={pass ? banq : 0} onChange={(e) => setBanq(Number(e.target.value))} className="a-input w-28">{Array.from({ length: banquet.max + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n === 0 ? "No" : n}</option>)}</select></div>
           </div>
           {groups.map(([k, label]) => {
             const list = items.filter((i) => (k === "WORKSHOP") === (i.kind === "WORKSHOP"));

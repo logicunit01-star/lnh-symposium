@@ -27,11 +27,11 @@ export function renderTemplate(t: Pick<Template, "subject" | "body" | "buttonLab
 }
 
 /** Send a templated email from the official Scientific Committee address (with CC), recorded in the sent log. */
-export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string }[] } = {}) {
+export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; noCc?: boolean; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string }[] } = {}) {
   const ev = await getEvent();
   const t = await getTemplate(key);
   const { subject, html } = renderTemplate(t, { event_name: ev.name, ...vars });
-  return sendEmail(to, subject, html, opts.attachments ?? [], { from: ev.emailFrom, cc: ev.emailCc, replyTo: ev.contactEmail, templateKey: key, ref: opts.ref ?? null });
+  return sendEmail(to, subject, html, opts.attachments ?? [], { from: ev.emailFrom, cc: opts.noCc ? null : ev.emailCc, replyTo: ev.contactEmail, templateKey: key, ref: opts.ref ?? null });
 }
 
 // ---------------- scheduled dispatches ----------------

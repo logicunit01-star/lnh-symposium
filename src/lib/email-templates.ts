@@ -16,11 +16,12 @@ export const MERGE_FIELDS: [string, string][] = [
   ["author_name", "Presenting author"],
   ["abstract_id", "Abstract ID"],
   ["status", "Approval / review status"],
+  ["ticket_no", "Workshop ticket number"],
   ["event_name", "Symposium name"],
   ["link", "Personal link (tracking, response or portal page)"],
 ];
 
-export const TEMPLATE_KEYS = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY"] as const;
+export const TEMPLATE_KEYS = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDef> = {
@@ -146,6 +147,21 @@ The flyer for **"{{session_name}}"** ({{department}}) has been generated from th
 Please review and approve it. Once approved it is locked; later changes can be made only through the Scientific Sessions Chairperson.`,
     buttonLabel: "Review the flyer",
   },
+  WORKSHOP_REMINDER: {
+    name: "Workshop reminder (day before)", audience: "Workshop ticket holders", when: "Automatically, about a day before each workshop (daily scheduler)",
+    subject: "Tomorrow: {{session_name}}",
+    body: `Dear {{name}},
+
+This is a reminder of your workshop **"{{session_name}}"**.
+
+Date: {{session_date}}
+Time: {{session_time}}
+Venue: {{venue}}
+Ticket: {{ticket_no}}
+
+Please arrive 15 minutes early and show your workshop ticket QR at the door. It is on your ticket page and in your confirmation PDF.`,
+    buttonLabel: "Show my ticket",
+  },
 };
 
 export type MergeVars = Partial<Record<string, string | null | undefined>>;
@@ -169,5 +185,5 @@ export function bodyToHtml(body: string, vars: MergeVars) {
 export const SAMPLE_VARS: MergeVars = {
   name: "Dr. Ayesha Khan", role: "Oral presenter", session_name: "Advances in interventional cardiology", session_date: "Friday 29 January 2027",
   session_time: "08:30–10:30", venue: "Hall-B (Convention Center)", department: "Cardiology", abstract_title: "Same-day discharge after elective PCI",
-  author_name: "Dr. Ayesha Khan", abstract_id: "ABS-2027-0001", status: "accepted as an oral presentation", event_name: "9th LNH Symposium 2027", link: "https://lnh-symposium.vercel.app",
+  author_name: "Dr. Ayesha Khan", ticket_no: "SYM-2027-00012-W1", abstract_id: "ABS-2027-0001", status: "accepted as an oral presentation", event_name: "9th LNH Symposium 2027", link: "https://lnh-symposium.vercel.app",
 };

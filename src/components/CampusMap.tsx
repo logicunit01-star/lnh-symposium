@@ -16,7 +16,7 @@ export function CampusMap({ pins, active, dark, href, className }: { pins: Pin[]
     ? { bg: "#071331", grid: "rgba(63,184,240,0.08)", block: "rgba(21,96,212,0.18)", stroke: "rgba(63,184,240,0.45)", text: "#9fb3d9", road: "rgba(255,255,255,0.08)", pin: "#3FB8F0", on: "#FF4D5E", label: "#ffffff" }
     : { bg: "#f1f5fb", grid: "rgba(10,46,110,0.06)", block: "#dfe8f6", stroke: "#9db3d8", text: "#4b5d7f", road: "#e3e8f0", pin: "#0089BF", on: "#B72025", label: "#232667" };
   return (
-    <svg viewBox="0 0 100 86" className={className} role="img" aria-label="Campus map with workshop venues">
+    <svg viewBox="0 0 100 86" className={className} role="group" aria-label="Campus map with workshop venues. Pins link to each room.">
       <defs>
         <pattern id={`g${dark ? "d" : "l"}`} width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0H0V4" fill="none" stroke={c.grid} strokeWidth="0.2" /></pattern>
       </defs>

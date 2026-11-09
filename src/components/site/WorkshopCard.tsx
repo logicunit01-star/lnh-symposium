@@ -1,12 +1,12 @@
 "use client";
 import { Award, CalendarDays, Clock, MapPin, Users } from "lucide-react";
 import type { WorkshopDTO } from "@/lib/workshops";
-import { AddToCart, RegisterNow } from "@/components/cart/CartDrawer";
+import { AddTicket } from "@/components/cart/CartDrawer";
 import { WaitlistButton } from "./WaitlistButton";
 import { cn, pkr } from "@/lib/utils";
 
-const DEPT_HUES = ["text-lnh-sky border-lnh-sky/40 bg-lnh-sky/10", "text-lnh-rose border-lnh-red/40 bg-lnh-red/10", "text-lnh-gold border-lnh-gold/40 bg-lnh-gold/10", "text-violet-300 border-violet-400/40 bg-violet-400/10", "text-emerald-300 border-emerald-400/40 bg-emerald-400/10"];
-export const deptHue = (d?: string | null) => DEPT_HUES[[...(d || "x")].reduce((a, c) => a + c.charCodeAt(0), 0) % DEPT_HUES.length];
+import { deptHue } from "./dept-hue";
+export { deptHue };
 
 export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean }) {
   const full = w.left === 0;
@@ -20,13 +20,13 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
         {w.department && <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest", deptHue(w.department))}>{w.department}</span>}
         {w.format && <span className="chip">{w.format}</span>}
       </div>
-      <h3 className="mt-4 font-display text-lg font-bold leading-snug text-white sm:text-xl">{w.title}</h3>
+      <h3 className="mt-4 font-display text-lg font-bold leading-snug text-white sm:text-xl"><a href={`/workshops/${w.slug}`} className="hover:text-lnh-sky hover:underline">{w.title}</a></h3>
       {!compact && w.description && <p className="mt-2 line-clamp-2 text-sm text-slate-400">{w.description}</p>}
       {lead && (
         <p className="mt-3 text-sm text-slate-300">
-          <span className="text-slate-500">Lead faculty: </span><span className="font-semibold text-white">{lead.name}</span>
+          <span className="text-slate-400">Lead faculty: </span><span className="font-semibold text-white">{lead.name}</span>
           {lead.degrees && <span className="text-slate-400">, {lead.degrees}</span>}
-          {w.faculty.length > 1 && <span className="text-slate-500"> +{w.faculty.length - 1} faculty</span>}
+          {w.faculty.length > 1 && <span className="text-slate-400"> +{w.faculty.length - 1} faculty</span>}
         </p>
       )}
       <ul className="mono mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-slate-300">
@@ -39,21 +39,18 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
         <div className="mt-4">
           <div className="flex justify-between text-[11px]">
             <span className="flex items-center gap-1.5 text-slate-400"><Users className="h-3.5 w-3.5" />Seats</span>
-            <span className={cn("mono font-semibold", full ? "text-lnh-rose" : (w.left ?? 0) <= 5 ? "text-lnh-gold" : "text-emerald-300")}>{full ? "Fully booked" : `${w.left} of ${w.capacity} seats left`}</span>
+            <span className={cn("mono font-semibold", full ? "text-lnh-rose" : (w.left ?? 0) < 10 ? "text-lnh-gold" : "text-emerald-300")}>{full ? "Fully booked" : (w.left ?? 0) < 10 ? `Few seats left: ${w.left}` : `${w.left} seats left`}</span>
           </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-lnh-sky via-lnh-blue to-lnh-red transition-all" style={{ width: `${pct}%` }} /></div>
+          {pct >= 50 && <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-lnh-sky via-lnh-blue to-lnh-red transition-all" style={{ width: `${pct}%` }} /></div>}
         </div>
       )}
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-500">Fee</p>
-          <p className="font-display text-lg font-bold text-white">{pkr(w.fee)}{w.regularFee > w.fee && <span className="ml-2 text-xs font-normal text-slate-500 line-through">{pkr(w.regularFee)}</span>}</p>
+          <p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop ticket</p>
+          <p className="font-display text-lg font-bold text-white">{pkr(w.fee)}</p>
         </div>
         <div className="flex items-center gap-2">
-          {full ? <WaitlistButton sessionId={w.id} slug={w.slug} /> : <>
-            <AddToCart item={item} />
-            {!compact && <RegisterNow item={item} />}
-          </>}
+          {full ? <WaitlistButton sessionId={w.id} slug={w.slug} /> : <AddTicket item={item} />}
         </div>
       </div>
     </article>

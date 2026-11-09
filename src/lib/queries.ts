@@ -20,6 +20,11 @@ export async function getProgramme(filter?: { types?: string[]; registrable?: bo
 }
 export type ProgrammeSession = Awaited<ReturnType<typeof getProgramme>>[number];
 
+/** One public programme item by slug (detail pages, release 3). */
+export async function getProgrammeItem(slug: string) {
+  return (await getProgramme()).find((p) => p.slug === slug) ?? null;
+}
+
 /** Seats taken per session (pending + paid + waived). */
 export async function seatsTaken(): Promise<Record<string, number>> {
   const rows = await db.select({ id: s.registrationItems.sessionId, n: sql<number>`count(*)::int` })

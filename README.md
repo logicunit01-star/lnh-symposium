@@ -206,3 +206,33 @@ drizzle/             SQL migrations
 - **Registration forms 2027:** CNIC (or passport), WhatsApp, address, province, city, qualification and LNH employee # at sign-up / checkout / onsite desk; four fee tiers by designation (early bird 1,050 / 2,000 / 3,000 / 5,000; regular 1,500 / 2,500 / 3,500 / 6,000) editable in Event Settings; additional banquet pass PKR 4,000, maximum 2. Guests (`/register/guest`, approved by the HOD) and volunteers (`/register/volunteer`, approved by the new role FACILITATION_CHAIR) register free; their pass is valid after approval.
 - **Branding:** LNH colour codes navy #232667, red #B72025, title gradient #00B8D7 → #0089BF. Flyers use DM Sans at 1080 × 1350 with fully embedded fonts, so text stays editable for social posts and standees.
 - New demo login: `facilitation@lnh.edu.pk` (password = `SEED_ADMIN_PASSWORD`).
+
+## Registration redesign, release 1: ticket model (Nov 2026, migration 0008)
+
+- **Two products.** The *Symposium Pass* admits to every symposium session (keynote, plenary, scientific, panel) on all three days and includes one banquet pass; the delegate may add 0 to 2 extra paid banquet passes. *Workshop tickets* are separate, one per workshop, bought with or without a pass (LNH decisions D1, D3).
+- **Early bird applies to the pass only** (D2). Workshops have one price (`sessions.fee`); the early-bird field is gone from the workshop form and is ignored everywhere.
+- **One pass per delegate.** `registrations.has_pass` marks the registration that holds the pass; a second pass is refused. Later orders of the same account point at the first registration (`primary_reg_id`) and are numbered `SYM-2027-00012-2`, `-3`, … A workshop already held cannot be bought twice.
+- **Scientific sessions are no longer items.** The server books only approved, registrable workshops; migration 0008 turns `registrable` off for every non-workshop session.
+- **Register page** (`/register`): two product cards, tier cards (T1 to T4) with designations, banquet stepper, the workshop catalogue embedded (filters by week, date, department, facility, format), one order summary (sticky on desktop, bottom bar on phones), guest and volunteer links.
+- **Checkout**: read-only order (pass, extra banquet, workshop tickets), "already yours" line for pass holders, designation asked only for workshop-only buyers, registration details, payment.
+- **Site-wide**: "Covered by your Symposium Pass" on agenda and session cards, *Add ticket* on workshop cards, header button *Get your pass* / *My tickets* (cart icon removed), muted text contrast raised to WCAG AA, larger footer tap targets, guest and volunteer links in the footer, staff login removed from the public footer.
+- **Catering** counts one banquet pass per purchased pass plus extras. Check-in, registration detail, export and the PDF show the pass and banquet totals.
+- Run `deploy.bat` (or `npm run db:setup`) once to apply migration 0008. Existing registrations are back-filled: every registration holds a pass except participant orders with no conference fee that carry only workshops.
+- Not in this release: unique QR per workshop ticket (D4), sign-in and account changes, My tickets wallet (release 2 and 3).
+
+## Registration redesign, release 2: sign-in and My tickets (Nov 2026, migration 0009)
+
+- **Email-first sign-in** (`/account`): enter the email; an existing account is asked for its password, a new email gets the short sign-up. Accounts can also **sign in with a 6-digit code** (email + SMS) and **reset a forgotten password** with a code; a code sign-in also clears a 15-minute lock-out. APIs: `/api/account/check`, `/api/account/code` (`SIGNIN` | `RESET`), `/api/account/code/verify`, `/api/account/reset`.
+- **Short sign-up**: title, first and last name, mobile, password (one strength meter), then the code. Gender, institution, specialty and the Registration Forms 2027 details are asked once at checkout and saved to the account (migration 0009 makes `accounts.gender` and `accounts.institution` optional; existing accounts keep theirs).
+- **Back where they were**: sign-in from checkout returns to `/checkout?welcome=1`, which confirms the pass and workshop tickets are still selected.
+- **My tickets** (`/account/bookings`): Symposium Pass card (status, banquet passes, QR and PDF, pay, e-certificate), one row per workshop ticket in date order, abstracts, and a collapsed orders and payments list. Registrations made with the same email without an account (desk, guest, volunteer) are included.
+- **Find my tickets** (`/my-registrations`): one page for people without an account, by SMS code or by registration number and email; `/register/status` redirects there.
+- Pending database updates are applied automatically when the server starts (`src/instrumentation.ts`), so a local install cannot run new code on an old database.
+
+## Registration redesign, release 3: tickets, agenda and site polish (Nov 2026, migration 0010)
+
+- **A QR per ticket (D4).** The Symposium Pass QR (holder details, banquet passes) is scanned at the symposium entrance; every workshop ticket has its own number (`SYM-2027-00012-W1`, `registration_items.ticket_no`) and QR for that workshop's door. Check-in recognises both: a workshop QR opens that ticket with *Admit to workshop*; orders without a pass cannot be checked in at the symposium entrance.
+- **E-ticket page** (`/register/success/<token>`): pass card and one card per workshop with QR, date, time and venue; pay-first panel when pending; calendar files (`/api/registrations/<token>/ics`, `?item=<id>` for one workshop); PDF with the confirmation, ID card (pass holders) and one ticket page per workshop.
+- **Workshop reminder** about a day before each workshop (email template *Workshop reminder (day before)*, editable in Admin → Emails, plus SMS), sent by the daily scheduler `/api/cron/reminders`, once per ticket (`registration_items.reminded_at`). The event reminder now goes to pass holders only.
+- **Agenda**: sessions grouped by start time with parallel halls side by side, filters by type and hall (`/agenda?type=keynote&hall=…`), `?day=`; pages of their own for each session (`/sessions/<slug>`) and workshop (`/workshops/<slug>`).
+- **Site**: `robots.txt` and `sitemap.xml`; security headers (content security policy, frame options, HSTS, referrer and permissions policies); hero without script-dependent animation and scroll reveal that never hides text without JavaScript (home main content on a throttled phone 4.8 s → 2.1 s, no layout shift); "video coming soon" tiles hidden until videos are added in Event Settings; e-abstract book with a speciality index and collapsible abstracts; venue maps accessible; 404 page with useful links; payment contact at checkout.

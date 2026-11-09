@@ -37,7 +37,7 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
     regNo, accessToken: randomToken(), regType: input.regType, title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
     email: input.email, phone: input.phone, whatsapp: input.whatsapp || null, address: input.address, country: input.country || "Pakistan", province: input.province || null, city: input.city,
     cnic: normaliseCnic(input.cnic, input.country), pmdcNo: input.pmdcNo || null, qualification: input.qualification || null, institution: input.institution,
-    categoryId: cat.id, conferenceFee: 0, totalFee: 0, paymentStatus: "WAIVED", paymentMethod: "Complimentary", approvalStatus: "PENDING",
+    categoryId: cat.id, hasPass: true, conferenceFee: 0, totalFee: 0, paymentStatus: "WAIVED", paymentMethod: "Complimentary", approvalStatus: "PENDING",
     department: input.department, guestRole: input.regType === "GUEST" ? input.guestRole : null, guestSession: input.regType === "GUEST" ? input.guestSession : null,
     academicYear: input.regType === "VOLUNTEER" ? input.academicYear : null,
   }).returning();

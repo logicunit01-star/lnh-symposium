@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { z } from "zod";
 import { db, schema as s } from "./db";
-import { normaliseCnic } from "./reg-fields";
 
 export const USER_COOKIE = "lnh_user";
 const key = () => new TextEncoder().encode((process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me") + ":account");
@@ -34,27 +33,22 @@ const name50 = z.string().trim().min(1, "Required").max(50, "Max 50 characters")
 export const passwordRule = z.string().min(8, "At least 8 characters")
   .regex(/[A-Z]/, "Add an uppercase letter").regex(/[0-9]/, "Add a number").regex(/[^A-Za-z0-9]/, "Add a special character");
 
+/** Short sign-up (release 2): everything else is asked once at checkout and saved to the account. */
 export const signupInput = z.object({
   title: z.enum(["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms."]),
-  gender: z.enum(["Male", "Female"]),
   firstName: name50,
   lastName: name50,
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   phone: z.string().trim().regex(/^03\d{2}-?\d{7}$/, "Use format 03XX-XXXXXXX"),
-  pmdcNo: z.string().trim().max(30).optional().or(z.literal("")),
-  specialty: z.string().trim().max(80).optional().or(z.literal("")),
-  designation: z.string().trim().max(80).optional().or(z.literal("")),
-  institution: z.string().trim().min(2, "Required").max(160),
-  // Registration Forms 2027
-  address: z.string().trim().min(5, "Required").max(300),
-  city: z.string().trim().min(2, "Required").max(60),
-  province: z.string().trim().max(60).optional().or(z.literal("")),
-  country: z.string().trim().max(60).default("Pakistan"),
-  cnic: z.string().trim().min(1, "Required").max(25),
-  whatsapp: z.string().trim().max(20).optional().or(z.literal("")),
-  qualification: z.string().trim().max(120).optional().or(z.literal("")),
-  employeeNo: z.string().trim().max(20).optional().or(z.literal("")),
   password: passwordRule,
-  confirm: z.string(),
-}).refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Passwords do not match" })
-  .refine((d) => !!normaliseCnic(d.cnic, d.country), { path: ["cnic"], message: "Enter the 13-digit CNIC (12345-1234567-1), or your passport number if you are outside Pakistan" });
+});
+
+export const emailInput = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address") });
+
+/** Response that signs the account in (7-day cookie). */
+export async function signedIn(a: { id: string; firstName: string; lastName: string; email: string }, body: Record<string, unknown> = {}) {
+  const { NextResponse } = await import("next/server");
+  const res = NextResponse.json({ ok: true, ...body });
+  res.cookies.set(USER_COOKIE, await signAccount({ sub: a.id, name: `${a.firstName} ${a.lastName}`, email: a.email }), cookieOpts);
+  return res;
+}
