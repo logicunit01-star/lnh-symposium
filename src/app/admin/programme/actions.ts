@@ -47,6 +47,8 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
   } else if (d.preferredSlots.some((k) => ev.sessionSlots.find((x) => x.key === k)?.special)) {
     return { error: "The plenary and debate slots are reserved for the committee's sessions.", fields: { preferredSlots: "Choose one of the speciality session slots" } };
   }
+  // Session title is optional (Dashboard Instructions, revised 06-11-2026)
+  if (!d.title) d.title = special ? (d.sessionFormat === "DEBATE" ? "Debate session" : "Plenary session") : `${d.department} session`;
   const id = String(f.get("id") || "") || null;
   let existing: typeof s.sessions.$inferSelect | undefined;
   if (id) {

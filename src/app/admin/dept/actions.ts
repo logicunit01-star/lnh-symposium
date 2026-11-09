@@ -6,7 +6,7 @@ import { db, schema as s } from "@/lib/db";
 import { requireDept } from "@/lib/dept";
 import { getEvent } from "@/lib/event";
 import { logAbstract, reviewWindow } from "@/lib/abstracts";
-import { SCORE_CRITERIA, decisionsFor, decisionLabel } from "@/lib/scientific";
+import { SCORE_CRITERIA, decisionsFor, decisionLabel, scoreText } from "@/lib/scientific";
 
 /** Can this department act on abstracts of this phase right now? */
 async function canReview(phase: number, dept: typeof s.departments.$inferSelect | null) {
@@ -24,11 +24,13 @@ export async function deptDecide(abstractId: string, f: FormData) {
   if (blocked) throw new Error(blocked);
   const decision = String(f.get("decision") || "");
   if (!decisionsFor(a.presentationPref).includes(decision)) redirect(`/admin/dept/abstracts?err=decision#a-${a.id}`);
-  const scores = Object.fromEntries(SCORE_CRITERIA.map(([k]) => [k, Math.min(5, Math.max(1, Number(f.get(`sc_${k}`)) || 0))]));
-  if (Object.values(scores).some((v) => !v)) redirect(`/admin/dept/abstracts?err=score#a-${a.id}`);
+  const raw = SCORE_CRITERIA.map(([k]) => String(f.get(`sc_${k}`) ?? ""));
+  // 1 Poor, 2 Average, 3 Good, 0 = N/A (Dashboard Instructions, revised 06-11-2026)
+  const scores = Object.fromEntries(SCORE_CRITERIA.map(([k], i) => [k, Math.min(3, Math.max(0, Number(raw[i]) || 0))]));
+  if (raw.some((v) => !["0", "1", "2", "3"].includes(v))) redirect(`/admin/dept/abstracts?err=score#a-${a.id}`);
   const total = Object.values(scores).reduce((x, y) => x + y, 0);
   await db.update(s.abstracts).set({ hodDecision: decision, hodScores: scores, hodTotal: total, hodNotes: String(f.get("notes") || "").trim() || null, hodBy: u.name, hodAt: new Date() }).where(eq(s.abstracts.id, a.id));
-  await logAbstract(a.id, u.name, `HOD: ${decisionLabel(decision, a.presentationPref)}`, `Score ${total}/25`);
+  await logAbstract(a.id, u.name, `HOD: ${decisionLabel(decision, a.presentationPref)}`, `Score ${scoreText(total, scores)}`);
   revalidatePath("/admin/dept/abstracts");
   redirect(`/admin/dept/abstracts?saved=${a.refNo}#a-${a.id}`);
 }

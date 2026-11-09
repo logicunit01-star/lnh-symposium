@@ -55,7 +55,7 @@ export function AbstractForm({ wordLimit, departments, account }: {
       const d: any = Object.fromEntries(new FormData(e.currentTarget));
       const r = await submit({
         presentationPref: pref, specialty: d.specialty, title: d.title, fullName: d.fullName, designation: d.designation, organization: d.organization,
-        department: d.department, city: d.city, country: d.country, email: d.email, mobile: d.mobile, coAuthors: co,
+        department: d.department, city: d.city, country: d.country, email: d.email, mobile: d.mobile, coAuthors: co.filter((c) => c.name.trim() || c.affiliation.trim()),
         abstractTitle: title, kind, sections: sec, keywords, declaration: d.declaration === "on",
       });
       if (r) { setDone(r.refNo); window.scrollTo({ top: 0 }); }
@@ -94,14 +94,14 @@ export function AbstractForm({ wordLimit, departments, account }: {
       </section>
 
       <section>
-        <h2 className="font-display text-lg font-bold text-white">3 · Co-authors <span className="text-sm font-normal text-slate-400">(1 to 6, in programme / e-abstract book order, with affiliations)</span></h2>
+        <h2 className="font-display text-lg font-bold text-white">3 · Co-authors <span className="text-sm font-normal text-slate-400">(optional, up to 6, in programme / e-abstract book order, with affiliations)</span></h2>
         <div className="mt-3 space-y-3">
           {co.map((c, i) => (
             <div key={i} className="grid items-end gap-3 sm:grid-cols-[2rem_1fr_1.4fr_auto]">
               <span className="mono pb-3 text-sm text-slate-500">{i + 1}.</span>
               <Field label="Name" error={fe(`coAuthors.${i}.name`)}><input value={c.name} onChange={(e) => setCo(co.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className="input" aria-label={`Co-author ${i + 1} name`} /></Field>
               <Field label="Affiliation" error={fe(`coAuthors.${i}.affiliation`)}><input value={c.affiliation} onChange={(e) => setCo(co.map((x, j) => j === i ? { ...x, affiliation: e.target.value } : x))} className="input" aria-label={`Co-author ${i + 1} affiliation`} /></Field>
-              <button type="button" disabled={co.length === 1} onClick={() => setCo(co.filter((_, j) => j !== i))} className="mb-1 grid h-11 w-11 place-items-center rounded-xl border border-white/10 text-slate-400 hover:text-lnh-rose disabled:opacity-30" aria-label="Remove co-author"><Trash2 className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setCo(co.filter((_, j) => j !== i))} className="mb-1 grid h-11 w-11 place-items-center rounded-xl border border-white/10 text-slate-400 hover:text-lnh-rose disabled:opacity-30" aria-label="Remove co-author"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
           {co.length < 6 && <button type="button" onClick={() => setCo([...co, { name: "", affiliation: "" }])} className="btn-ghost btn-sm"><Plus className="h-4 w-4" />Add co-author</button>}

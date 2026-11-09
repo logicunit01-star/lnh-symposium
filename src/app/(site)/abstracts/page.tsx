@@ -24,9 +24,9 @@ export default async function Abstracts() {
   const guidelines = [
     "Original research or case reports / case series.",
     `Maximum 300 words in total, excluding title, authors and affiliations; title maximum 35 words.`,
-    `Original research: Introduction ${O.background}, Methods ${O.methods}, Results ${O.results}, Conclusion ${O.conclusion} words.`,
-    `Case report / series: Introduction ${C.background}, Case report / series ${C.cases} words.`,
-    "3 to 5 keywords; up to 6 co-authors with affiliations.",
+    `Original research: Introduction (including objectives/purpose) ${O.background}, Methods ${O.methods}, Results ${O.results}, Conclusion ${O.conclusion} words.`,
+    `Case report / series: Introduction (including objectives/purpose) ${C.background}, Case report / series ${C.cases} words.`,
+    "3 to 5 keywords; co-authors are optional (up to 6, with affiliations).",
     "Each abstract gets an ID and an instant confirmation email. Duplicate titles are not accepted.",
     "The presenting author must register for the symposium.",
   ];

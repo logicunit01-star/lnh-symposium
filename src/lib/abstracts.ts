@@ -19,7 +19,7 @@ export const abstractInput = z.object({
   city: req(60), country: req(60),
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   mobile: z.string().trim().regex(/^(\+92|0092|0)?3\d{2}[- ]?\d{7}$|^\+?\d[\d\s-]{7,18}$/, "Enter a valid contact number"),
-  coAuthors: z.array(z.object({ name: req(120), affiliation: req(200) })).min(1, "Add at least one co-author").max(6, "Maximum 6 co-authors"),
+  coAuthors: z.array(z.object({ name: req(120), affiliation: req(200) })).max(6, "Maximum 6 co-authors"),
   abstractTitle: z.string().trim().min(5, "Enter the full title").refine((v) => words(v) <= 35, "Title must be 35 words or fewer"),
   kind: z.enum(["ORIGINAL", "CASE"]),
   sections: z.record(z.string().trim().max(4000)),

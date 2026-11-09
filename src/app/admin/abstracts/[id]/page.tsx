@@ -5,7 +5,7 @@ import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge } from "@/components/admin/ui";
-import { KIND_LABEL, PREF_LABEL, SCORE_CRITERIA, SECTIONS, decisionLabel } from "@/lib/scientific";
+import { KIND_LABEL, PREF_LABEL, SCORE_CRITERIA, SECTIONS, decisionLabel, scoreText, scoreValue } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
 import { assignAbstractVenue, scReassign } from "../actions";
 
@@ -49,8 +49,8 @@ export default async function AbstractDetail({ params, searchParams }: { params:
             <div className="flex items-center justify-between"><p className="text-sm font-semibold">HOD review (decision)</p><StatusBadge s={a.status} /></div>
             {a.hodDecision ? (
               <>
-                <p className="mt-2 font-display text-lg font-bold">{decisionLabel(a.hodDecision, a.presentationPref)} <span className="text-slate-400">{a.hodTotal}/25</span></p>
-                <ul className="mt-2 space-y-1 text-xs text-slate-600">{SCORE_CRITERIA.map(([k, l]) => <li key={k} className="flex justify-between"><span>{l}</span><b>{a.hodScores?.[k] ?? "—"}</b></li>)}</ul>
+                <p className="mt-2 font-display text-lg font-bold">{decisionLabel(a.hodDecision, a.presentationPref)} <span className="text-slate-400">{scoreText(a.hodTotal, a.hodScores)}</span></p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600">{SCORE_CRITERIA.map(([k, l]) => <li key={k} className="flex justify-between"><span>{l}</span><b>{scoreValue(a.hodScores?.[k])}</b></li>)}</ul>
                 {a.hodNotes && <p className="mt-2 text-sm text-slate-600">“{a.hodNotes}”</p>}
                 <p className="mt-2 text-xs text-slate-400">{a.hodBy} · {a.hodAt ? fmtDateTime(a.hodAt) : ""}</p>
               </>

@@ -4,7 +4,7 @@ import { requireDept } from "@/lib/dept";
 import { getEvent } from "@/lib/event";
 import { reviewWindow } from "@/lib/abstracts";
 import { PageTitle } from "@/components/admin/ui";
-import { SCORE_CRITERIA, SECTIONS, PREF_LABEL, KIND_LABEL, DEFAULT_QC_GUIDELINES, decisionLabel, decisionsFor } from "@/lib/scientific";
+import { SCORE_CRITERIA, SCORE_OPTIONS, SCORE_KEY, SECTIONS, PREF_LABEL, KIND_LABEL, DEFAULT_QC_GUIDELINES, decisionLabel, decisionsFor, scoreText } from "@/lib/scientific";
 import { cn, fmtDateTime } from "@/lib/utils";
 import { deptDecide, deptSubmit } from "../actions";
 
@@ -25,7 +25,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
     "Returned to the Symposium Secretariat": rows.filter((r) => r.status === "BACK"),
   };
   const qc = (ev.qcGuidelines || DEFAULT_QC_GUIDELINES).split("\n").filter(Boolean);
-  const msg = searchParams.err === "incomplete" ? "Decide every abstract before sending them to the secretariat." : searchParams.err === "score" ? "Score all five criteria (1 to 5)." : searchParams.err === "decision" ? "Choose a decision." : null;
+  const msg = searchParams.err === "incomplete" ? "Decide every abstract before sending them to the secretariat." : searchParams.err === "score" ? "Score all seven criteria (1, 2, 3 or N/A)." : searchParams.err === "decision" ? "Choose a decision." : null;
 
   return (
     <>
@@ -49,8 +49,8 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
 
       <details className="a-card mb-6 p-5" open={!!activePhase}>
         <summary className="cursor-pointer font-display text-base font-bold text-slate-900">Quality-check guidelines for abstract review</summary>
-        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-slate-700">{qc.map((g) => <li key={g}>{g}</li>)}</ol>
-        <p className="mt-3 text-xs text-slate-500">Score each abstract on the five criteria (1 to 5), then choose Accept, Reject or Return to the Symposium Secretariat. Your decision is final; authors are emailed after the agenda is finalised.</p>
+        <ul className="mt-3 space-y-1.5 text-sm text-slate-700">{qc.map((g) => <li key={g}>{g}</li>)}</ul>
+        <p className="mt-3 text-xs text-slate-500">Score each abstract on the seven criteria (1 Poor, 2 Average, 3 Good, or N/A), then choose Accept, Reject or Return to the Symposium Secretariat. Your decision is final; authors are emailed after the agenda is finalised.</p>
       </details>
 
       {activePhase && (
@@ -61,7 +61,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
                 <span><span className="font-mono text-xs font-semibold text-lnh-blue">{a.refNo}</span>{a.phase === 2 && <span className="ml-2 rounded bg-amber-100 px-1.5 text-[10px] font-bold text-amber-800">PHASE 2</span>}
                   <span className="block font-medium text-slate-900">{a.abstractTitle}</span>
                   <span className="text-xs text-slate-500">{PREF_LABEL[a.presentationPref ?? "ORAL"]} · {KIND_LABEL[a.kind ?? "ORIGINAL"]} · {a.presentingAuthor}, {a.organization}</span></span>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", a.hodDecision ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800")}>{a.hodDecision ? `${decisionLabel(a.hodDecision, a.presentationPref)} · ${a.hodTotal}/25` : "To review"}</span>
+                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", a.hodDecision ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800")}>{a.hodDecision ? `${decisionLabel(a.hodDecision, a.presentationPref)} · ${scoreText(a.hodTotal, a.hodScores)}` : "To review"}</span>
               </summary>
               <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_360px]">
                 <article className="space-y-3 text-sm leading-relaxed text-slate-700">
@@ -71,10 +71,10 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
                   <p className="text-xs text-slate-500">{a.wordCount} words · Keywords: {a.keywords}</p>
                 </article>
                 <form action={deptDecide.bind(null, a.id)} className="space-y-3 rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Quality-check scoring sheet</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Quality check scoring sheet ({SCORE_KEY})</p>
                   {SCORE_CRITERIA.map(([k, label]) => (
                     <div key={k} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-700">{label}</span>
-                      <select name={`sc_${k}`} defaultValue={a.hodScores?.[k] ?? ""} className="a-input w-16 py-1"><option value="">–</option>{[1, 2, 3, 4, 5].map((n) => <option key={n}>{n}</option>)}</select></div>
+                      <select name={`sc_${k}`} defaultValue={a.hodScores?.[k] != null && a.hodScores[k] <= 3 ? String(a.hodScores[k]) : ""} className="a-input w-32 py-1"><option value="">–</option>{SCORE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
                   ))}
                   <p className="pt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Decision</p>
                   <div className="grid gap-1.5">{decisionsFor(a.presentationPref).map((d) => (

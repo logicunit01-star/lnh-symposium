@@ -19,7 +19,7 @@ const blank = { name: "", phone: "", email: "" };
  *  keynote speaker(s), panelists and a moderator; chair and co-chair are optional for them. */
 export const sessionProposalInput = z.object({
   department: z.string().min(2),
-  title: z.string().trim().min(5, "Session title / topic required").max(200),
+  title: z.string().trim().max(200).default(""), // optional (Dashboard Instructions, revised 06-11-2026)
   sessionFormat: z.enum(["INVITED_PAPERS", "PAPERS_ONLY", "GUEST_ONLY", "PANEL", "CASE_BASED", "OTHER", "PLENARY", "DEBATE"]),
   formatOther: z.string().trim().max(120).optional(),
   preferredSlots: z.array(z.string()).min(1, "Choose at least one day and time slot"),
@@ -39,9 +39,9 @@ export const sessionProposalInput = z.object({
     if (!r.success) r.error.issues.forEach((i) => ctx.addIssue({ code: "custom", path: [k, ...i.path], message: i.message }));
   }
   if (d.sessionFormat === "OTHER" && !d.formatOther) ctx.addIssue({ code: "custom", path: ["formatOther"], message: "Please specify the session type" });
-  if ((d.sessionFormat === "PANEL" || d.sessionFormat === "DEBATE") && d.panelists.length < 2) ctx.addIssue({ code: "custom", path: ["panelists"], message: d.sessionFormat === "DEBATE" ? "A debate needs at least two panelists" : "A panel needs more than one panelist" });
+  // Panelists and guest/invited speakers are optional for department sessions (Dashboard Instructions, revised 06-11-2026).
+  if (d.sessionFormat === "DEBATE" && d.panelists.length < 2) ctx.addIssue({ code: "custom", path: ["panelists"], message: "A debate needs at least two panelists" });
   if (d.sessionFormat === "PLENARY" && !d.panelists.length) ctx.addIssue({ code: "custom", path: ["panelists"], message: "Add the plenary panelists" });
-  if (["INVITED_PAPERS", "GUEST_ONLY"].includes(d.sessionFormat) && !d.speakers.length) ctx.addIssue({ code: "custom", path: ["speakers"], message: "Add at least one guest / invited speaker" });
   if (special && !d.speakers.length) ctx.addIssue({ code: "custom", path: ["speakers"], message: "Add the keynote speaker" });
   if (d.hasPresenters && !d.presenters.length) ctx.addIssue({ code: "custom", path: ["presenters"], message: "Add the research paper presenters" });
 });

@@ -7,6 +7,14 @@ import { DEFAULT_AGENDA_TEMPLATES, DEFAULT_SLOTS, DEPARTMENTS, titleKey } from "
 type DB = typeof defaultDb;
 const D = (x: string) => new Date(x); // ISO with +05:00 (PKT)
 
+/** Demo HOD scores on the 7-criteria sheet (1 Poor, 2 Average, 3 Good): an old 0–25 total scaled to 0–21. */
+const demoScore = (old: number) => {
+  const total = Math.min(21, Math.max(7, Math.round((old * 21) / 25)));
+  const keys = ["originality", "objectives", "methods", "data", "results", "conclusions", "overall"];
+  const scores = Object.fromEntries(keys.map((k, i) => [k, i < 21 - total ? 2 : 3]));
+  return { total: Object.values(scores).reduce((a, b) => a + b, 0), scores };
+};
+
 export const EVENT_DEFAULTS = {
   edition: "9th",
   name: "9th LNH Symposium 2027",
@@ -252,8 +260,8 @@ async function seedScientificDemo(db: DB) {
       organization: x.org, department: x.dept, city: "Karachi", country: "Pakistan", mobile: "0300-1234567", email: `demo.author${n}@example.com`,
       specialty: x.dept, assignedDept: x.dept, authors: x.name, presentingAuthor: x.name, coAuthors: [{ name: "Co-author Placeholder", affiliation: x.org }],
       abstractTitle: x.title, titleKey: titleKey(x.title), body, sections, keywords: "artificial intelligence, quality, cost", wordCount: 40,
-      hodDecision: x.hod ?? null, hodTotal: x.total ?? null, hodBy: x.hod ? `HOD ${x.dept}` : null, hodAt: x.hod ? new Date() : null,
-      hodScores: x.total ? { originality: 5, methods: 4, results: 4, clarity: 4, impact: x.total - 17 } : null,
+      hodDecision: x.hod ?? null, hodTotal: x.total ? demoScore(x.total).total : null, hodBy: x.hod ? `HOD ${x.dept}` : null, hodAt: x.hod ? new Date() : null,
+      hodScores: x.total ? demoScore(x.total).scores : null,
     });
   }
   await db.insert(s.counters).values({ key: "abs2-2027", value: n }).onConflictDoUpdate({ target: s.counters.key, set: { value: n } });

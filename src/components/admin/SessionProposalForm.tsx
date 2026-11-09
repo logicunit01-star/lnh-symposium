@@ -95,7 +95,7 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
         <div><label className="a-label">1 · Department *</label>
           {fixedDept || special ? <input value={special ? "Scientific Committee" : fixedDept!} readOnly className="a-input bg-slate-50" /> : <select disabled={dis} value={d.department} onChange={(e) => set({ department: e.target.value })} className="a-input"><option value="">Choose…</option>{departments.map((x) => <option key={x}>{x}</option>)}</select>}{err("department")}</div>
         <div><label className="a-label">6 · Expected no. of participants / audience *</label><input disabled={dis} type="number" min={1} value={d.expectedAudience} onChange={(e) => set({ expectedAudience: e.target.value })} className="a-input" />{err("expectedAudience")}</div>
-        <div className="sm:col-span-2"><label className="a-label">2 · Session title / topic {pre ? <span className="font-normal text-slate-400">(optional)</span> : "*"}</label><input disabled={dis} value={d.title} onChange={(e) => set({ title: e.target.value })} className="a-input" />{err("title")}</div>
+        <div className="sm:col-span-2"><label className="a-label">2 · Session title / Session # <span className="font-normal text-slate-400">(optional)</span></label><input disabled={dis} value={d.title} onChange={(e) => set({ title: e.target.value })} className="a-input" />{err("title")}</div>
         <div className="sm:col-span-2"><label className="a-label">3 · Session type {pre ? <span className="font-normal text-slate-400">(optional)</span> : "*"}</label>
           <div className="grid gap-2 sm:grid-cols-3">{formats.map(([v, l]) => (
             <label key={v} className={cn("flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm", d.sessionFormat === v ? "border-lnh-blue bg-lnh-blue/5" : "border-slate-200")}>
@@ -129,8 +129,8 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
         {PersonRow({ label: "Moderator (from LNH)", k: "moderator" })}
       </section>
 
-      <section className="a-card space-y-3 p-6"><p className="font-display text-base font-bold">10 · Panelists {(d.sessionFormat === "PANEL" || d.sessionFormat === "DEBATE") && <span className="text-sm font-normal text-slate-500">(more than one)</span>}</p>{GuestList({ k: "panelists", label: "Panelist" })}</section>
-      <section className="a-card space-y-3 p-6"><p className="font-display text-base font-bold">11 · {special ? "Keynote speaker(s)" : "Guest / invited speakers"}</p>{GuestList({ k: "speakers", label: special ? "Keynote speaker" : "Speaker" })}</section>
+      <section className="a-card space-y-3 p-6"><p className="font-display text-base font-bold">10 · Panelists {d.sessionFormat === "DEBATE" ? <span className="text-sm font-normal text-slate-500">(at least two)</span> : !special && <span className="text-sm font-normal text-slate-500">(optional)</span>}</p>{GuestList({ k: "panelists", label: "Panelist" })}</section>
+      <section className="a-card space-y-3 p-6"><p className="font-display text-base font-bold">11 · {special ? "Keynote speaker(s)" : <>Guest / invited speakers <span className="text-sm font-normal text-slate-500">(optional)</span></>}</p>{GuestList({ k: "speakers", label: special ? "Keynote speaker" : "Speaker" })}</section>
 
       {!special && <section className="a-card space-y-3 p-6">
         <p className="font-display text-base font-bold">12 · Research / oral presentations</p>

@@ -4,7 +4,7 @@ import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge, Pager, Empty } from "@/components/admin/ui";
-import { PREF_LABEL, decisionLabel } from "@/lib/scientific";
+import { PREF_LABEL, decisionLabel, scoreText } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
 import { assignAbstractVenue, notifyDecisions } from "./actions";
 import { ensureDefaultJobs } from "@/lib/email";
@@ -67,7 +67,7 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
               <td className="text-sm">{a.presentingAuthor}<p className="text-xs text-slate-400">{a.organization}</p></td>
               <td className="text-xs text-slate-600">{a.assignedDept ?? a.specialty}{a.phase === 2 && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">P2</span>}</td>
               <td className="text-xs">{PREF_LABEL[a.presentationPref ?? ""] ?? a.type}</td>
-              <td className="text-xs">{a.hodDecision ? <>{decisionLabel(a.hodDecision, a.presentationPref)}<span className="text-slate-400"> · {a.hodTotal}/25</span></> : <span className="text-slate-400">—</span>}</td>
+              <td className="text-xs">{a.hodDecision ? <>{decisionLabel(a.hodDecision, a.presentationPref)}<span className="text-slate-400"> · {scoreText(a.hodTotal, a.hodScores)}</span></> : <span className="text-slate-400">—</span>}</td>
               <td><StatusBadge s={a.status} />{a.acceptedAs && <span className="ml-1 text-[10px] font-bold text-emerald-700">{a.acceptedAs}</span>}</td>
               <td>{a.status === "ACCEPTED" && canAssign ? (
                 <form action={assignAbstractVenue.bind(null, a.id)} className="flex flex-wrap items-center gap-1">
