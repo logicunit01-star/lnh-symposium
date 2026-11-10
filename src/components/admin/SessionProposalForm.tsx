@@ -111,6 +111,9 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
       {fixedDept && !special ? (
       <section className="a-card p-6">
         <p className="a-label">5 · Session day and time slot</p>
+        {d.preferredSlots.length > 0 ? (
+          <p className="text-sm font-semibold text-slate-800">{d.preferredSlots.map((k) => slots.find((x) => x.key === k)).filter(Boolean).map((x) => `${dayLabel(x!.day)}, ${x!.start}–${x!.end}`).join(" · ")} <span className="font-normal text-slate-500">(set by the Scientific Committee)</span></p>
+        ) : null}
         <p className="text-sm text-slate-700">The venue, day and time slot are allotted by the Scientific Committee.</p>
       </section>
       ) : (

@@ -33,7 +33,7 @@ export default async function Abstracts() {
   return (
     <>
       <PageHero eyebrow="Call for abstracts" title={<>Abstract <span className="text-grad">submission</span></>}
-        sub="Submit your abstract online. It is reviewed by your speciality's department; you can follow its status here.">
+        sub="Submit your abstract online. It will be reviewed by the relevant speciality/department; you can follow its status here.">
         <div className="mt-8 flex flex-wrap gap-3">
           {ev.abstractOpen && <span className="chip gap-2 py-2"><CalendarClock className="h-4 w-4" />Opens {fmtDate(ev.abstractOpen)}</span>}
           {ev.abstractDeadline && <span className="chip gap-2 border-lnh-red/40 py-2 text-lnh-rose"><CalendarClock className="h-4 w-4" />Deadline {fmtDate(ev.abstractDeadline)}</span>}
@@ -51,7 +51,8 @@ export default async function Abstracts() {
         <div className="space-y-6 lg:col-span-8">
           {mine.length > 0 && (
             <div id="my-abstracts" className="hud scroll-mt-28 p-6">
-              <p className="mono text-xs uppercase tracking-[0.2em] text-slate-400">My abstracts · status</p>
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="mono text-xs uppercase tracking-[0.2em] text-slate-400">My abstracts · status</p>
+                {w === "OPEN" && <a href="#submit-abstract" className="text-sm font-semibold text-lnh-sky underline">Submit another abstract</a>}</div>
               <ul className="mt-3 divide-y divide-white/10">{mine.map((x) => {
                 const st = authorStatus(x);
                 return (
@@ -74,8 +75,8 @@ export default async function Abstracts() {
                   <Link href="/account?next=/abstracts" className="btn-ghost">Sign in</Link>
                 </div>
               </div>
-            ) : <AbstractForm wordLimit={ev.abstractWordLimit} departments={depts.map((d) => d.name)}
-                account={{ title: a.title, name: `${a.firstName} ${a.lastName}`, email: a.email, phone: a.phone, institution: a.institution ?? "", designation: a.designation ?? "", city: a.city ?? "" }} />}
+            ) : <div id="submit-abstract" className="scroll-mt-28"><AbstractForm wordLimit={ev.abstractWordLimit} departments={depts.map((d) => d.name)}
+                account={{ title: a.title, name: `${a.firstName} ${a.lastName}`, email: a.email, phone: a.phone, institution: a.institution ?? "", designation: a.designation ?? "", city: a.city ?? "" }} /></div>}
         </div>
       </div>
     </>

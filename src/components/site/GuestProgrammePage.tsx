@@ -19,18 +19,18 @@ export async function GuestProgrammePage({ k, preview }: { k: PageKey; preview?:
   return (
     <>
       <PageHero eyebrow="Programme" title={<>{first} <span className="text-grad">{rest.join(" ")}</span></>}
-        sub={k === "EXPERTS" ? "Meet the guest experts of the 9th LNH Symposium." : "The pre-symposium webinar and panel discussion ahead of the 9th LNH Symposium."} />
+        sub={k === "EXPERTS" ? "Meet the guest experts of the 9th LNH Symposium." : k === "INAUGURAL" ? "The inaugural session of the 9th LNH Symposium." : "Activities planned just before the 9th LNH Symposium."} />
       <div className="container-x max-w-5xl space-y-8">
         {pv && !(page.published && (k !== "EXPERTS" || ev.programmeReleasedAt)) && <Alert kind="info">Preview for the Scientific Committee; not yet public.</Alert>}
         {!visible ? (
-          <div className="hud p-8"><p className="text-slate-200">{k === "EXPERTS" ? "Our guest experts will be introduced here once the Scientific Committee finalises the agenda." : "Details of the pre-symposium webinar / panel discussion will be announced here soon."}</p>
+          <div className="hud p-8"><p className="text-slate-200">{k === "EXPERTS" ? "Our guest experts will be introduced here once the Scientific Committee finalises the agenda." : k === "INAUGURAL" ? "Details of the inaugural session will be announced here soon." : "Details of the pre-symposium activities will be announced here soon."}</p>
             <p className="mt-3 text-sm text-slate-400"><Link href="/agenda" className="text-lnh-sky underline">See the agenda</Link></p></div>
         ) : (
           <>
             {(page.dateText || page.format || page.description) && (
               <div className="hud grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
                 {page.dateText && <p className="flex items-start gap-2 text-slate-100"><CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-lnh-sky" /><span><span className="block text-xs uppercase tracking-wider text-slate-400">Date and time</span>{page.dateText}</span></p>}
-                {page.format && <p className="flex items-start gap-2 text-slate-100"><Presentation className="mt-0.5 h-5 w-5 shrink-0 text-lnh-sky" /><span><span className="block text-xs uppercase tracking-wider text-slate-400">Programme format</span><span className="whitespace-pre-line">{page.format}</span></span></p>}
+                {page.format && <p className="flex items-start gap-2 text-slate-100"><Presentation className="mt-0.5 h-5 w-5 shrink-0 text-lnh-sky" /><span><span className="block text-xs uppercase tracking-wider text-slate-400">{k === "EXPERTS" ? "Programme format" : "Programme"}</span><span className="whitespace-pre-line">{page.format}</span></span></p>}
                 {page.description && <p className="whitespace-pre-line text-slate-300 sm:col-span-2">{page.description}</p>}
               </div>
             )}
@@ -46,7 +46,7 @@ export async function GuestProgrammePage({ k, preview }: { k: PageKey; preview?:
                   </li>
                 ))}
               </ul>
-            ) : <p className="text-slate-400">Guests will be announced soon.</p>}
+            ) : k === "EXPERTS" ? <p className="text-slate-400">Guests will be announced soon.</p> : null}
           </>
         )}
       </div>

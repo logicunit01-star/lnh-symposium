@@ -1,5 +1,4 @@
-import { GuestProgrammePage } from "@/components/site/GuestProgrammePage";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Pre-Symposium Webinar / Panel Discussion" };
-export const dynamic = "force-dynamic";
-export default function Webinar({ searchParams }: { searchParams: { preview?: string } }) { return <GuestProgrammePage k="WEBINAR" preview={!!searchParams.preview} />; }
+// The webinar / panel discussion page became "Pre-symposium activities" (Sadaf, 10 Nov); old links keep working.
+export default function Webinar() { redirect("/programme/pre-symposium-activities"); }

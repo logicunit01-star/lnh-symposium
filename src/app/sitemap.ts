@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /** sitemap.xml (release 3, audit M6): main pages plus one page per session and workshop. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = appUrl();
-  const pages = ["", "/about", "/committee", "/awards", "/venues", "/contact", "/agenda", "/programme/plenary", "/programme/debate", "/programme/scientific", "/programme/webinar", "/programme/meet-the-experts", "/speakers", "/sessions", "/workshops", "/abstracts", "/abstracts/book", "/register", "/my-registrations"];
+  const pages = ["", "/about", "/committee", "/awards", "/venues", "/contact", "/agenda", "/programme/plenary", "/programme/debate", "/programme/scientific", "/programme/pre-symposium-activities", "/programme/inaugural-session", "/programme/meet-the-experts", "/speakers", "/sessions", "/workshops", "/abstracts", "/abstracts/book", "/register", "/my-registrations"];
   const prog = await getProgramme().catch(() => []);
   return [
     ...pages.map((p) => ({ url: `${base}${p}`, changeFrequency: "weekly" as const, priority: p === "" ? 1 : 0.7 })),

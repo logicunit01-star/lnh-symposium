@@ -136,7 +136,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
             <Link key={t.key} href={`/admin/emails?t=${t.key}`} className={cn("block px-4 py-3 hover:bg-slate-50", sel.key === t.key && "bg-lnh-blue/5")}>
               <p className="text-sm font-semibold text-slate-800">{DEFAULT_TEMPLATES[t.key].name}</p>
               <p className="text-xs text-slate-500">{DEFAULT_TEMPLATES[t.key].audience}</p>
-              {t.custom && <span className="badge mt-1 bg-sky-100 text-sky-800">Edited</span>}
+              {t.custom && <span className="badge mt-1 bg-sky-100 text-sky-800">Edited</span>}{DEFAULT_TEMPLATES[t.key].switchable && !t.enabled && <span className="badge ml-1 mt-1 bg-amber-100 text-amber-800">Off</span>}
             </Link>
           ))}
         </div>
@@ -147,6 +147,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
             <div><label className="a-label">Subject</label><input name="subject" defaultValue={sel.subject} className="a-input" /></div>
             <div><label className="a-label">Message (blank line = new paragraph, **bold**, a line with an empty field is left out)</label><textarea name="body" rows={14} defaultValue={sel.body} className="a-input font-mono text-xs" /></div>
             <div><label className="a-label">Button label (links to the recipient's page)</label><input name="buttonLabel" defaultValue={sel.buttonLabel ?? ""} className="a-input" /></div>
+            {def.switchable && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={sel.enabled} />Send this reminder automatically</label>}
             <div className="flex flex-wrap gap-2"><button className="a-btn-primary">Save template</button>{sel.custom && <button name="reset" value="1" className="a-btn-ghost">Restore default</button>}</div>
           </form>
           <div className="a-card p-5">

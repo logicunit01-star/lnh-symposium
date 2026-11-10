@@ -10,6 +10,8 @@ export const DEPARTMENTS = [
   "Dermatology", "Nephrology", "Oncology", "Pulmonology/Chest medicine", "Chemical Pathology", "Histopathology", "Microbiology", "Molecular Pathology",
   "Hematology", "Anesthesia", "Breast Surgery", "Pediatric surgery", "Vascular Surgery", "Rheumatology", "Neurology", "Psychiatry/Mental Health",
   "Pediatric medicine", "Medical Technology (BSMT)", "Nursing", "Physiotherapy / Speech therapy / Occupational therapy",
+  // added by the Dashboard Instructions (revised 06-11-2026); Sadaf confirmed they also appear in the abstract speciality list
+  "BME", "Supply Chain & Finance", "Foods & Nutrition", "Human Resources",
 ];
 
 /** Fixed scientific session slots (SC Agenda form). Keys are stable: "<date>|<start>". */

@@ -506,6 +506,7 @@ export const emailTemplates = pgTable("email_templates", {
   subject: text("subject").notNull(),
   body: text("body").notNull(),
   buttonLabel: text("button_label"),
+  enabled: boolean("enabled").notNull().default(true), // automatic reminders can be switched off by the admin
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -611,7 +612,7 @@ export type Abstract = typeof abstracts.$inferSelect;
 export type SessionPerson = typeof sessionPeople.$inferSelect;
 
 /** Programme pages managed by the Scientific Committee (Dashboard Instructions, revised 06-11-2026):
- *  WEBINAR = Pre-Symposium Webinar / Panel Discussion, EXPERTS = Meet the Experts. */
+ *  WEBINAR = Pre-symposium activities (renamed 10 Nov), INAUGURAL = Inaugural session, EXPERTS = Meet the Experts. */
 export const programmePages = pgTable("programme_pages", {
   key: text("key").primaryKey(), // WEBINAR | EXPERTS
   title: text("title").notNull(),

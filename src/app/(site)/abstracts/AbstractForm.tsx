@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
@@ -39,12 +40,19 @@ export function AbstractForm({ wordLimit, departments, account }: {
     return () => clearTimeout(t);
   }, [title]);
 
+  const router = useRouter();
+  const another = () => { setDone(null); setPref(""); setSec({}); setTitle(""); setCo([{ name: "", affiliation: "" }]); setKw(""); setDup(null); router.refresh(); document.getElementById("submit-abstract")?.scrollIntoView({ behavior: "smooth" }); };
   if (done) return (
     <div className="hud p-10 text-center">
       <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
       <p className="eyebrow mt-6">Abstract received</p>
       <p className="h-display mt-3 text-5xl text-white">{done}</p>
       <p className="mx-auto mt-4 max-w-md text-slate-400">Your abstract ID and a confirmation have been emailed to you. You can follow its status (under review, accepted or rejected) on this page and under My bookings. All further correspondence will be with you as the presenting author.</p>
+      {/* Dashboard Instructions (revised 06-11-2026) and Sadaf (10 Nov): a way back to the form for another abstract */}
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <button type="button" onClick={another} className="btn-primary">Submit another abstract</button>
+        <a href="#my-abstracts" onClick={() => router.refresh()} className="btn-ghost">See my abstracts</a>
+      </div>
     </div>
   );
 

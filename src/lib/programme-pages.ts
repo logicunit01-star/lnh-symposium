@@ -3,10 +3,12 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db, schema as s } from "./db";
 
 /** Programme pages (Dashboard Instructions, revised 06-11-2026): Pre-Symposium Webinar / Panel Discussion and Meet the Experts. */
-export const PAGE_KEYS = { WEBINAR: "WEBINAR", EXPERTS: "EXPERTS" } as const;
+// Sadaf (10 Nov): no webinar/panel discussion; the WEBINAR page (internal key kept) is now "Pre-symposium activities"
+// (e.g. the inauguration of two new services); an "Inaugural session" page is added. The Secretariat enters the details.
+export const PAGE_KEYS = { WEBINAR: "WEBINAR", INAUGURAL: "INAUGURAL", EXPERTS: "EXPERTS" } as const;
 export type PageKey = keyof typeof PAGE_KEYS;
-export const PAGE_TITLE: Record<PageKey, string> = { WEBINAR: "Pre-Symposium Webinar / Panel Discussion", EXPERTS: "Meet the Experts" };
-export const PAGE_PATH: Record<PageKey, string> = { WEBINAR: "/programme/webinar", EXPERTS: "/programme/meet-the-experts" };
+export const PAGE_TITLE: Record<PageKey, string> = { WEBINAR: "Pre-symposium activities", INAUGURAL: "Inaugural session", EXPERTS: "Meet the Experts" };
+export const PAGE_PATH: Record<PageKey, string> = { WEBINAR: "/programme/pre-symposium-activities", INAUGURAL: "/programme/inaugural-session", EXPERTS: "/programme/meet-the-experts" };
 
 export type PublicGuest = { id: string; name: string; affiliation: string | null; qualification: string | null; topic: string | null; photo: string | null; order: number };
 

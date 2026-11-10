@@ -14,7 +14,7 @@ export async function saveTemplate(key: string, f: FormData) {
   if (!TEMPLATE_KEYS.includes(key as TemplateKey)) throw new Error("Unknown template");
   if (f.get("reset") === "1") await db.delete(s.emailTemplates).where(eq(s.emailTemplates.key, key));
   else {
-    const row = { key, subject: str(f, "subject").slice(0, 300) || DEFAULT_TEMPLATES[key as TemplateKey].subject, body: str(f, "body").slice(0, 8000) || DEFAULT_TEMPLATES[key as TemplateKey].body, buttonLabel: str(f, "buttonLabel").slice(0, 60) || null, updatedBy: u.name, updatedAt: new Date() };
+    const row = { key, subject: str(f, "subject").slice(0, 300) || DEFAULT_TEMPLATES[key as TemplateKey].subject, body: str(f, "body").slice(0, 8000) || DEFAULT_TEMPLATES[key as TemplateKey].body, buttonLabel: str(f, "buttonLabel").slice(0, 60) || null, enabled: DEFAULT_TEMPLATES[key as TemplateKey].switchable ? f.get("enabled") === "on" : true, updatedBy: u.name, updatedAt: new Date() };
     await db.insert(s.emailTemplates).values(row).onConflictDoUpdate({ target: s.emailTemplates.key, set: row });
   }
   revalidatePath("/admin/emails");

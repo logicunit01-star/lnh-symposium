@@ -4,7 +4,7 @@ import { db, schema as s } from "./db";
 import { getEvent } from "./event";
 import { sendEmail, sendSms, emailLayout } from "./notify";
 import { appUrl, fmtDate, fmtTime24, pkr } from "./utils";
-import { sendTemplate } from "./email";
+import { getTemplate, sendTemplate } from "./email";
 
 /** Idempotent reminder job — safe to run hourly/daily. */
 export async function runReminders(now = new Date()) {
@@ -24,18 +24,20 @@ export async function runReminders(now = new Date()) {
     await db.update(s.registrations).set({ remindedAt: now }).where(eq(s.registrations.id, r.id));
     pending++;
   }
-  // 2) event reminder, once, within 48h of the start
+  // 2) symposium reminder the day before (Sadaf, 10 Nov), once, to Symposium Pass holders; editable and switchable
+  //    in Automated Emails (template SYMPOSIUM_REMINDER)
   const hrs = (+ev.startDate - +now) / 3600e3;
-  if (hrs > 0 && hrs <= 48) {
+  if (hrs > 0 && hrs <= 36 && (await getTemplate("SYMPOSIUM_REMINDER")).enabled) {
     const [flag] = await db.select().from(s.counters).where(eq(s.counters.key, `event-reminder-${ev.startDate.toISOString()}`));
     if (!flag) {
       await db.insert(s.counters).values({ key: `event-reminder-${ev.startDate.toISOString()}`, value: 1 });
       const list = await db.select().from(s.registrations).where(and(inArray(s.registrations.paymentStatus, ["PAID", "WAIVED"]), eq(s.registrations.hasPass, true)));
       for (const r of list) {
-        await sendEmail(r.email, `See you soon — ${ev.name}`, emailLayout("The symposium is almost here",
-          `<p>Dear ${r.title} ${r.firstName},</p><p>The <b>${ev.name}</b> begins on <b>${fmtDate(ev.startDate, { weekday: "long", day: "numeric", month: "long" })}</b> at ${ev.venue}. Registration opens at 8:30 AM.</p><p>Please bring your confirmation (registration no. <b>${r.regNo}</b>) or show the QR code from your email.</p>`,
-          { label: "View my registration", href: `${appUrl()}/register/success/${r.accessToken}` }));
-        await sendSms(r.phone, `LNH Symposium starts ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}, 8:30 AM. Bring reg no. ${r.regNo}. See you there!`);
+        await sendTemplate("SYMPOSIUM_REMINDER", r.email, {
+          name: `${r.title} ${r.firstName} ${r.lastName}`, session_date: fmtDate(ev.startDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+          venue: ev.venue, ticket_no: r.regNo, link: `${appUrl()}/register/success/${r.accessToken}`,
+        }, { ref: r.regNo, noCc: true }).catch((e) => console.error("symposium reminder failed", e));
+        await sendSms(r.phone, `LNH Symposium starts tomorrow, ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}, 8:30 AM. Bring reg no. ${r.regNo}. See you there!`);
         event++;
       }
     }
@@ -46,7 +48,8 @@ export async function runReminders(now = new Date()) {
     .innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId)).innerJoin(s.sessions, eq(s.sessions.id, s.registrationItems.sessionId))
     .where(and(isNull(s.registrationItems.remindedAt), inArray(s.registrations.paymentStatus, ["PAID", "WAIVED"]),
       sql`${s.sessions.startsAt} > ${now}`, sql`${s.sessions.startsAt} <= ${new Date(+now + 36 * 3600e3)}`));
-  for (const { item, reg: r, ses } of soon) {
+  const wsOn = (await getTemplate("WORKSHOP_REMINDER")).enabled;
+  for (const { item, reg: r, ses } of wsOn ? soon : []) {
     await sendTemplate("WORKSHOP_REMINDER", r.email, {
       name: `${r.title} ${r.firstName} ${r.lastName}`, session_name: ses.title, session_date: fmtDate(ses.startsAt, { weekday: "long", day: "numeric", month: "long" }),
       session_time: `${fmtTime24(ses.startsAt)}–${fmtTime24(ses.endsAt)}`, venue: ses.hall, ticket_no: item.ticketNo ?? r.regNo, link: `${appUrl()}/register/success/${r.accessToken}`,

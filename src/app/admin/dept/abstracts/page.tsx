@@ -3,6 +3,7 @@ import { db, schema as s } from "@/lib/db";
 import { requireDept } from "@/lib/dept";
 import { getEvent } from "@/lib/event";
 import { reviewWindow } from "@/lib/abstracts";
+import { ScoreSheet } from "@/components/admin/ScoreSheet";
 import { PageTitle } from "@/components/admin/ui";
 import { SCORE_CRITERIA, SCORE_OPTIONS, SCORE_KEY, SECTIONS, PREF_LABEL, KIND_LABEL, DEFAULT_QC_GUIDELINES, decisionLabel, decisionsFor, scoreText } from "@/lib/scientific";
 import { cn, fmtDateTime } from "@/lib/utils";
@@ -50,7 +51,6 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
       <details className="a-card mb-6 p-5" open={!!activePhase}>
         <summary className="cursor-pointer font-display text-base font-bold text-slate-900">Quality-check guidelines for abstract review</summary>
         <ul className="mt-3 space-y-1.5 text-sm text-slate-700">{qc.map((g) => <li key={g}>{g}</li>)}</ul>
-        <p className="mt-3 text-xs text-slate-500">Score each abstract on the seven criteria (1 Poor, 2 Average, 3 Good, or N/A), then choose Accept, Reject or Return to the Symposium Secretariat. Your decision is final; authors are emailed after the agenda is finalised.</p>
       </details>
 
       {activePhase && (
@@ -72,10 +72,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
                 </article>
                 <form action={deptDecide.bind(null, a.id)} className="space-y-3 rounded-xl bg-slate-50 p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Quality check scoring sheet ({SCORE_KEY})</p>
-                  {SCORE_CRITERIA.map(([k, label]) => (
-                    <div key={k} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-700">{label}</span>
-                      <select name={`sc_${k}`} defaultValue={a.hodScores?.[k] != null && a.hodScores[k] <= 3 ? String(a.hodScores[k]) : ""} className="a-input w-32 py-1"><option value="">–</option>{SCORE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
-                  ))}
+                  <ScoreSheet criteria={SCORE_CRITERIA} options={SCORE_OPTIONS} initial={Object.fromEntries(SCORE_CRITERIA.filter(([k]) => a.hodScores?.[k] != null && a.hodScores[k] <= 3 && !("impact" in (a.hodScores ?? {}))).map(([k]) => [k, String(a.hodScores![k])]))} />
                   <p className="pt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Decision</p>
                   <div className="grid gap-1.5">{decisionsFor(a.presentationPref).map((d) => (
                     <label key={d} className="flex items-center gap-2 text-sm"><input type="radio" name="decision" value={d} defaultChecked={a.hodDecision === d} />{decisionLabel(d, a.presentationPref)}</label>

@@ -41,14 +41,14 @@ async function PageCard({ k }: { k: PageKey }) {
       </div>
       <form action={savePage.bind(null, k)} className="grid gap-3 sm:grid-cols-2">
         <div><label className="a-label">Page title</label><input name="title" defaultValue={page.title} className="a-input" /></div>
-        <div><label className="a-label">Date and time</label><input name="dateText" defaultValue={page.dateText ?? ""} className="a-input" placeholder="e.g. Saturday 16 January 2027, 7:00–8:30 pm (online)" /></div>
-        <div className="sm:col-span-2"><label className="a-label">Programme format</label><textarea name="format" rows={3} defaultValue={page.format ?? ""} className="a-input" placeholder="e.g. Online panel discussion · 4 panelists · moderated Q&A" /></div>
+        <div><label className="a-label">Date and time</label><input name="dateText" defaultValue={page.dateText ?? ""} className="a-input" placeholder="e.g. Thursday 28 January 2027, 11:00 am" /></div>
+        <div className="sm:col-span-2"><label className="a-label">{k === "EXPERTS" ? "Programme format" : "Programme"}</label><textarea name="format" rows={3} defaultValue={page.format ?? ""} className="a-input" placeholder={k === "WEBINAR" ? "e.g. Inauguration of two new services" : k === "INAUGURAL" ? "e.g. Recitation, welcome address, chief guest, vote of thanks" : "e.g. Small-group sessions with each expert"} /></div>
         <div className="sm:col-span-2"><label className="a-label">Description (optional)</label><textarea name="description" rows={3} defaultValue={page.description ?? ""} className="a-input" /></div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="published" defaultChecked={page.published} />Publish on the website{k === "EXPERTS" ? " (guests appear once the programme is released)" : ""}</label>
         <div className="sm:col-span-2"><button className="a-btn-primary">Save page</button></div>
       </form>
       <div>
-        <h3 className="mb-3 font-semibold">Guests ({guests.length})</h3>
+        <h3 className="mb-3 font-semibold">{k === "EXPERTS" ? "Guests" : "People (optional)"} ({guests.length})</h3>
         <div className="space-y-3">
           {guests.map((g) => (
             <details key={g.id} className="rounded-xl border border-slate-200 p-4">
@@ -76,10 +76,10 @@ export default async function ProgrammePages({ searchParams }: { searchParams: {
   await requirePerm("programme.edit");
   return (
     <>
-      <PageTitle title="Programme pages" sub="Pre-Symposium Webinar / Panel Discussion and Meet the Experts: programme format and guests (photograph, name, affiliation, qualification). Plenary, Debate and Scientific Sessions pages fill in from the approved programme." />
+      <PageTitle title="Programme pages" sub="Pre-symposium activities, Inaugural session and Meet the Experts: entered by the Symposium Secretariat (date and time, programme, description, and people with photograph, name, affiliation and qualification). Each page stays hidden until it is published. Plenary, Debate and Scientific Sessions pages fill in from the approved programme." />
       {searchParams.err && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">{MSG[searchParams.err] ?? "Could not save."}</p>}
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{SAVED[searchParams.saved] ?? "Saved."}</p>}
-      <div className="space-y-6"><PageCard k="WEBINAR" /><PageCard k="EXPERTS" /></div>
+      <div className="space-y-6"><PageCard k="WEBINAR" /><PageCard k="INAUGURAL" /><PageCard k="EXPERTS" /></div>
     </>
   );
 }

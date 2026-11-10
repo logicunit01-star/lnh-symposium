@@ -6,15 +6,15 @@ import { sendEmail, emailLayout } from "./notify";
 import { appUrl, fmtDateTime } from "./utils";
 import { DEFAULT_TEMPLATES, TEMPLATE_KEYS, bodyToHtml, type MergeVars, type TemplateKey } from "./email-templates";
 
-export type Template = { key: TemplateKey; subject: string; body: string; buttonLabel: string | null; custom: boolean; updatedBy: string | null; updatedAt: Date | null };
+export type Template = { key: TemplateKey; subject: string; body: string; buttonLabel: string | null; enabled: boolean; custom: boolean; updatedBy: string | null; updatedAt: Date | null };
 
 /** Template text: the admin's saved version, or the default. */
 export async function getTemplate(key: TemplateKey): Promise<Template> {
   const [row] = await db.select().from(s.emailTemplates).where(eq(s.emailTemplates.key, key));
   const d = DEFAULT_TEMPLATES[key];
   return row
-    ? { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, custom: true, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
-    : { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, custom: false, updatedBy: null, updatedAt: null };
+    ? { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, enabled: row.enabled, custom: true, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
+    : { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, enabled: true, custom: false, updatedBy: null, updatedAt: null };
 }
 export async function allTemplates() { return Promise.all(TEMPLATE_KEYS.map(getTemplate)); }
 

@@ -2,7 +2,7 @@
 // Body: plain text; a blank line starts a new paragraph; **text** is bold; {{field}} is replaced by the merge value.
 // A line whose merge field is empty is left out (for example "Abstract ID:" in a chairperson's invitation).
 
-export type TemplateDef = { name: string; audience: string; when: string; subject: string; body: string; buttonLabel?: string };
+export type TemplateDef = { name: string; audience: string; when: string; subject: string; body: string; buttonLabel?: string; switchable?: boolean };
 
 export const MERGE_FIELDS: [string, string][] = [
   ["name", "Recipient's name (author, chair, co-chair, speaker, panelist)"],
@@ -21,7 +21,7 @@ export const MERGE_FIELDS: [string, string][] = [
   ["link", "Personal link (tracking, response or portal page)"],
 ];
 
-export const TEMPLATE_KEYS = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER"] as const;
+export const TEMPLATE_KEYS = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDef> = {
@@ -148,7 +148,7 @@ Please review and approve it. Once approved it is locked; later changes can be m
     buttonLabel: "Review the flyer",
   },
   WORKSHOP_REMINDER: {
-    name: "Workshop reminder (day before)", audience: "Workshop ticket holders", when: "Automatically, about a day before each workshop (daily scheduler)",
+    name: "Workshop reminder (day before)", audience: "Workshop ticket holders", when: "Automatically, about a day before each workshop (daily scheduler)", switchable: true,
     subject: "Tomorrow: {{session_name}}",
     body: `Dear {{name}},
 
@@ -161,6 +161,20 @@ Ticket: {{ticket_no}}
 
 Please arrive 15 minutes early and show your workshop ticket QR at the door. It is on your ticket page and in your confirmation PDF.`,
     buttonLabel: "Show my ticket",
+  },
+  SYMPOSIUM_REMINDER: {
+    name: "Symposium reminder (day before)", audience: "Symposium Pass holders (paid or complimentary)", when: "Automatically, the day before the symposium starts (daily scheduler)", switchable: true,
+    subject: "Tomorrow: {{event_name}}",
+    body: `Dear {{name}},
+
+This is a reminder that the **{{event_name}}** begins tomorrow.
+
+Date: {{session_date}}
+Venue: {{venue}}
+Registration No.: {{ticket_no}}
+
+Registration opens at 8:30 am. Please bring your registration ID card or show your Symposium Pass QR at the entrance. Your ticket page also has the Scientific Agenda and the e-abstract book.`,
+    buttonLabel: "Show my pass",
   },
 };
 
