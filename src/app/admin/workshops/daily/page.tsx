@@ -12,8 +12,9 @@ export const metadata = { title: "Daily requirements" };
 export default async function Daily({ searchParams }: { searchParams: { date?: string } }) {
   const u = await requirePerm("workshops");
   const sc = await staffScope(u);
-  const dates = await workshopDates(sc);
   const today = ymdPk(new Date());
+  // only upcoming workshop dates (Dashboard Findings, 9 Nov); an older sheet stays reachable by its link
+  const dates = (await workshopDates(sc)).filter((d) => d >= today || d === searchParams.date);
   const date = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : dates.find((d) => d >= today) ?? dates[0] ?? today;
   const sheet = await dailySheet(date, sc);
   const day = new Date(`${date}T12:00:00+05:00`);

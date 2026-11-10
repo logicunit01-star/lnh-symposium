@@ -41,7 +41,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
       <PageTitle title={w.title} sub={`${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${weekLabel ? ` (${weekLabel})` : ""}` : ""}`}
         actions={<>
           {canEdit && <Link href={`/admin/workshops/${w.id}/edit`} className="a-btn-ghost"><Pencil className="h-4 w-4" />Edit</Link>}
-          {w.status === "APPROVED" && <a href={`/api/workshops/${w.slug}/flyer`} className="a-btn-ghost"><Download className="h-4 w-4" />{w.flyerStatus === "APPROVED" ? "Flyer PDF" : "Flyer preview"}</a>}
+          {w.status === "APPROVED" && <a href={`/workshops/${w.slug}/flyer`} className="a-btn-ghost"><Download className="h-4 w-4" />{w.flyerStatus === "APPROVED" ? "Flyer PDF" : "Flyer preview"}</a>}
           {w.status === "APPROVED" && <Link href={`/workshops#${w.slug}`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Catalogue</Link>}
           {can(u.role, "sessions") && <Link href={`/admin/sessions/${w.id}`} className="a-btn-primary"><Users className="h-4 w-4" />Participants</Link>}
         </>} />

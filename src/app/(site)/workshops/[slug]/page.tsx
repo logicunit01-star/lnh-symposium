@@ -29,7 +29,6 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
           <Link href="/workshops" className="inline-flex min-h-[44px] items-center gap-1.5 text-sm text-slate-300 hover:text-white"><ArrowLeft className="h-4 w-4" />All workshops</Link>
           <div className="mt-4 flex flex-wrap gap-2">
             {w.department && <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${deptHue(w.department)}`}>{w.department}</span>}
-            {w.format && <span className="chip">{w.format}</span>}
             <span className="chip">Separate ticket · no pass needed</span>
           </div>
           <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">{w.title}</h1>
@@ -52,7 +51,7 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
           <div className="hud mt-8 flex flex-wrap items-center justify-between gap-4 p-6">
             <div><p className="text-xs uppercase tracking-widest text-slate-300">Workshop ticket</p><p className="font-display text-3xl font-bold text-white">{pkr(w.fee)}</p></div>
             <div className="flex flex-wrap items-center gap-3">
-              <a href={`/api/workshops/${w.slug}/flyer`} className="btn-ghost btn-sm"><Download className="h-4 w-4" />Flyer</a>
+              <a href={`/workshops/${w.slug}/flyer`} className="btn-ghost btn-sm"><Download className="h-4 w-4" />Flyer</a>
               {full ? <Link href={`/workshops#${w.slug}`} className="btn-ghost">Join the waitlist</Link> : <AddTicket item={{ id: w.id, title: w.title, kind: "WORKSHOP", fee: w.fee, when: w.dateLabel, tag: w.department }} />}
             </div>
           </div>

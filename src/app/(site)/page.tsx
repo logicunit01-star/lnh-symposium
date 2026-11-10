@@ -323,7 +323,7 @@ export default async function Home() {
             <NeuralField density={0.5} interactive={false} />
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
             <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/70">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
-            <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-5xl text-white sm:text-7xl">Be part of the new era</h2>
+            <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-[2.5rem] text-white sm:text-7xl">Be part of the new era</h2>
             <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="btn-light px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>

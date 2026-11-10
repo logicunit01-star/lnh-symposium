@@ -44,7 +44,7 @@ export default async function DeptFlyers({ searchParams }: { searchParams: { s?:
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div><h2 className="font-display text-lg font-bold text-slate-900">{sel.title}</h2>
                     {sel.flyerReviewedAt && <p className="mt-1 text-xs text-slate-500">Last review: {sel.flyerReviewedBy}, {fmtDateTime(sel.flyerReviewedAt)}{sel.flyerNote ? ` · “${sel.flyerNote}”` : ""}</p>}</div>
-                  <a href={`/api/sessions/${sel.slug}/flyer`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Open PDF</a>
+                  <a href={`/sessions/${sel.slug}/flyer`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Open PDF</a>
                 </div>
                 {sel.flyerStatus === "APPROVED" ? <p className="mt-4 flex items-center gap-2 text-sm text-emerald-700"><Lock className="h-4 w-4" />Approved and locked. Contact the Scientific Sessions Chairperson for any change.</p>
                   : sel.flyerStatus === "CHANGES" ? <p className="mt-4 text-sm text-rose-700">You asked for changes. The Scientific Committee will send the updated flyer back to you.</p> : (
@@ -55,7 +55,7 @@ export default async function DeptFlyers({ searchParams }: { searchParams: { s?:
                   </form>
                 )}
               </div>
-              <div className="a-card overflow-hidden"><iframe title={`Flyer for ${sel.title}`} src={`/api/sessions/${sel.slug}/flyer#view=FitH`} className="h-[1200px] w-full bg-slate-200" /></div>
+              <div className="a-card overflow-hidden"><iframe title={`Flyer for ${sel.title}`} src={`/sessions/${sel.slug}/flyer#view=FitH`} className="h-[1200px] w-full bg-slate-200" /></div>
             </div>
           )}
         </div>

@@ -1,14 +1,15 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm, staffScope } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { themeWeekOf } from "@/lib/demo-content";
 import { sendEmail, emailLayout } from "@/lib/notify";
-import { appUrl, fmtDate, fmtTime24 } from "@/lib/utils";
+import { appUrl, fmtDate, ymdPk } from "@/lib/utils";
+import { isSunday, roomClash, todayPk } from "@/lib/wp-avail";
 
 export type FormResult = { error?: string; ok?: string } | null;
 
@@ -47,7 +48,10 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
 
   const title = str(f, "title") ?? "";
   const date = str(f, "date") ?? "";
-  const start = `${str(f, "startH")}:${str(f, "startM")}`, end = `${str(f, "endH")}:${str(f, "endM")}`;
+  const start = `${str(f, "startH")}:${str(f, "startM")}`;
+  // End time follows the chosen duration (Dashboard Findings, 9 Nov: hours restricted by the workshop duration)
+  const dur = int(f, "duration"), sm = Number(str(f, "startH")) * 60 + Number(str(f, "startM"));
+  const end = dur >= 30 && sm + dur <= 24 * 60 ? `${String(Math.floor((sm + dur) / 60)).padStart(2, "0")}:${String((sm + dur) % 60).padStart(2, "0")}` : `${str(f, "endH")}:${str(f, "endM")}`;
   const department = sc.all ? str(f, "department") : sc.department;
   const venueId = str(f, "venueId");
   const capacity = int(f, "capacity");
@@ -56,6 +60,10 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   if (title.length < 5) return { error: "Enter the workshop title (at least 5 characters)." };
   if (!department) return { error: "Choose the owning department." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Pick the proposed date." };
+  // No past dates and no Sundays (Dashboard Findings, 9 Nov); an existing request may keep its own date
+  const keepsDate = !!existing && ymdPk(existing.startsAt) === date;
+  if (!keepsDate && date < todayPk()) return { error: "The date has passed. Choose a date from today onwards." };
+  if (!keepsDate && isSunday(date)) return { error: "Workshops cannot be held on a Sunday. Choose another day." };
   const startsAt = new Date(`${date}T${start}:00+05:00`), endsAt = new Date(`${date}T${end}:00+05:00`);
   if (ev.workshopStart && ev.workshopEnd && (startsAt < ev.workshopStart || startsAt > ev.workshopEnd))
     return { error: `The date must fall inside the workshop window (${fmtDate(ev.workshopStart, { day: "numeric", month: "short", year: "numeric" })} – ${fmtDate(ev.workshopEnd, { day: "numeric", month: "short", year: "numeric" })}).` };
@@ -67,11 +75,9 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   if (capacity > venue.capacity) return { error: `Seat cap ${capacity} exceeds the capacity of ${venue.name} (${venue.capacity}).` };
   if (contact && !PHONE.test(contact.replace(/\s/g, ""))) return { error: "Speaker contact number must look like 0300-1234567." };
 
-  const clash = await db.select({ title: s.sessions.title, a: s.sessions.startsAt, b: s.sessions.endsAt }).from(s.sessions).where(and(
-    eq(s.sessions.venueId, venueId), ne(s.sessions.status, "REJECTED"), sql`${s.sessions.startsAt} < ${endsAt}`, sql`${s.sessions.endsAt} > ${startsAt}`,
-    id ? ne(s.sessions.id, id) : undefined,
-  ));
-  if (clash.length) return { error: `${venue.name} is already booked ${fmtTime24(clash[0].a)}–${fmtTime24(clash[0].b)} that day for “${clash[0].title}”. Choose another time or venue.` };
+  // First come, first served: a room booked (or awaiting approval) for an overlapping time cannot be booked again
+  const clash = await roomClash(venueId, startsAt, endsAt, id);
+  if (clash) return { error: `${venue.name} is already booked ${clash.from}–${clash.to} that day for “${clash.title}”${clash.status === "APPROVED" ? "" : " (awaiting approval)"}. Choose another time or venue.` };
 
   const fee = int(f, "fee"), earlyFee = str(f, "earlyFee") ? int(f, "earlyFee") : null;
   const data = {
@@ -218,7 +224,7 @@ export async function reviewFlyer(id: string, f: FormData) {
   if (to === "APPROVED" && w.proposedById) {
     const [p] = await db.select().from(s.users).where(eq(s.users.id, w.proposedById));
     if (p) await sendEmail(p.email, `Flyer approved: ${w.title}`, emailLayout("Your workshop flyer is ready",
-      `<p>Dear ${p.name},</p><p>The Marketing department has approved the flyer for “${w.title}” (${fmtDate(w.startsAt)}).</p><p>Download and share it: ${appUrl()}/api/workshops/${w.slug}/flyer</p>`));
+      `<p>Dear ${p.name},</p><p>The Marketing department has approved the flyer for “${w.title}” (${fmtDate(w.startsAt)}).</p><p>Download and share it: ${appUrl()}/workshops/${w.slug}/flyer</p>`));
   }
   revalidatePath("/admin/flyers"); revalidatePath(`/admin/workshops/${id}`);
   redirect(`/admin/flyers?w=${id}&saved=${to}`);

@@ -58,7 +58,7 @@ export default async function Flyers({ searchParams }: { searchParams: { w?: str
                     <p className="text-sm text-slate-500">{sel.department} · {sel.hall ?? "venue tbc"} · {fmtDate(sel.startsAt, { weekday: "short", day: "numeric", month: "short" })}</p>
                     {sel.flyerReviewedAt && <p className="mt-1 text-xs text-slate-500">Last review: {sel.flyerReviewedBy}, {fmtDateTime(sel.flyerReviewedAt)}{sel.flyerNote ? ` · “${sel.flyerNote}”` : ""}</p>}
                   </div>
-                  <a href={`/api/workshops/${sel.slug}/flyer`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Open PDF</a>
+                  <a href={`/workshops/${sel.slug}/flyer`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Open PDF</a>
                 </div>
                 <form action={reviewFlyer.bind(null, sel.id)} className="mt-4 flex flex-wrap items-end gap-2">
                   <div className="min-w-[260px] flex-1"><label className="a-label">Note to the workshop committee (required when asking for changes)</label><input name="note" className="a-input" placeholder="e.g. Use the full faculty title; shorten the description" /></div>
@@ -66,7 +66,7 @@ export default async function Flyers({ searchParams }: { searchParams: { w?: str
                   <button name="flyer" value="CHANGES" className="a-btn-ghost text-rose-600"><MessageSquareWarning className="h-4 w-4" />Request changes</button>
                 </form>
               </div>
-              <div className="a-card overflow-hidden"><iframe title={`Flyer for ${sel.title}`} src={`/api/workshops/${sel.slug}/flyer#view=FitH`} className="h-[1100px] w-full bg-slate-200" /></div>
+              <div className="a-card overflow-hidden"><iframe title={`Flyer for ${sel.title}`} src={`/workshops/${sel.slug}/flyer#view=FitH`} className="h-[1100px] w-full bg-slate-200" /></div>
             </div>
           )}
         </div>

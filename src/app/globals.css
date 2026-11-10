@@ -58,7 +58,8 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
   .container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
   .eyebrow { @apply inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-lnh-sky; }
   .eyebrow::before { content: ""; @apply h-1.5 w-1.5 rounded-full bg-lnh-red shadow-[0_0_12px_#B72025]; }
-  .h-display { @apply font-display font-bold uppercase leading-[0.92] tracking-tight; }
+  /* break-words: a long word wraps instead of running off a small phone (Dashboard Findings, 9 Nov) */
+  .h-display { @apply font-display font-bold uppercase leading-[0.92] tracking-tight break-words; }
   .text-grad { @apply bg-gradient-to-r from-lnh-cyan to-lnh-blue bg-clip-text text-transparent; }
   /* "9th LNH Symposium" title: official linear gradient #00B8D7 → #0089BF */
   .text-lnh-title { background-image: linear-gradient(90deg, #00B8D7, #0089BF); @apply bg-clip-text text-transparent; }

@@ -1,10 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Search, X } from "lucide-react";
 import type { WorkshopDTO } from "@/lib/workshops";
 import { WorkshopCard } from "@/components/site/WorkshopCard";
 import { OrderSummary, OrderBar } from "@/components/cart/CartDrawer";
-import { cn } from "@/lib/utils";
+import { cn, matchesAll } from "@/lib/utils";
 
 const DAY = 864e5;
 const parse = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -20,24 +20,26 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
     return starts.map((s, i) => { const a = parse(s), b = new Date(a.getTime() + 6 * DAY); return { key: s, label: `Week ${i + 1}`, range: `${short(a)} – ${short(b)}`, from: s, to: iso(b) }; });
   }, [items]);
   const departments = useMemo(() => [...new Set(items.map((w) => w.department).filter(Boolean))].sort() as string[], [items]);
-  const formats = useMemo(() => [...new Set(items.map((w) => w.format).filter(Boolean))].sort() as string[], [items]);
   const facilities = useMemo(() => [...new Set(items.map((w) => w.facility).filter(Boolean))].sort() as string[], [items]);
   const months = useMemo(() => [...new Set(items.map((w) => w.date.slice(0, 7)))].sort(), [items]);
 
   const [week, setWeek] = useState<string>("all");
   const [day, setDay] = useState<string | null>(null);
   const [dept, setDept] = useState("");
-  const [fmt, setFmt] = useState("");
+  const [q, setQ] = useState("");
   const [fac, setFac] = useState("");
   const [month, setMonth] = useState(months[0] ?? iso(new Date()).slice(0, 7));
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const wk = weeks.find((w) => w.key === week);
+  // One search box (Dashboard Findings, 9 Nov): every word must appear in the title, description, department, theme, venue or faculty
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hay = (w: WorkshopDTO) => [w.title, w.description, w.department, w.track, w.hall, w.building, ...w.faculty.map((f) => f.name)].filter(Boolean).join(" ").toLowerCase();
   const shown = items.filter((w) =>
-    (!wk || (w.date >= wk.from && w.date <= wk.to)) && (!day || w.date === day) && (!dept || w.department === dept) && (!fac || w.facility === fac) && (!fmt || w.format === fmt));
+    (!wk || (w.date >= wk.from && w.date <= wk.to)) && (!day || w.date === day) && (!dept || w.department === dept) && (!fac || w.facility === fac) && (!words.length || matchesAll(hay(w), words)));
   const datesWith = new Set(items.map((w) => w.date));
-  const reset = () => { setWeek("all"); setDay(null); setDept(""); setFac(""); setFmt(""); };
-  const active = [week !== "all", !!day, !!dept, !!fac, !!fmt].filter(Boolean).length;
+  const reset = () => { setWeek("all"); setDay(null); setDept(""); setFac(""); setQ(""); };
+  const active = [week !== "all", !!day, !!dept, !!fac].filter(Boolean).length;
 
   // calendar grid for selected month
   const [y, m] = month.split("-").map(Number);
@@ -81,14 +83,18 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
       <label><span className="label">Facility</span>
         <select className="input" value={fac} onChange={(e) => setFac(e.target.value)}><option value="">All facilities</option>{facilities.map((d) => <option key={d}>{d}</option>)}</select>
       </label>
-      <label><span className="label">Format</span>
-        <select className="input" value={fmt} onChange={(e) => setFmt(e.target.value)}><option value="">All formats</option>{formats.map((d) => <option key={d}>{d}</option>)}</select>
-      </label>
     </div>
   );
 
   return (
     <div className={embedded ? "" : "container-x pb-24 lg:pb-0"}>
+      {/* search: one box across title, department, theme, venue and faculty */}
+      <form role="search" onSubmit={(e) => e.preventDefault()} className="relative mb-3">
+        <label htmlFor="ws-search" className="sr-only">Search workshops</label>
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input id="ws-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search workshops, e.g. AI, robotics, ultrasound" className="input pl-11" />
+        {q && <p className="mt-2 text-sm text-slate-300" aria-live="polite">{shown.length} workshop{shown.length === 1 ? "" : "s"} match “{q}”. <button type="button" onClick={() => setQ("")} className="text-lnh-sky underline">Clear search</button></p>}
+      </form>
       {/* phones: filters first, so the button is never scrolled off-screen */}
       <div className={cn("mb-3 flex items-center gap-2", embedded ? "" : "lg:hidden")}>
         <button onClick={() => setFiltersOpen(true)} className={cn("flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 px-4 text-sm font-semibold text-white", !embedded && "lg:hidden")}><Filter className="h-4 w-4" />Filters{active ? ` (${active})` : ""}</button>
@@ -120,7 +126,7 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
           {shown.length ? (
             <div className={cn("grid gap-4 md:grid-cols-2", !embedded && "lg:grid-cols-1 2xl:grid-cols-2")}>{shown.map((w) => <WorkshopCard key={w.id} w={w} />)}</div>
           ) : (
-            <div className="hud p-10 text-center text-slate-400">No workshops match these filters. <button onClick={reset} className="text-lnh-sky underline">Clear filters</button></div>
+            <div className="hud p-10 text-center text-slate-400">No workshops match your search or filters. <button onClick={reset} className="text-lnh-sky underline">Clear all</button></div>
           )}
         </div>
 

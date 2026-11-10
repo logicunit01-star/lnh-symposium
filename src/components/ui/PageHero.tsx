@@ -9,7 +9,7 @@ export function PageHero({ eyebrow, title, sub, children }: { eyebrow: string; t
       <div className="orb right-0 top-10 h-[320px] w-[320px] bg-lnh-red/20 [animation-delay:-5s]" />
       <div className="container-x relative">
         <span className="eyebrow">{eyebrow}</span>
-        <h1 className="h-display mt-5 max-w-5xl text-5xl text-white sm:text-6xl lg:text-7xl">{title}</h1>
+        <h1 className="h-display mt-5 max-w-5xl text-[2.5rem] text-white sm:text-6xl lg:text-7xl">{title}</h1>
         {sub && <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">{sub}</p>}
         {children}
       </div>

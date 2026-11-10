@@ -18,7 +18,6 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
       <span className="corner left-3 top-3 border-l border-t" /><span className="corner right-3 top-3 border-r border-t" />
       <div className="flex flex-wrap items-center gap-2">
         {w.department && <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest", deptHue(w.department))}>{w.department}</span>}
-        {w.format && <span className="chip">{w.format}</span>}
       </div>
       <h3 className="mt-4 font-display text-lg font-bold leading-snug text-white sm:text-xl"><a href={`/workshops/${w.slug}`} className="hover:text-lnh-sky hover:underline">{w.title}</a></h3>
       {!compact && w.description && <p className="mt-2 line-clamp-2 text-sm text-slate-400">{w.description}</p>}

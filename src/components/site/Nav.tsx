@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Menu, UserRound, X } from "lucide-react";
+import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,7 @@ export function Nav({ year, account }: { year: number; account?: { name: string;
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:ml-0">
             <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-1">
               <ThemeToggle bare />
+              <Link href="/search" title="Search" aria-label="Search the programme" className="grid h-9 w-9 place-items-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-white"><Search className="h-[18px] w-[18px]" /></Link>
               <Link href={account ? "/account/bookings" : "/account"} title={account ? "My tickets" : "Sign in"}
                 className="hidden h-9 items-center gap-2 rounded-full px-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white md:inline-flex">
                 <UserRound className="h-[18px] w-[18px]" /><span className="hidden max-w-[110px] truncate xl:inline">{account ? account.name.split(" ")[0] : "Sign in"}</span>

@@ -53,7 +53,7 @@ export default async function SessionPage({ params }: { params: { slug: string }
         <div className="hud mt-8 flex flex-wrap items-center justify-between gap-4 p-6">
           <p className="flex items-center gap-2 text-slate-200"><Ticket className="h-5 w-5 text-lnh-sky" />Covered by your Symposium Pass. Nothing to book for this session.</p>
           <div className="flex gap-3">
-            {flyer && <a href={`/api/sessions/${s.slug}/flyer`} className="btn-ghost btn-sm"><Download className="h-4 w-4" />Flyer</a>}
+            {flyer && <a href={`/sessions/${s.slug}/flyer`} className="btn-ghost btn-sm"><Download className="h-4 w-4" />Flyer</a>}
             <Link href="/register#pass" className="btn-primary btn-sm">Get your pass</Link>
           </div>
         </div>

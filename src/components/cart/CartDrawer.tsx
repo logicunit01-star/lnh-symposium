@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Check, ChevronUp, Lock, Plus, Ticket, Trash2, Utensils, Wrench, X } from "lucide-react";
 import { useCart, type CartItem } from "./CartProvider";
 import { cn, pkr } from "@/lib/utils";
@@ -104,10 +104,21 @@ export function CartDrawer() {
 /** Phones: bottom bar with the order count and total, on the register and workshop pages. */
 export function OrderBar() {
   const { count, total, pass, items, setOpen, ready } = useCart();
-  if (!ready || count === 0) return null;
+  const bar = useRef<HTMLDivElement>(null);
+  const show = ready && count > 0;
+  // Keep page text (and the footer) clear of the bar: reserve its height at the bottom of the page (Dashboard Findings, 9 Nov)
+  useEffect(() => {
+    const el = bar.current;
+    if (!show || !el) return;
+    const fit = () => { const h = window.innerWidth < 1024 ? el.offsetHeight : 0; document.body.style.paddingBottom = h ? `${h}px` : ""; document.documentElement.style.scrollPaddingBottom = h ? `${h + 8}px` : ""; };
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(el); window.addEventListener("resize", fit);
+    return () => { ro.disconnect(); window.removeEventListener("resize", fit); document.body.style.paddingBottom = ""; document.documentElement.style.scrollPaddingBottom = ""; };
+  }, [show]);
+  if (!show) return null;
   const what = [pass ? "Pass" : null, items.length ? `${items.length} workshop${items.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" + ");
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-800/95 px-4 py-3 backdrop-blur-xl lg:hidden">
+    <div ref={bar} className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-800/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
       <div className="flex items-center gap-3">
         <button onClick={() => setOpen(true)} className="flex min-h-[44px] flex-1 items-center gap-2 text-left" aria-label="Review your order">
           <ChevronUp className="h-4 w-4 text-slate-300" />

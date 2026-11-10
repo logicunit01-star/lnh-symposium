@@ -6,12 +6,12 @@ import { getEvent } from "@/lib/event";
 import { CATEGORY_LABEL, DECISION_DAYS, DECISION_LABEL, LOW_FILL, departments, lowFillAlerts, lowFillWatch, revenueByTier, wpKpis, wpWorkshops, WP_STATUSES } from "@/lib/wp";
 import { PageTitle } from "@/components/admin/ui";
 import { Bar, WpStatus, WpTabs, pct, usd } from "@/components/admin/wp";
-import { cn, fmtDate, pkr } from "@/lib/utils";
+import { cn, fmtDate, pkr, ymdPk } from "@/lib/utils";
 import { decideLowFill } from "./actions";
 
 export const metadata = { title: "Workshop Programme" };
 
-export default async function WorkshopConsole({ searchParams }: { searchParams: { status?: string; week?: string; dept?: string; asOf?: string; denied?: string; deleted?: string } }) {
+export default async function WorkshopConsole({ searchParams }: { searchParams: { status?: string; week?: string; dept?: string; day?: string; asOf?: string; denied?: string; deleted?: string } }) {
   const u = await requirePerm("workshops");
   const sc = await staffScope(u);
   const ev = await getEvent();
@@ -21,7 +21,11 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
   const dept = sc.all ? searchParams.dept || undefined : undefined;
 
   const [all, tiers, depts] = await Promise.all([wpWorkshops(sc), revenueByTier(sc), sc.all ? departments() : Promise.resolve([])]);
-  const rows = all.filter((r) => (!status || r.w.status === status) && (!week || r.w.themeWeek === week) && (!dept || r.w.department === dept));
+  // Date filter lists only symposium workshop dates from today on (Dashboard Findings, 9 Nov: no past dates in the calendar)
+  const today = ymdPk(new Date());
+  const days = [...new Set(all.map((r) => ymdPk(r.w.startsAt)))].filter((d) => d >= today).sort();
+  const day = searchParams.day && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.day) ? searchParams.day : undefined;
+  const rows = all.filter((r) => (!status || r.w.status === status) && (!week || r.w.themeWeek === week) && (!dept || r.w.department === dept) && (!day || ymdPk(r.w.startsAt) === day));
   const k = wpKpis(all, ev.seatTarget);
   const alerts = lowFillAlerts(all, asOf);
   const watch = lowFillWatch(all, asOf);
@@ -30,7 +34,7 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
   const canEdit = (r: (typeof rows)[number]) => !r.w.locked && (can(u.role, "workshops.edit") || (!sc.all && can(u.role, "workshops.submit")));
   const q = (o: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
-    const m = { status, week, dept, asOf: searchParams.asOf, ...o };
+    const m = { status, week, dept, day, asOf: searchParams.asOf, ...o };
     Object.entries(m).forEach(([a, b]) => b != null && b !== "" && p.set(a, String(b)));
     const sq = p.toString(); return `/admin/workshops${sq ? `?${sq}` : ""}`;
   };
@@ -125,7 +129,8 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
           {status && <input type="hidden" name="status" value={status} />}
           <div><label className="a-label">Theme week</label><select name="week" defaultValue={week ?? ""} className="a-input py-1.5"><option value="">All weeks</option>{ev.themeWeeks.map((w, i) => <option key={i} value={i + 1}>Week {i + 1} · {w.label}</option>)}</select></div>
           {sc.all && <div><label className="a-label">Department</label><select name="dept" defaultValue={dept ?? ""} className="a-input py-1.5"><option value="">All</option>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}
-          <div><label className="a-label" title="Preview alerts as they would appear on this date">Simulate date</label><input type="date" name="asOf" defaultValue={searchParams.asOf ?? ""} className="a-input py-1.5" /></div>
+          <div><label className="a-label">Workshop date</label><select name="day" defaultValue={day ?? ""} className="a-input py-1.5"><option value="">All dates</option>{days.map((d) => <option key={d} value={d}>{fmtDate(new Date(`${d}T12:00:00+05:00`), { weekday: "short", day: "numeric", month: "short" })}</option>)}</select></div>
+          {sc.all && <div><label className="a-label" title="Preview alerts as they would appear on this date">Simulate date</label><input type="date" name="asOf" min={today} defaultValue={searchParams.asOf ?? ""} className="a-input py-1.5" /></div>}
           <button className="a-btn-ghost">Apply</button>
         </form>
       </div>

@@ -45,3 +45,10 @@ export const fmtTime24 = (d: Date | string) =>
   new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(d));
 /** yyyy-mm-dd in Pakistan time */
 export const ymdPk = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(d));
+
+/** Search match (Dashboard Findings, 9 Nov): every word must appear; short words (AI, ENT, ICU) match whole words only, so "AI" does not match "training". */
+export const matchesAll = (hay: string, words: string[]) => words.every((w) => {
+  if (w.length > 3) return hay.includes(w);
+  const esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${esc}($|[^a-z0-9])`).test(hay);
+});

@@ -323,20 +323,42 @@ async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
 
   // facts: up to 2 rows x 3 columns
   y -= 18;
-  const fact = (x: number, fy: number, [label, value, sub]: Fact) => {
-    page.drawText(label.toUpperCase(), { x, y: fy, size: 12.5, font: med, color: BLUET });
-    page.drawText(clean(value).slice(0, 26), { x, y: fy - 26, size: 20, font: bold, color: NAVYT });
-    if (sub) page.drawText(clean(sub).slice(0, 34), { x, y: fy - 46, size: 13, font: reg, color: MUTED });
+  // Each fact stays inside its column, and the third column stops short of the QR panel
+  // (Dashboard Findings, 9 Nov: "The venue name is overlapping with the QR code").
+  const qrLeft = cx + cw - 40 - qrW;
+  const fit = (t: string, font: PDFFont, size: number, min: number, maxW: number) => {
+    let z = size; while (z > min && font.widthOfTextAtSize(t, z) > maxW) z -= 0.5;
+    let out = t; while (out.length > 1 && font.widthOfTextAtSize(out, z) > maxW) out = out.slice(0, -2).trimEnd() + "\u2026";
+    return { text: out, size: z };
   };
-  spec.facts.slice(0, 6).forEach((f, i) => fact(L + (i % 3) * 205, y - Math.floor(i / 3) * 78, f));
-  y -= spec.facts.length > 3 ? 160 : 82;
+  const fact = (x: number, fy: number, [label, value, sub]: Fact, maxW: number) => {
+    page.drawText(label.toUpperCase(), { x, y: fy, size: 12.5, font: med, color: BLUET });
+    const v = clean(value);
+    const one = fit(v, bold, 20, 15, maxW);
+    if (one.text === v) page.drawText(v, { x, y: fy - 26, size: one.size, font: bold, color: NAVYT });
+    else {
+      // a long venue name wraps onto two lines instead of being cut or running under the QR
+      const all = wrap(v, bold, 15, maxW); const lines = all.length > 2 ? [all[0], fit(all.slice(1).join(" "), bold, 15, 15, maxW).text] : all;
+      lines.forEach((l, i) => page.drawText(l, { x, y: fy - 24 - i * 17, size: 15, font: bold, color: NAVYT }));
+      if (sub) { const sb = fit(clean(sub), reg, 12, 10, maxW); page.drawText(sb.text, { x, y: fy - 24 - lines.length * 17 - 3, size: sb.size, font: reg, color: MUTED }); }
+      return;
+    }
+    if (sub) { const sb = fit(clean(sub), reg, 13, 10.5, maxW); page.drawText(sb.text, { x, y: fy - 46, size: sb.size, font: reg, color: MUTED }); }
+  };
+  const colW3 = (i: number) => (i % 3 === 2 ? Math.min(195, qrLeft - 24 - (L + 410)) : 190);
+  const wrapped = spec.facts.slice(0, 3).some((f, i) => bold.widthOfTextAtSize(clean(f[1]), 15) > colW3(i));
+  const rowGap = wrapped ? 92 : 78;
+  spec.facts.slice(0, 6).forEach((f, i) => fact(L + (i % 3) * 205, y - Math.floor(i / 3) * rowGap, f, colW3(i)));
+  y -= (spec.facts.length > 3 ? rowGap + 82 : 82) + (wrapped && spec.facts.length <= 3 ? 14 : 0);
   page.drawLine({ start: { x: L, y: y + 20 }, end: { x: L + colW, y: y + 20 }, thickness: 1, color: hex("#D5E3EF") });
 
   for (const p of spec.people) {
     if (y < cBot + 70) break;
     page.drawText(p.label.toUpperCase(), { x: L, y, size: 12.5, font: med, color: BLUET });
-    page.drawText(clean(p.name).slice(0, 44), { x: L + 170, y, size: 18, font: bold, color: NAVYT });
-    if (p.note) page.drawText(clean(p.note).slice(0, 40), { x: L + 170 + bold.widthOfTextAtSize(clean(p.name).slice(0, 44), 18) + 10, y: y + 1, size: 13, font: reg, color: MUTED });
+    const nm = fit(clean(p.name), bold, 18, 14, qrLeft - 24 - (L + 170));
+    page.drawText(nm.text, { x: L + 170, y, size: nm.size, font: bold, color: NAVYT });
+    const nx = L + 170 + bold.widthOfTextAtSize(nm.text, nm.size) + 10;
+    if (p.note && qrLeft - 24 - nx > 40) page.drawText(fit(clean(p.note), reg, 13, 13, qrLeft - 24 - nx).text, { x: nx, y: y + 1, size: 13, font: reg, color: MUTED });
     y -= 30;
   }
   const extra = [...(spec.lines ?? []), ...(spec.description ? wrap(clean(spec.description), reg, 15, colW) : [])];
@@ -361,7 +383,8 @@ async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
 export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
   return posterFlyer({
     docTitle: `${w.title} - flyer`, tag: "PRE-SYMPOSIUM WORKSHOP", tagColor: "#B72025",
-    meta: [w.department, w.format, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "),
+    // no format label ("Hands-on" etc.): Dashboard Findings, 9 Nov
+    meta: [w.department, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "),
     title: w.title, subtitle: w.themeLabel,
     facts: [
       ["Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
@@ -373,7 +396,8 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
     ],
     people: w.leadFaculty ? [{ label: "Lead faculty", name: w.leadFaculty, note: w.facultyDegrees }] : [],
     description: w.description,
-    qrUrl: `${appUrl()}/workshops#${w.slug}`, qrTitle: "SCAN TO REGISTER", qrSub: "Limited seats", footerPath: "/workshops",
+    // standard link: the workshop's own page (Dashboard Findings, 9 Nov)
+    qrUrl: `${appUrl()}/workshops/${w.slug}`, qrTitle: "SCAN TO REGISTER", qrSub: "Limited seats", footerPath: "/workshops",
   }, ev);
 }
 

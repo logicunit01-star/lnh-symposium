@@ -121,7 +121,7 @@ export default async function ProgrammeSession({ params, searchParams }: { param
               <p className="text-xs text-slate-500">Content approval (above) and final flyer approval (department HOD) are separate steps. Once the HOD approves, the flyer is locked; only the Scientific Sessions Chairperson can make changes.</p>
               <p className="text-sm"><span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", ses.flyerStatus === "APPROVED" ? "bg-emerald-100 text-emerald-800" : ses.flyerStatus === "CHANGES" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800")}>{ses.flyerStatus === "APPROVED" ? "Approved and locked" : ses.flyerStatus === "CHANGES" ? "HOD asked for changes" : "Waiting for HOD approval"}</span></p>
               {ses.flyerReviewedAt && <p className="text-xs text-slate-500">{ses.flyerReviewedBy}, {fmtDateTime(ses.flyerReviewedAt)}{ses.flyerNote ? ` · “${ses.flyerNote}”` : ""}</p>}
-              <a href={`/api/sessions/${ses.slug}/flyer`} target="_blank" className="a-btn-ghost w-full">Open flyer (PDF)</a>
+              <a href={`/sessions/${ses.slug}/flyer`} target="_blank" className="a-btn-ghost w-full">Open flyer (PDF)</a>
               {ses.flyerStatus === "CHANGES" && can(u.role, "programme.edit") && <form action={resendFlyer.bind(null, ses.id)}><button className="a-btn-primary w-full">Send updated flyer to the HOD</button></form>}
             </div>
           )}

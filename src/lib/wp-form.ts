@@ -12,6 +12,6 @@ export async function formAContext() {
     db.select().from(s.venues).where(eq(s.venues.active, true)).orderBy(asc(s.venues.name)),
     db.select({ name: s.departments.name }).from(s.departments).where(eq(s.departments.active, true)).orderBy(asc(s.departments.name)).then((r) => r.map((x) => x.name)),
   ]);
-  const window = { from: ev.workshopStart ? ymdPk(ev.workshopStart) : "", to: ev.workshopEnd ? ymdPk(ev.workshopEnd) : "" };
+  const window = { from: ev.workshopStart ? ymdPk(ev.workshopStart) : "", to: ev.workshopEnd ? ymdPk(ev.workshopEnd) : "", today: ymdPk(new Date()) };
   return { ev, venues, depts, weeks: ev.themeWeeks, window };
 }
