@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -24,7 +24,7 @@ export default async function ProgrammeSession({ params, searchParams }: { param
   if (!data || !data.session.proposal) notFound();
   const ses = data.session;
   const [rooms, history, also, depts] = await Promise.all([
-    db.select().from(s.venues).where(eq(s.venues.active, true)).orderBy(asc(s.venues.building), asc(s.venues.name)),
+    db.select().from(s.venues).where(and(eq(s.venues.active, true), ne(s.venues.usage, "WORKSHOP"))).orderBy(asc(s.venues.building), asc(s.venues.name)),
     db.select().from(s.sessionReviews).where(eq(s.sessionReviews.sessionId, ses.id)).orderBy(desc(s.sessionReviews.createdAt)),
     alsoAppearsIn(ses.id),
     db.select({ name: s.departments.name }).from(s.departments).orderBy(asc(s.departments.name)),

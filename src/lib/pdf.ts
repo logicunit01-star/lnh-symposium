@@ -246,6 +246,7 @@ export type FlyerInput = {
   slug: string; title: string; description: string | null; department: string | null; format: string | null; startsAt: Date; endsAt: Date;
   hall: string | null; building?: string | null; capacity: number | null; left: number | null; fee: number; earlyFee: number | null; cmeHours: number | null;
   leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null;
+  days?: number; mode?: string; facilitatorNames?: string[];
 };
 type FlyerEvent = { name: string; mainTheme: string; contactEmail: string; contactPhone: string; startDate?: Date; endDate?: Date; eventDays?: string[] };
 type Fact = [label: string, value: string, sub?: string];
@@ -380,6 +381,13 @@ async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
 }
 
 /** Flyer generated from an approved workshop record on the official 9th LNH Symposium poster design (1080 x 1350, DM Sans). */
+// the flyer card has room for two name rows: Director, then all facilitators on one line (names only, without degrees)
+const facilitatorRows = (names: string[]) => {
+  if (!names.length) return [];
+  const short = names.map((n) => n.split(",")[0].trim());
+  const list = short.length > 3 ? `${short.slice(0, 3).join(", ")} +${short.length - 3} more` : short.join(", ");
+  return [{ label: short.length > 1 ? "Facilitators" : "Facilitator", name: list }];
+};
 export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
   return posterFlyer({
     docTitle: `${w.title} - flyer`, tag: "PRE-SYMPOSIUM WORKSHOP", tagColor: "#B72025",
@@ -387,14 +395,20 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
     meta: [w.department, w.category === "A" ? "Multidisciplinary" : null].filter(Boolean).join("  ·  "),
     title: w.title, subtitle: w.themeLabel,
     facts: [
-      ["Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
-      ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, "Pakistan time"],
-      ["Venue", w.hall ?? "-", w.building ?? undefined],
+      (w.days ?? 1) > 1
+        ? ["Dates", `${fmtDate(w.startsAt, { day: "numeric", month: "short" })} - ${fmtDate(w.endsAt, { day: "numeric", month: "short", year: "numeric" })}`, `${w.days} full days`]
+        : ["Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
+      ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, (w.days ?? 1) > 1 ? "Each day, Pakistan time" : "Pakistan time"],
+      w.mode === "ONLINE" ? ["Venue", "Online", "Link sent to registered participants"] : ["Venue", w.hall ?? "-", w.mode === "HYBRID" ? `${w.building ? `${w.building} · ` : ""}also online` : w.building ?? undefined],
       ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
       ["Fee", pkr(w.fee), "Separate ticket, no Symposium Pass needed"],
       ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
     ],
-    people: w.leadFaculty ? [{ label: "Lead faculty", name: w.leadFaculty, note: w.facultyDegrees }] : [],
+    // N3 (13 Nov): one Workshop Director and the facilitators by name, no photos
+    people: [
+      ...(w.leadFaculty ? [{ label: "Workshop Director", name: w.leadFaculty, note: w.facultyDegrees }] : []),
+      ...facilitatorRows(w.facilitatorNames ?? []),
+    ],
     description: w.description,
     // standard link: the workshop's own page (Dashboard Findings, 9 Nov)
     qrUrl: `${appUrl()}/workshops/${w.slug}`, qrTitle: "SCAN TO REGISTER", qrSub: "Limited seats", footerPath: "/workshops",

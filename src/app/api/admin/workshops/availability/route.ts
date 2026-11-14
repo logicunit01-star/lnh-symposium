@@ -10,5 +10,5 @@ export async function GET(req: Request) {
   const u = new URL(req.url).searchParams;
   const date = u.get("date") ?? "", start = u.get("start") ?? "", end = u.get("end") ?? "";
   if (!D.test(date) || !T.test(start) || !T.test(end) || end <= start) return Response.json({ error: "bad request" }, { status: 400 });
-  return Response.json(await availability({ date, start, end, venueId: u.get("venueId") || null, excludeId: u.get("exclude") || null, seats: Number(u.get("seats")) || 1 }));
+  return Response.json(await availability({ date, start, end, venueId: u.get("venueId") || null, excludeId: u.get("exclude") || null, seats: Number(u.get("seats")) || 1, days: Number(u.get("days")) || 1 }));
 }

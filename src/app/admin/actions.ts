@@ -123,6 +123,9 @@ export async function saveSettings(f: FormData) {
     abstractWordLimit: num(f, "abstractWordLimit") ?? 300, contactEmail: str(f, "contactEmail")!, contactPhone: str(f, "contactPhone")!,
     facebook: str(f, "facebook"), instagram: str(f, "instagram"), linkedin: str(f, "linkedin"), youtube: str(f, "youtube"), x: str(f, "x"),
     videos: (str(f, "videos") || "").split(/\s+/).filter(Boolean),
+    tickerItems: (str(f, "tickerItems") || "").split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 12),
+    galleryUrl: str(f, "galleryUrl"), galleryThumbUrl: str(f, "galleryThumbUrl"),
+    agendaLive: bool(f, "agendaLive"), speakersLive: bool(f, "speakersLive"),
     workshopStart: d("workshopStart"), workshopEnd: d("workshopEnd"),
     themeWeeks: (str(f, "themeWeeks") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s*[,|]\s*(.+?)\s*$/)).filter(Boolean).map((m) => ({ from: m![1], label: m![2] })),
     seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280,
@@ -151,6 +154,13 @@ export async function saveUser(id: string | null, f: FormData) {
   const pw = str(f, "password");
   const data: any = { name: str(f, "name")!, email: str(f, "email")!.toLowerCase(), role: str(f, "role") as any, department: str(f, "department"), active: bool(f, "active") };
   if (pw) { if (pw.length < 8) throw new Error("Password must be at least 8 characters"); data.passwordHash = await bcrypt.hash(pw, 10); }
+  // N5 (13 Nov): one department focal person per department
+  if (data.role === "FOCAL_PERSON") {
+    if (!data.department) redirect(`/admin/users?err=${encodeURIComponent("Set the department for the focal person.")}`);
+    const others = await db.select({ id: s.users.id, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "FOCAL_PERSON"), eq(s.users.department, data.department), eq(s.users.active, true)));
+    const other = others.find((o) => o.id !== id);
+    if (other && data.active) redirect(`/admin/users?err=${encodeURIComponent(`${data.department} already has a focal person (${other.name}). Deactivate that login first.`)}`);
+  }
   if (id) await db.update(s.users).set(data).where(eq(s.users.id, id));
   else { if (!pw) throw new Error("Password required for new users"); await db.insert(s.users).values(data); }
   revalidatePath("/admin/users");

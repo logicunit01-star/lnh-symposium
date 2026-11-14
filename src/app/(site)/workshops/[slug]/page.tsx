@@ -40,11 +40,14 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
             {w.capacity != null && <li className="flex items-center gap-2"><Users className="h-5 w-5 text-lnh-sky" />{full ? "Fully booked" : `${w.left} of ${w.capacity} seats left`}</li>}
           </ul>
           {w.description && <div className="prose-lnh mt-8 max-w-3xl"><p>{w.description}</p></div>}
+          {s.targetAudience && <p className="mt-6 max-w-3xl text-slate-200"><span className="font-semibold text-white">Who should attend: </span>{s.targetAudience}</p>}
+          {s.objectives && <div className="mt-6 max-w-3xl"><h2 className="font-display text-xl font-bold text-white">Learning objectives</h2><p className="mt-2 whitespace-pre-line text-slate-200">{s.objectives}</p></div>}
+          {s.prelimProgramme && <div className="mt-6 max-w-3xl"><h2 className="font-display text-xl font-bold text-white">Programme</h2><p className="mt-2 whitespace-pre-line text-sm text-slate-200">{s.prelimProgramme}</p></div>}
           {w.faculty.length > 0 && (
             <div className="mt-8">
               <h2 className="font-display text-xl font-bold text-white">Faculty</h2>
               <ul className="mt-3 grid gap-3 sm:grid-cols-2">{w.faculty.map((f) => (
-                <li key={f.name} className="hud p-4"><p className="font-semibold text-white">{f.name}{f.degrees ? `, ${f.degrees}` : ""}</p><p className="text-sm text-slate-300">{[f.role, f.designation].filter(Boolean).join(" · ")}</p></li>
+                <li key={f.role + f.name} className="hud p-4"><p className="font-semibold text-white">{f.name}{f.degrees ? `, ${f.degrees}` : ""}</p><p className="text-sm text-slate-300">{[f.role, f.designation].filter(Boolean).join(" · ")}</p></li>
               ))}</ul>
             </div>
           )}

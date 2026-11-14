@@ -22,7 +22,7 @@ export default async function Register() {
   return (
     <>
       <PageHero eyebrow="Registration" title={<>Register for the <span className="text-holo">symposium</span></>}
-        sub={`Choose your Symposium Pass, add any workshops, then pay once.${earlyUntil ? ` Early-bird pass prices until ${earlyUntil}.` : ""} LNH staff register online and pay the same fee as everyone. Desk registration is not available at this stage.`} />
+        sub={`Choose your Symposium Pass, add any workshops, then pay once.${earlyUntil ? ` Early-bird pass prices until ${earlyUntil}.` : ""} LNH staff register online and pay the same fee as everyone. On-site kiosk registration for the symposium and workshops will open soon at the registration desk.`} />
       <div className="container-x grid gap-8 pb-28 lg:grid-cols-12 lg:pb-0">
         <div className="min-w-0 space-y-14 lg:col-span-8">
           {!ev.registrationOpen && <Alert>Registration is currently closed.</Alert>}

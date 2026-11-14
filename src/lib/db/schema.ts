@@ -8,7 +8,7 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const created = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 const updated = () => timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date());
 
-export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD", "SC_CHAIR", "SECRETARIAT", "MARKETING", "CATERING", "FACILITATION_CHAIR"]);
+export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "ADMIN", "SCIENTIFIC_COMMITTEE", "REGISTRATION_DESK", "VIEWER", "WP_CHAIR", "WP_MEMBER", "HOD", "SC_CHAIR", "SECRETARIAT", "MARKETING", "CATERING", "FACILITATION_CHAIR", "FOCAL_PERSON"]);
 export const sessionTypeEnum = pgEnum("session_type", ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "FAILED", "WAIVED", "REFUNDED"]);
 export const abstractTypeEnum = pgEnum("abstract_type", ["ORAL", "POSTER"]);
@@ -46,6 +46,12 @@ export const event = pgTable("event", {
   youtube: text("youtube"),
   x: text("x"),
   videos: jsonb("videos").$type<string[]>().notNull().default([]),
+  // Homepage (changes 11.11.2026): ticker text, gallery link, and pages that show only once they go live
+  tickerItems: jsonb("ticker_items").$type<string[]>().notNull().default([]),
+  galleryUrl: text("gallery_url"),
+  galleryThumbUrl: text("gallery_thumb_url"),
+  agendaLive: boolean("agenda_live").notNull().default(false),
+  speakersLive: boolean("speakers_live").notNull().default(false),
   // Workshop programme (pre-symposium)
   workshopStart: timestamp("workshop_start", { withTimezone: true }),
   workshopEnd: timestamp("workshop_end", { withTimezone: true }),
@@ -160,6 +166,7 @@ export const venues = pgTable("venues", {
   mapY: real("map_y").notNull().default(50),
   directions: text("directions"),
   active: boolean("active").notNull().default(true),
+  usage: text("usage").notNull().default("BOTH"), // WORKSHOP | SCIENTIFIC | BOTH (D5, 13 Nov: the 43-room list is for workshops only)
   createdAt: created(),
 });
 
@@ -204,6 +211,16 @@ export const sessions = pgTable("sessions", {
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewNote: text("review_note"),
   locked: boolean("locked").notNull().default(false),
+  // Workshop Decisions and New Requirements (13 Nov 2026)
+  days: integer("days").notNull().default(1), // D1: 1, or 2 / 3 consecutive full days (09:00-17:00 each)
+  proposedTitle: text("proposed_title"), // N1: title as first proposed; "title" is the finalised title
+  organiser: text("organiser"),
+  objectives: text("objectives"),
+  targetAudience: text("target_audience"),
+  prelimProgramme: text("prelim_programme"),
+  mode: text("mode").notNull().default("ONSITE"), // N2: ONSITE | ONLINE | HYBRID
+  onlineLink: text("online_link"),
+  facilitatorNames: jsonb("facilitator_names").$type<string[]>().notNull().default([]), // N3 (the Workshop Director is leadFaculty)
   coChairDecision: text("co_chair_decision"), // RUN | MERGE | CANCEL | PROMOTE (low-fill remediation)
   // Scientific session proposal (department form)
   proposal: boolean("proposal").notNull().default(false), // true = submitted by a department; public only after programme release
@@ -371,6 +388,11 @@ export const registrationItems = pgTable("registration_items", {
   // Release 3 (D4): each workshop ticket has its own number and QR, e.g. SYM-2027-00012-W1
   ticketNo: text("ticket_no").unique(),
   remindedAt: timestamp("reminded_at", { withTimezone: true }),
+  // N5/N6 (13 Nov 2026): the department focal person verifies attendance; the workshop e-certificate follows verification + feedback
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: text("verified_by"),
+  certNo: text("cert_no").unique("reg_item_cert_uq"),
+  certAt: timestamp("cert_at", { withTimezone: true }),
 }, (t) => ({ uq: uniqueIndex("reg_item_uq").on(t.registrationId, t.sessionId) }));
 
 export const payments = pgTable("payments", {
@@ -471,6 +493,11 @@ export const feedback = pgTable("feedback", {
   recommend: boolean("recommend").notNull().default(true),
   comments: text("comments"),
   regNo: text("reg_no"),
+  // N7 workshop feedback form (13 Nov 2026): 12 statements (1-5), recommend Yes/Maybe/No, contact opt-in
+  registrationId: text("registration_id").references(() => registrations.id, { onDelete: "set null" }),
+  answers: jsonb("answers").$type<number[]>(),
+  recommendChoice: text("recommend_choice"),
+  contactOk: boolean("contact_ok"),
   createdAt: created(),
 }, (t) => ({ sIdx: index("fb_session_idx").on(t.sessionId) }));
 

@@ -1,9 +1,10 @@
 import "server-only";
 import crypto from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { appUrl, randomToken } from "./utils";
 import { sendRegistrationNotice } from "./registration";
+import { createOrder, orderStatus, click2PayUrl } from "./paypro";
 
 export type Checkout =
   | { kind: "redirect"; url: string }
@@ -35,6 +36,18 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
   const txnRef = `T${pktStamp()}${randomToken(3).replace(/[^A-Za-z0-9]/g, "").toUpperCase()}`.slice(0, 20);
   await db.insert(s.payments).values({ registrationId, provider: prov, amount: reg.totalFee, txnRef });
 
+  if (prov === "paypro") {
+    // PayPro: create an order (OrderNumber = txnRef), keep its PayProId, send the customer to Click2Pay
+    const name = `${reg.title} ${reg.firstName} ${reg.lastName}`.replace(/\s+/g, " ").trim();
+    try {
+      const o = await createOrder({ orderNumber: txnRef, amount: reg.totalFee, name, mobile: reg.phone, email: reg.email });
+      await db.update(s.payments).set({ providerRef: o.payProId, raw: { order: o.raw, click2Pay: o.click2Pay } as any }).where(eq(s.payments.txnRef, txnRef));
+      return { kind: "redirect", url: click2PayUrl(o.click2Pay, `${appUrl()}/api/payments/paypro/return?txn=${txnRef}`) };
+    } catch (e) {
+      await db.update(s.payments).set({ status: "FAILED", raw: { error: String((e as Error).message) } as any }).where(eq(s.payments.txnRef, txnRef));
+      throw new Error("Online payment is not available right now. Please try again in a few minutes.");
+    }
+  }
   if (prov === "jazzcash") {
     // JazzCash Hosted Checkout (v1.1). Verify field list against your merchant integration guide before going live.
     const salt = process.env.JAZZCASH_INTEGRITY_SALT || "";
@@ -59,6 +72,27 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
   return { kind: "redirect", url: `${appUrl()}/pay/mock?txn=${txnRef}` };
 }
 
+/** PayPro: asks PayPro for the order status and settles it if paid. Returns null when the payment is unknown or not PayPro. */
+export async function checkPayPro(txnRef: string) {
+  const pay = await db.query.payments.findFirst({ where: eq(s.payments.txnRef, txnRef) });
+  if (!pay || pay.provider !== "paypro" || !pay.providerRef) return null;
+  if (pay.status === "PAID") return { pay, paid: true };
+  const st = await orderStatus(pay.providerRef);
+  if (st.paid) await settlePayment(txnRef, true, pay.providerRef, { ...(pay.raw as object || {}), status: st.raw });
+  return { pay, paid: st.paid, status: st.status };
+}
+
+/** Cron: PayPro orders still pending from the last 10 days are checked with PayPro (catches missed callbacks). */
+export async function reconcilePayPro() {
+  const rows = await db.select({ txnRef: s.payments.txnRef }).from(s.payments).where(and(eq(s.payments.provider, "paypro"), eq(s.payments.status, "PENDING"),
+    isNotNull(s.payments.providerRef), gt(s.payments.createdAt, new Date(Date.now() - 10 * 864e5)))).orderBy(desc(s.payments.createdAt)).limit(300);
+  let paid = 0, errors = 0;
+  for (const r of rows) {
+    try { if ((await checkPayPro(r.txnRef))?.paid) paid++; } catch { errors++; }
+  }
+  return { checked: rows.length, paid, errors };
+}
+
 export function jazzHash(fields: Record<string, string>, salt: string) {
   const keys = Object.keys(fields).filter((k) => k.toLowerCase().startsWith("pp") && k !== "pp_SecureHash" && fields[k] !== "").sort();
   const str = [salt, ...keys.map((k) => fields[k])].join("&");
@@ -72,6 +106,8 @@ export async function settlePayment(txnRef: string, ok: boolean, providerRef?: s
   if (pay.status === "PAID") return pay;
   await db.update(s.payments).set({ status: ok ? "PAID" : "FAILED", providerRef, raw: raw as any }).where(eq(s.payments.id, pay.id));
   if (ok) {
+    const reg = await db.query.registrations.findFirst({ where: eq(s.registrations.id, pay.registrationId), columns: { paymentStatus: true } });
+    if (reg?.paymentStatus === "PAID" || reg?.paymentStatus === "WAIVED") return pay; // already settled through another payment: no second email
     await db.update(s.registrations).set({ paymentStatus: "PAID", paymentMethod: pay.provider, paidAt: new Date() })
       .where(and(eq(s.registrations.id, pay.registrationId)));
     await sendRegistrationNotice(pay.registrationId, "paid").catch((e) => console.error(e));

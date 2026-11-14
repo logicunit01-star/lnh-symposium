@@ -13,7 +13,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
   ].filter((s) => s.href);
   const cols = [
     { t: "Participate", l: [["Symposium Pass", "/register"], ["Workshops", "/workshops"], ["Abstract Submission", "/abstracts"], ["My tickets", "/account/bookings"], ["Find my tickets", "/my-registrations"], ["E-certificates", "/certificates"], ["Guest registration", "/register/guest"], ["Volunteer registration", "/register/volunteer"]] },
-    { t: "Programme", l: [["Agenda", "/agenda"], ["Scientific Sessions", "/programme/scientific"], ["Meet the Experts", "/programme/meet-the-experts"], ["Speakers", "/speakers"], ["Awards", "/awards"]] },
+    { t: "Programme", l: [["Agenda", "/agenda"], ["Meet the Experts & Speakers", "/speakers"], ["Awards", "/awards"]] },
     { t: "Symposium", l: [["About", "/about"], ["Organizing Committee", "/committee"], ["Contact Us", "/contact"]] },
   ];
   return (
@@ -45,7 +45,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
           ))}
         </div>
         <div className="lg:col-span-4">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Campus &amp; venue map</p>
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Venue map</p>
           <div className="overflow-hidden rounded-2xl border border-white/10">
             <iframe title="Liaquat National Hospital map" className="h-56 w-full grayscale-[60%] invert-[90%] hue-rotate-180" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
               src="https://www.google.com/maps?q=Liaquat+National+Hospital,+Stadium+Road,+Karachi&output=embed" />

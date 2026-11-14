@@ -4,14 +4,43 @@ import { PageHero } from "@/components/ui/PageHero";
 import { Reveal } from "@/components/ui/Reveal";
 import { Avatar } from "@/components/ui/Avatar";
 import { fmtDate, fmtTime } from "@/lib/utils";
+import { getEvent } from "@/lib/event";
+import { currentUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { getProgrammePage } from "@/lib/programme-pages";
 
-export const metadata = { title: "Speakers" };
+export const metadata = { title: "Meet the Experts & Speakers" };
+export const dynamic = "force-dynamic";
 
-export default async function Speakers() {
-  const speakers = await getSpeakers();
+/** Meet the Experts and Speakers as one section (homepage changes 11.11.2026). Speakers show once they go live
+ *  (Event Settings); experts once their page is published and the programme is released. Staff preview: ?preview=1. */
+export default async function Speakers({ searchParams }: { searchParams: { preview?: string } }) {
+  const [ev, speakersAll, staff, { page, guests }] = await Promise.all([getEvent(), getSpeakers(), currentUser(), getProgrammePage("EXPERTS")]);
+  const pv = !!searchParams.preview && can(staff?.role, "programme");
+  const speakers = ev.speakersLive || pv ? speakersAll : [];
+  const experts = pv || (page.published && !!ev.programmeReleasedAt) ? guests : [];
   return (
     <>
-      <PageHero eyebrow={`${speakers.length} speakers`} title={<>Meet the <span className="text-grad-red">speakers</span></>} sub="Keynote speakers, panelists and workshop facilitators from Pakistan and abroad." />
+      <PageHero eyebrow="Speakers" title={<>Meet the <span className="text-grad-red">experts &amp; speakers</span></>} sub="Guest experts, keynote speakers, panelists and workshop facilitators from Pakistan and abroad." />
+      {experts.length > 0 && (
+        <section id="experts" className="container-x mb-16 scroll-mt-28">
+          <h2 className="h-display mb-2 text-3xl text-white">Meet the Experts</h2>
+          {page.format && <p className="mb-6 whitespace-pre-line text-slate-300">{page.format}</p>}
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {experts.map((g) => (
+              <li key={g.id} className="hud flex flex-col items-center p-6 text-center">
+                <Avatar name={g.name} src={g.photo} className="h-32 w-32 rounded-full text-[16px]" />
+                <p className="mt-4 font-display text-lg font-bold text-white">{g.name}</p>
+                {g.qualification && <p className="text-sm text-lnh-sky">{g.qualification}</p>}
+                {g.affiliation && <p className="mt-1 text-sm text-slate-300">{g.affiliation}</p>}
+                {g.topic && <p className="mt-3 text-sm text-slate-400">{g.topic}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {!speakers.length && !experts.length && <div className="container-x"><div className="hud p-10 text-center"><p className="font-display text-2xl font-bold text-white">Coming soon</p><p className="mt-2 text-slate-300">Our experts and speakers will be announced here.</p></div></div>}
+      {speakers.length > 0 && experts.length > 0 && <h2 className="container-x h-display mb-6 text-3xl text-white">Speakers</h2>}
       <div className="container-x grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {speakers.map((s, i) => (
           <Reveal key={s.id} delay={(i % 3) * 80} className="card card-hover group flex flex-col overflow-hidden" as="article">

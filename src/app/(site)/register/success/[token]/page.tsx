@@ -9,12 +9,13 @@ import { appUrl, cn, fmtDate, fmtTime, pkr } from "@/lib/utils";
 import { Alert } from "@/components/ui/Field";
 import { PayButton } from "./PayButton";
 import { qrPayload, ticketPayload } from "@/lib/qr-payload";
+import { workshopCertUrl } from "@/lib/certificates";
 
 export const metadata = { title: "Your tickets", robots: { index: false } };
 const qrOpts = { margin: 1, width: 260, color: { dark: "#040B1E", light: "#ffffff" } };
 
 /** E-ticket page (registration redesign, release 3): a Symposium Pass card and one card per workshop ticket, each with its own QR (D4). */
-export default async function Success({ params, searchParams }: { params: { token: string }; searchParams: { paid?: string; failed?: string } }) {
+export default async function Success({ params, searchParams }: { params: { token: string }; searchParams: { paid?: string; failed?: string; pending?: string } }) {
   const r = await loadRegistration({ accessToken: params.token });
   if (!r) notFound();
   const ev = await getEvent();
@@ -36,6 +37,7 @@ export default async function Success({ params, searchParams }: { params: { toke
       <div className="orb right-0 top-40 h-80 w-80 bg-lnh-red/20" />
       <div className="container-x relative max-w-4xl space-y-6">
         {searchParams.failed && <Alert>Payment was not completed. You can try again below.</Alert>}
+        {searchParams.pending && !confirmed && <Alert>We have not received the payment confirmation from PayPro yet. If you paid by bank app, ATM or over the counter, your registration is confirmed automatically once PayPro tells us, and you will receive an email.</Alert>}
 
         {/* header */}
         <div className={cn("flex flex-wrap items-center justify-between gap-4 rounded-3xl px-6 py-5 sm:px-8", confirmed ? "bg-emerald-500/15" : rejected ? "bg-rose-500/15" : "bg-amber-500/15")}>
@@ -55,6 +57,7 @@ export default async function Success({ params, searchParams }: { params: { toke
           <div className="hud flex flex-wrap items-center justify-between gap-4 p-6">
             <div><p className="font-semibold text-white">Pay {pkr(r.totalFee)} to confirm your tickets</p><p className="text-sm text-slate-300">Your QR codes work at entry once payment is received.</p></div>
             {prov !== "manual" && <PayButton token={r.accessToken} amount={pkr(r.totalFee)} />}
+            {prov === "paypro" && <p className="w-full text-xs text-slate-400">Secure payment through PayPro: debit/credit card, bank app, ATM or over the counter.</p>}
           </div>
         )}
 
@@ -78,10 +81,16 @@ export default async function Success({ params, searchParams }: { params: { toke
             <div>
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-lnh-gold"><Wrench className="h-4 w-4" />Workshop ticket</p>
               <p className="mt-2 font-display text-xl font-bold text-white">{i.session.title}</p>
-              <p className="mt-1 text-slate-200">{fmtDate(i.session.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {fmtTime(i.session.startsAt)} – {fmtTime(i.session.endsAt)}</p>
-              {i.session.hall && <p className="mt-1 flex items-center gap-1.5 text-slate-200"><MapPin className="h-4 w-4" />{i.session.venueId ? <a href={`/venues#${i.session.venueId}`} className="underline">{i.session.hall}</a> : i.session.hall}</p>}
+              <p className="mt-1 text-slate-200">{i.session.days > 1 ? `${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(i.session.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · daily` : fmtDate(i.session.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {fmtTime(i.session.startsAt)} – {fmtTime(i.session.endsAt)}</p>
+              {confirmed && i.session.mode !== "ONSITE" && i.session.onlineLink && <p className="mt-1 text-slate-200">Online: <a href={i.session.onlineLink} className="break-all text-lnh-sky underline" target="_blank" rel="noreferrer">{i.session.onlineLink}</a></p>}
+              {i.session.mode !== "ONLINE" && i.session.hall && <p className="mt-1 flex items-center gap-1.5 text-slate-200"><MapPin className="h-4 w-4" />{i.session.venueId ? <a href={`/venues#${i.session.venueId}`} className="underline">{i.session.hall}</a> : i.session.hall}</p>}
               <p className="mono mt-3 text-sm text-slate-300">Ticket {i.ticketNo ?? r.regNo}</p>
-              <a href={`${ics}?item=${i.id}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline"><CalendarPlus className="h-4 w-4" />Add to calendar</a>
+              <div className="flex flex-wrap gap-x-5">
+                <a href={`${ics}?item=${i.id}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline"><CalendarPlus className="h-4 w-4" />Add to calendar</a>
+                {/* N6 / N7: feedback after the workshop starts; certificate once attendance is confirmed and feedback is in */}
+                {confirmed && i.certNo && <a href={workshopCertUrl(i.id, r.accessToken)} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-lnh-gold underline"><Award className="h-4 w-4" />Workshop certificate</a>}
+                {confirmed && !i.certNo && i.session.startsAt <= new Date() && <a href={`/feedback/${i.session.slug}?t=${encodeURIComponent(r.accessToken)}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline">Give feedback{i.verifiedAt ? " to get your certificate" : ""}</a>}
+              </div>
             </div>
             {ticketQrs[n] && <div className="text-center"><img src={ticketQrs[n]} alt={`Workshop ticket QR code ${i.ticketNo ?? ""}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the workshop door</p></div>}
           </article>

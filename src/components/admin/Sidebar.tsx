@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
+import { UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
 import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin/checkin", label: "Check-in", I: ScanLine, p: "checkin" },
   { href: "/admin/workshops", label: "Workshop Programme", I: ClipboardCheck, p: "workshops" },
   { href: "/admin/venues", label: "Venues & Map", I: MapPinned, p: "venues" },
+  { href: "/admin/attendance", label: "Workshop Attendance", I: UserCheck, p: "attendance" },
   { href: "/admin/sessions", label: "Sessions & Programme", I: CalendarRange, p: "sessions" },
   { href: "/admin/dept", label: "My Department", I: Building2, p: "dept.abstracts" },
   { href: "/admin/dept/abstracts", label: "Abstract Review", I: FileText, p: "dept.abstracts" },

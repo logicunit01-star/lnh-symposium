@@ -1,26 +1,24 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Bot, BrainCircuit, CalendarDays, FileText, MapPin, Network, Play, Sparkles, Wrench } from "lucide-react";
-import { getEvent, isEarlyBird, eventDays, eventDaysLabel, DAY_THEMES } from "@/lib/event";
-import { getProgramme, getSpeakers, seatsTaken } from "@/lib/queries";
-import { toWorkshopDTO } from "@/lib/workshops";
+import { ArrowRight, ArrowUpRight, Bot, BrainCircuit, CalendarDays, FileText, Images, MapPin, Network, Play, Sparkles } from "lucide-react";
+import { getEvent, isEarlyBird, eventDays, eventDaysLabel, DAY_THEMES, GALLERY_DEFAULT, TICKER_DEFAULT } from "@/lib/event";
+import { getProgramme, getSpeakers } from "@/lib/queries";
 import { fmtDate, fmtTime, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Countdown } from "@/components/ui/Countdown";
 import { Reveal } from "@/components/ui/Reveal";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { Avatar } from "@/components/ui/Avatar";
 import { NeuralField } from "@/components/ui/NeuralField";
-import { WorkshopCard } from "@/components/site/WorkshopCard";
 
 const youtubeId = (u: string) => u.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)?.[1];
 
 export default async function Home() {
-  const [ev, programme, speakers, taken] = await Promise.all([getEvent(), getProgramme(), getSpeakers(), seatsTaken()]);
+  const [ev, programme, speakers] = await Promise.all([getEvent(), getProgramme(), getSpeakers()]);
   const early = isEarlyBird(ev);
   const days = eventDays(ev);
-  const workshops = programme.filter((s) => s.type === "WORKSHOP");
   const featured = speakers.filter((s) => s.featured).slice(0, 6);
-  const wsFirst = workshops[0]?.startsAt, wsLast = workshops.at(-1)?.startsAt;
-  const [mainA, mainB] = ev.mainTheme.includes(":") ? ev.mainTheme.split(/:\s*/) : [ev.mainTheme, ""];
+  const [, mainB] = ev.mainTheme.includes(":") ? ev.mainTheme.split(/:\s*/) : [ev.mainTheme, ""];
+  const ticker = ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT;
+  const teaser = ev.videos.map(youtubeId).find(Boolean);
 
   const pillars = [
     { day: 1, I: BrainCircuit, name: "Artificial Intelligence", short: "AI", tone: "from-lnh-sky/25", accent: "text-lnh-sky",
@@ -30,18 +28,11 @@ export default async function Home() {
     { day: 3, I: Network, name: "Digitization", short: "Digitization", tone: "from-lnh-blue/35", accent: "text-lnh-blue",
       text: "Electronic records, telemedicine, interoperability and data-driven quality — building the digital hospital." },
   ];
-  const keyDates = [
-    ev.abstractOpen && { d: ev.abstractOpen, t: "Abstract submission opens" },
-    ev.abstractDeadline && { d: ev.abstractDeadline, t: "Abstract submission deadline" },
-    ev.earlyBirdUntil && { d: ev.earlyBirdUntil, t: "Symposium Pass early-bird ends" },
-    wsFirst && { d: wsFirst, t: "Pre-conference workshops begin" },
-    { d: days[0], t: "Symposium Day 1" },
-  ].filter(Boolean).sort((a: any, b: any) => +new Date(a.d) - +new Date(b.d)) as { d: Date; t: string }[];
 
   return (
     <>
       {/* ================= HERO ================= */}
-      <section className="noise relative flex min-h-[100svh] items-center overflow-hidden pt-28">
+      <section className="noise relative flex min-h-[100svh] items-center overflow-hidden pt-[76px]">
         {ev.heroVideoUrl && (
           <>
             <video className="absolute inset-0 h-full w-full object-cover opacity-30" src={ev.heroVideoUrl} autoPlay muted loop playsInline />
@@ -54,19 +45,19 @@ export default async function Home() {
         <div className="orb -right-24 bottom-0 h-[460px] w-[460px] bg-lnh-red/25 [animation-delay:-4s]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 animate-scan bg-gradient-to-b from-transparent via-lnh-sky/[0.04] to-transparent" />
 
-        <div className="container-x relative z-10 grid items-center gap-10 py-16 lg:grid-cols-[1fr_1.05fr]">
+        <div className="container-x relative z-10 grid items-center gap-8 pt-12 pb-16 lg:grid-cols-[0.85fr_1.4fr]">
           <div>
             <div className="hero-in">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-lnh-red px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_24px_-4px_#B72025]">{ev.edition} Edition</span>
+                <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
                 <span className="chip gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{eventDaysLabel(ev, "short")}</span>
                 <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />LNH, Karachi</span>
-                <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
               </div>
             </div>
             <div className="hero-in" style={{ animationDelay: "120ms" }}>
-              <p className="mono mt-8 text-xs uppercase tracking-[0.35em] text-lnh-sky">{ev.name} · {mainA}</p>
-              <h1 className="h-display mt-4 text-[12vw] leading-[0.9] text-white sm:text-[8.5vw] lg:text-[5.2rem] xl:text-[5.6rem]">
+              {/* homepage changes 11.11.2026: "9th LNH Symposium" in the approved title style */}
+              <p className="text-lnh-title mt-8 font-display text-3xl font-bold tracking-tight sm:text-4xl">9<sup className="text-[0.55em]">th</sup> LNH Symposium</p>
+              <h1 className="h-display mt-3 text-[12vw] leading-[0.9] text-white sm:text-[8.5vw] lg:text-[5.2rem] xl:text-[5.6rem]">
                 <span className="block">Shaping the</span>
                 <span className="text-holo block">new era</span>
                 <span className="block">of healthcare</span>
@@ -81,9 +72,10 @@ export default async function Home() {
               <p className="mt-6 max-w-xl text-lg text-slate-300"><span className="font-semibold text-white">{mainB || ev.theme}.</span> {ev.tagline}</p>
             </div>
             <div className="hero-in mt-9 flex flex-wrap gap-3" style={{ animationDelay: "320ms" }}>
-              <Link href="/register" className="btn-primary px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/agenda" className="btn-ghost px-7 py-4 text-base">View Agenda</Link>
-              <Link href="/speakers" className="btn-ghost px-7 py-4 text-base">Explore Speakers</Link>
+              <Link href="/register" className="btn-primary px-8 py-4 text-base">Register <ArrowRight className="h-4 w-4" /></Link>
+              {/* shown once those pages go live (Event Settings) */}
+              {ev.agendaLive && <Link href="/agenda" className="btn-ghost px-7 py-4 text-base">View Agenda</Link>}
+              {ev.speakersLive && <Link href="/speakers" className="btn-ghost px-7 py-4 text-base">Explore Speakers</Link>}
             </div>
             <div className="hero-in mt-12" style={{ animationDelay: "420ms" }}>
               <p className="mono mb-3 text-[11px] uppercase tracking-[0.3em] text-slate-500">T-minus to Day 1 · {fmtDate(days[0], { weekday: "long", day: "numeric", month: "long" })}</p>
@@ -91,11 +83,10 @@ export default async function Home() {
             </div>
           </div>
           <div className="hero-in relative" style={{ animationDelay: "200ms" }}>
-            <div className="relative mx-auto w-full max-w-[720px] lg:-mr-16 lg:w-[115%] xl:-mr-24">
+            <div className="relative mx-auto w-full max-w-[900px] lg:w-[108%] lg:max-w-none">
               <div className="pointer-events-none absolute inset-x-6 bottom-6 top-1/3 rounded-[50%] bg-lnh-sky/25 blur-3xl" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/campus-scene.webp" alt="Liaquat National Hospital, Karachi, with robotics and digital health imagery" width={1232} height={560} className="relative w-full drop-shadow-[0_30px_40px_rgba(4,11,30,.45)]" />
-              <p className="mono relative mt-2 text-center text-[10px] uppercase tracking-[0.3em] text-slate-500">Liaquat National Hospital · Stadium Road, Karachi</p>
             </div>
           </div>
         </div>
@@ -106,8 +97,8 @@ export default async function Home() {
       <section className="relative -mx-4 -rotate-1 overflow-hidden border-y border-white/10 bg-gradient-to-r from-lnh-red via-[#b3122a] to-lnh-red py-5">
         <div className="flex w-max animate-marquee gap-10 whitespace-nowrap font-display text-2xl font-bold uppercase tracking-tight text-white sm:text-3xl">
           {Array.from({ length: 2 }).flatMap((_, k) =>
-            ["AI Diagnostics", "Robotic Surgery", "Digital Hospitals", "Telemedicine", "Predictive Care", "Smart ICUs", "Data Governance", "Value-Based Care"].map((w) => (
-              <span key={w + k} className="flex items-center gap-10">{w}<Sparkles className="h-6 w-6 text-white/60" /></span>
+            [...ticker, ...ticker].map((w, j) => (
+              <span key={`${k}-${j}`} className="flex items-center gap-10">{w}<Sparkles className="h-6 w-6 text-white/60" /></span>
             ))
           )}
         </div>
@@ -119,68 +110,15 @@ export default async function Home() {
           <SectionHead eyebrow="Three days · three frontiers" title={<>One theme. <span className="text-holo">Three frontiers.</span></>}
             sub="Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care."
             action={<Link href="/about" className="btn-ghost shrink-0">Learn more <ArrowRight className="h-4 w-4" /></Link>} />
-          <div className="grid gap-4 lg:grid-cols-3">
-            {pillars.map(({ day, I, name, tone, accent, text }, i) => {
-              const d = days[day - 1];
-              const count = programme.filter((p) => p.day === day && !["BREAK", "CEREMONY"].includes(p.type)).length;
-              return (
-                <Reveal key={name} delay={i * 120}>
-                  <Link href="/agenda" className={`hud group relative block h-full overflow-hidden bg-gradient-to-br ${tone} to-transparent p-8 transition duration-500 hover:-translate-y-1`}>
-                    <span className="corner left-4 top-4 border-l border-t" /><span className="corner bottom-4 right-4 border-b border-r" />
-                    <div className="flex items-start justify-between">
-                      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-ink/60 ring-1 ring-white/15"><I className={`h-7 w-7 ${accent}`} /></span>
-                      <div className="mono text-right text-[11px] uppercase tracking-widest text-slate-400">
-                        <p>Day {day}</p>
-                        {d && <p className="font-display text-2xl font-bold normal-case tracking-tight text-white">{fmtDate(d, { day: "numeric", month: "short" })}</p>}
-                      </div>
-                    </div>
-                    <h3 className="h-display mt-10 text-4xl text-white">{name}</h3>
-                    <p className="mt-3 text-slate-300">{text}</p>
-                    <p className="mono mt-6 flex items-center gap-2 text-xs uppercase tracking-widest text-slate-400">{count} sessions <ArrowUpRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></p>
-                  </Link>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ================= JOURNEY TIMELINE ================= */}
-      <section className="container-x pb-28">
-        <Reveal className="hud relative overflow-hidden p-8 sm:p-10">
-          <NeuralField density={0.35} interactive={false} className="opacity-60" />
-          <p className="eyebrow relative">The road to the symposium</p>
-          <ol className="relative mt-10 grid gap-8 md:grid-cols-4">
-            <li aria-hidden="true" className="absolute left-0 right-0 top-[11px] hidden h-px list-none bg-gradient-to-r from-lnh-gold via-lnh-sky to-lnh-red md:block" />
-            {[
-              { k: "Pre-conference", t: "Workshops", d: wsFirst && wsLast ? `${fmtDate(wsFirst, { day: "numeric", month: "short" })} – ${fmtDate(wsLast, { day: "numeric", month: "short" })}` : "To be announced", I: Wrench, c: "bg-lnh-gold", href: "/workshops" },
-              ...days.slice(0, 3).map((d, i) => ({ k: `Day ${i + 1}`, t: DAY_THEMES[i + 1] ?? "Symposium", d: fmtDate(d, { weekday: "short", day: "numeric", month: "short" }), I: [BrainCircuit, Bot, Network][i] ?? Sparkles, c: ["bg-lnh-sky", "bg-lnh-rose", "bg-lnh-blue"][i] ?? "bg-white", href: "/agenda" })),
-            ].map(({ k, t, d, I, c, href }) => (
-              <li key={k} className="relative">
-                <span className={`relative z-10 grid h-6 w-6 place-items-center rounded-full ${c} shadow-[0_0_18px_currentColor] ring-4 ring-ink`}><span className="h-2 w-2 rounded-full bg-white" /></span>
-                <p className="mono mt-4 text-[11px] uppercase tracking-[0.25em] text-slate-400">{k}</p>
-                <Link href={href} className="mt-1 flex items-center gap-2 font-display text-2xl font-bold text-white hover:text-lnh-sky"><I className="h-5 w-5" />{t}</Link>
-                <p className="mt-1 text-sm text-slate-300">{d}</p>
-              </li>
+          {/* homepage changes 11.11.2026: icons with the heading only (no cards, dates or descriptions) */}
+          <div className="grid gap-10 sm:grid-cols-3">
+            {pillars.map(({ I, name, accent }, i) => (
+              <Reveal key={name} delay={i * 120} className="flex flex-col items-center text-center">
+                <span className="grid h-20 w-20 place-items-center rounded-3xl bg-ink/60 ring-1 ring-white/15"><I className={`h-10 w-10 ${accent}`} /></span>
+                <h3 className="h-display mt-6 text-3xl text-white sm:text-4xl">{name}</h3>
+              </Reveal>
             ))}
-          </ol>
-        </Reveal>
-      </section>
-
-      {/* ================= STATS ================= */}
-      <section className="container-x pb-28">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 lg:grid-cols-4">
-          {[
-            [String(days.length), "Symposium days"],
-            [String(workshops.length), "Pre-conference workshops"],
-            [`${speakers.length}+`, "Expert speakers"],
-            [String(programme.filter((p) => !["BREAK", "CEREMONY", "WORKSHOP"].includes(p.type)).length), "Keynotes, plenaries & panels"],
-          ].map(([n, l], i) => (
-            <Reveal key={l} delay={i * 100} className="bg-ink p-8 sm:p-10">
-              <p className="h-display text-5xl text-white sm:text-7xl">{n}</p>
-              <p className="mono mt-3 text-[11px] uppercase tracking-[0.25em] text-slate-400">{l}</p>
-            </Reveal>
-          ))}
+          </div>
         </div>
       </section>
 
@@ -190,17 +128,12 @@ export default async function Home() {
         <div className="container-x relative">
           <SectionHead eyebrow="Pre-conference · limited seats" title={<>Pre-symposium <span className="text-holo">workshops</span></>}
             sub="Simulation labs, AI tools and skills stations. Each workshop is a separate ticket with its own fee; no Symposium Pass needed."
-            action={<Link href="/workshops" className="btn-blue shrink-0">Open workshop portal <ArrowRight className="h-4 w-4" /></Link>} />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {workshops.slice(0, 3).map((w, i) => (
-              <Reveal key={w.id} delay={i * 100}><WorkshopCard w={toWorkshopDTO(w, taken, early)} compact /></Reveal>
-            ))}
-          </div>
+            action={<Link href="/workshops" className="btn-blue shrink-0">Workshops details and Registration <ArrowRight className="h-4 w-4" /></Link>} />
         </div>
       </section>
 
-      {/* ================= SPEAKERS ================= */}
-      <section className="container-x py-28">
+      {/* ================= SPEAKERS (hidden until the speakers go live: Event Settings) ================= */}
+      {ev.speakersLive && <section className="container-x py-28">
         <SectionHead eyebrow="Featured speakers" title={<>Voices of the <span className="text-grad-red">new era</span></>}
           action={<Link href="/speakers" className="btn-ghost shrink-0">All speakers <ArrowRight className="h-4 w-4" /></Link>} />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -220,14 +153,14 @@ export default async function Home() {
             </Reveal>
           ))}
         </div>
-      </section>
+      </section>}
 
       {/* ================= AGENDA PREVIEW ================= */}
       <section className="relative overflow-hidden border-y border-white/10 py-28">
         <div className="grid-lines absolute inset-0 opacity-50" />
         <div className="container-x relative">
           <SectionHead eyebrow="At a glance" title={<>Three days on <span className="text-holo">the frontier</span></>}
-            action={<Link href="/agenda" className="btn-blue shrink-0">Full agenda <ArrowRight className="h-4 w-4" /></Link>} />
+            action={<Link href="/agenda" className="btn-blue shrink-0">View full agenda <ArrowRight className="h-4 w-4" /></Link>} />
           <div className="grid gap-4 lg:grid-cols-3">
             {[1, 2, 3].map((d, i) => {
               const items = programme.filter((p) => p.day === d && p.type !== "BREAK");
@@ -259,33 +192,38 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ================= VIDEOS (shown once videos are added in Event Settings; audit H3) ================= */}
-      {ev.videos.length > 0 && <section className="container-x py-28">
-        <SectionHead eyebrow="Watch" title={<>Moments from <span className="text-holo">past editions</span></>} />
+      {/* ================= TEASER VIDEO + GALLERY (homepage changes 11.11.2026) ================= */}
+      <section className="container-x py-28">
+        <SectionHead eyebrow="Watch" title={<>Teaser and <span className="text-holo">gallery</span></>} />
         <div className="grid gap-4 md:grid-cols-3">
-          {(ev.videos.length ? ev.videos : [null, null, null]).slice(0, 3).map((v, i) => {
-            const id = v && youtubeId(v);
-            return (
-              <Reveal key={i} delay={i * 100} className={i === 0 ? "md:col-span-2 md:row-span-2" : ""}>
-                {id ? (
-                  <div className="overflow-hidden rounded-3xl border border-white/10"><iframe className="aspect-video h-full w-full" src={`https://www.youtube-nocookie.com/embed/${id}`} title={`Symposium video ${i + 1}`} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" /></div>
-                ) : (
-                  <a href={ev.youtube || "#"} target="_blank" rel="noreferrer" className="on-dark group relative grid aspect-video place-items-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-lnh-navy via-ink-700 to-[#3a0a12]">
-                    <div className="circuit absolute inset-0" />
-                    <span className="relative grid h-20 w-20 place-items-center rounded-full bg-white/10 ring-1 ring-white/30 backdrop-blur transition group-hover:scale-110 group-hover:bg-lnh-red"><Play className="ml-1 h-8 w-8 fill-white text-white" /></span>
-                    <span className="absolute bottom-5 left-6 text-sm font-medium text-slate-300">{["Highlights reel", "Keynote recap", "Workshop moments"][i]} — video coming soon</span>
-                  </a>
-                )}
-              </Reveal>
-            );
-          })}
+          <Reveal className="md:col-span-2">
+            {teaser ? (
+              <div className="overflow-hidden rounded-3xl border border-white/10"><iframe className="aspect-video h-full w-full" src={`https://www.youtube-nocookie.com/embed/${teaser}`} title="9th LNH Symposium teaser" allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" /></div>
+            ) : (
+              <div className="on-dark relative grid aspect-video place-items-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-lnh-navy via-ink-700 to-[#3a0a12]">
+                <div className="circuit absolute inset-0" />
+                <span className="relative grid h-20 w-20 place-items-center rounded-full bg-white/10 ring-1 ring-white/30 backdrop-blur"><Play className="ml-1 h-8 w-8 fill-white text-white" /></span>
+                <span className="absolute bottom-5 left-6 text-sm font-medium text-slate-300">Symposium teaser: coming soon</span>
+              </div>
+            )}
+          </Reveal>
+          <Reveal delay={100}>
+            <a href={ev.galleryUrl || GALLERY_DEFAULT} target="_blank" rel="noreferrer" className="on-dark group relative flex h-full min-h-[220px] flex-col justify-end overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-lnh-blue via-lnh-navy to-ink-700 p-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {ev.galleryThumbUrl && <img src={ev.galleryThumbUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-700 group-hover:scale-105" loading="lazy" />}
+              <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
+              <Images className="relative h-8 w-8 text-white/80" />
+              <p className="relative mt-3 font-display text-2xl font-bold text-white">8<sup className="text-[0.55em]">th</sup> LNH Symposium gallery</p>
+              <p className="relative mt-1 flex items-center gap-1.5 text-sm text-white/80">View the photos <ArrowUpRight className="h-4 w-4" /></p>
+            </a>
+          </Reveal>
         </div>
-      </section>}
+      </section>
 
       {/* ================= ABSTRACTS + KEY DATES ================= */}
       <section className="container-x">
-        <div className="grid gap-4 lg:grid-cols-5">
-          <Reveal className="lg:col-span-3">
+        <div className="grid gap-4">
+          <Reveal>
             <div className="hud relative h-full overflow-hidden p-8 sm:p-12">
               <div className="orb -bottom-24 -left-10 h-80 w-80 bg-lnh-blue/30" />
               <FileText className="relative h-8 w-8 text-lnh-sky" />
@@ -294,23 +232,6 @@ export default async function Home() {
               <div className="relative mt-8 flex flex-wrap gap-3">
                 <Link href="/abstracts" className="btn-primary">Submit an abstract</Link>
               </div>
-            </div>
-          </Reveal>
-          <Reveal className="lg:col-span-2" delay={120}>
-            <div className="hud h-full p-8">
-              <p className="eyebrow">Key dates</p>
-              <ol className="relative mt-6 space-y-6 border-l border-white/15 pl-6">
-                {keyDates.map((k) => {
-                  const past = new Date(k.d) < new Date();
-                  return (
-                    <li key={k.t} className="relative">
-                      <span className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-ink ${past ? "bg-slate-600" : "bg-lnh-red shadow-[0_0_14px_#B72025]"}`} />
-                      <p className={`font-display text-lg font-bold ${past ? "text-slate-500 line-through" : "text-white"}`}>{fmtDate(k.d)}</p>
-                      <p className="text-sm text-slate-400">{k.t}</p>
-                    </li>
-                  );
-                })}
-              </ol>
             </div>
           </Reveal>
         </div>
@@ -326,7 +247,7 @@ export default async function Home() {
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-[2.5rem] text-white sm:text-7xl">Be part of the new era</h2>
             <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="btn-light px-8 py-4 text-base">Get your pass <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/register" className="btn-light px-8 py-4 text-base">Register <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Browse workshops</Link>
             </div>
           </div>

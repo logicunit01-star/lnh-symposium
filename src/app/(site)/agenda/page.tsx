@@ -3,6 +3,7 @@ import { getProgramme, seatsTaken } from "@/lib/queries";
 import { getEvent, isEarlyBird, eventDays, DAY_THEMES } from "@/lib/event";
 import { PageHero } from "@/components/ui/PageHero";
 import { AgendaTabs } from "./AgendaTabs";
+import { AgendaTools, ItineraryItem } from "./AgendaTools";
 import { SessionCard } from "@/components/site/SessionCard";
 import { cn, fmtDate, fmtTime, SESSION_TYPE_LABEL } from "@/lib/utils";
 
@@ -59,6 +60,8 @@ export default async function Agenda({ searchParams }: { searchParams: { type?: 
             <button className="btn-ghost btn-sm">Apply</button>
           </form>
         </nav>
+        <AgendaTools csvHref={`/api/agenda/csv${type || hall ? `?${new URLSearchParams({ ...(type ? { type } : {}), ...(hall ? { hall } : {}) })}` : ""}`}
+          items={all.filter((p) => p.type !== "BREAK").map((p) => ({ id: p.id, title: p.title, type: SESSION_TYPE_LABEL[p.type] ?? p.type, hall: p.hall, start: p.startsAt.toISOString(), end: p.endsAt.toISOString(), day: p.day, href: `/${p.type === "WORKSHOP" ? "workshops" : "sessions"}/${p.slug}` }))} />
         {(type || hall) && <p className="-mt-4 mb-6 text-sm text-slate-300">Showing {type ? SESSION_TYPE_LABEL[type].toLowerCase() + " sessions" : "all sessions"}{hall ? ` in ${hall}` : ""}. <Link href="/agenda" className="text-lnh-sky underline">Clear filters</Link></p>}
         <AgendaTabs
           initial={Math.max(0, days.indexOf(type === "WORKSHOP" ? 0 : Number(searchParams.day) || days[0]))}
@@ -71,13 +74,13 @@ export default async function Agenda({ searchParams }: { searchParams: { type?: 
                 {list.map((g) => {
                   const real = g.items.filter((p) => p.type !== "BREAK");
                   return (
-                    <li key={g.key} className="relative">
+                    <li key={g.key} className="itin-slot relative">
                       <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-lnh-red ring-4 ring-ink sm:-left-[47px]" />
                       <p className="mono mb-2 text-sm text-lnh-sky">{d === 0 ? `${fmtDate(g.at, { weekday: "short", day: "numeric", month: "short" })} · ` : ""}{fmtTime(g.at)} — {fmtTime(g.end)}{real.length > 1 && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-200">{real.length} in parallel</span>}</p>
                       <div className={cn("grid gap-4", real.length > 1 && "md:grid-cols-2", real.length > 2 && "xl:grid-cols-3")}>
                         {g.items.map((p) => p.type === "BREAK"
                           ? <div key={p.id} className="rounded-2xl border border-dashed border-white/15 px-6 py-4 text-sm text-slate-300 md:col-span-full">☕ {p.title} · {p.hall}</div>
-                          : <SessionCard key={p.id} s={p} taken={taken[p.id]} early={early} href={`/${p.type === "WORKSHOP" ? "workshops" : "sessions"}/${p.slug}`} />)}
+                          : <ItineraryItem key={p.id} id={p.id}><SessionCard s={p} taken={taken[p.id]} early={early} href={`/${p.type === "WORKSHOP" ? "workshops" : "sessions"}/${p.slug}`} /></ItineraryItem>)}
                       </div>
                     </li>
                   );

@@ -17,7 +17,7 @@ const GUIDE = [
   { key: "Radiology", name: "Radiology Tutorial Room", short: "Radiology", x: 84, y: 20, info: "Tutorial Room-1 in the Radiology department, main hospital." },
 ];
 
-export const metadata = { title: "Venues & Campus Map" };
+export const metadata = { title: "Venue Map" };
 export const dynamic = "force-dynamic";
 
 export default async function VenuesPage() {

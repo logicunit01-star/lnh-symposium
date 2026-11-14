@@ -16,20 +16,16 @@ const NAV: Item[] = [
       { label: "About the Symposium", href: "/about", desc: "Theme, purpose & significance" },
       { label: "Organizing Committee", href: "/committee", desc: "The people behind the event" },
       { label: "Awards", href: "/awards", desc: "Best paper & poster prizes" },
-      { label: "Venues & Campus Map", href: "/venues", desc: "Where each workshop and session happens" },
+      { label: "Venue Map", href: "/venues", desc: "Where each workshop and session happens" },
     ],
   },
   {
     label: "Programme",
     children: [
-      { label: "Agenda", href: "/agenda", desc: "Full schedule, day by day" },
-      { label: "Plenary Session", href: "/programme/plenary", desc: "Day 1 keynote, panelists & moderator" },
-      { label: "Debate Session", href: "/programme/debate", desc: "Day 2 keynote, panelists & moderator" },
-      { label: "Scientific Sessions", href: "/programme/scientific", desc: "Every session with its full agenda" },
+      { label: "Agenda", href: "/agenda", desc: "Plenary, debate and scientific sessions, day by day" },
       { label: "Pre-symposium activities", href: "/programme/pre-symposium-activities", desc: "Just before the symposium" },
       { label: "Inaugural session", href: "/programme/inaugural-session", desc: "The opening of the symposium" },
-      { label: "Meet the Experts", href: "/programme/meet-the-experts", desc: "Our guest experts" },
-      { label: "Speakers", href: "/speakers", desc: "Keynotes, panelists & faculty" },
+      { label: "Meet the Experts & Speakers", href: "/speakers", desc: "Guest experts, keynotes and faculty" },
     ],
   },
   { label: "Workshops", href: "/workshops" },
@@ -98,7 +94,7 @@ export function Nav({ year, account }: { year: number; account?: { name: string;
             </div>
             {account?.hasPass
               ? <Link href="/account/bookings" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex">My tickets</Link>
-              : <Link href="/register" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex">Get your pass</Link>}
+              : <Link href="/register" className="btn-primary hidden h-11 whitespace-nowrap px-5 py-0 text-sm sm:inline-flex">Register</Link>}
             <button className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/15 text-white sm:h-11 sm:w-11 lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu" aria-expanded={open}>
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -119,7 +115,7 @@ export function Nav({ year, account }: { year: number; account?: { name: string;
             </div>
           ))}
           <Link href={account ? "/account/bookings" : "/account"} className="btn-ghost mt-8 w-full">{account ? "My tickets" : "Sign in / Create account"}</Link>
-          {!account?.hasPass && <Link href="/register" className="btn-primary mt-3 w-full">Get your pass</Link>}
+          {!account?.hasPass && <Link href="/register" className="btn-primary mt-3 w-full">Register</Link>}
         </div>
       </div>
     </header>

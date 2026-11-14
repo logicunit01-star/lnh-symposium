@@ -13,9 +13,9 @@ export const viewport: Viewport = { themeColor: "#040B1E" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
-        {/* apply the visitor's saved theme before paint (public site only; admin ignores it) */}
+        {/* Day view is the default (homepage changes 11.11.2026); a visitor's saved choice is applied before paint (public site only) */}
         <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add("js");try{var t=localStorage.getItem("lnh-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}` }} />
       </head>
       <body>{children}</body>

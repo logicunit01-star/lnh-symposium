@@ -6,15 +6,16 @@ import { PageTitle } from "@/components/admin/ui";
 import { fmtDateTime } from "@/lib/utils";
 import { saveUser } from "../actions";
 
-export default async function Users() {
+export default async function Users({ searchParams }: { searchParams: { err?: string } }) {
   await requirePerm("users");
   const users = await db.select().from(s.users).orderBy(asc(s.users.createdAt));
   return (
     <>
       <PageTitle title="Users & roles" sub="Role-based access: each role only sees the sections it needs. Heads of Department only see workshops of the department set here." />
+      {searchParams.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{searchParams.err}</p>}
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department (HOD)</th><th>New password</th><th>Active</th><th>Last login</th><th /></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department (HOD / focal person)</th><th>New password</th><th>Active</th><th>Last login</th><th /></tr></thead>
           <tbody>{[...users, null].map((u) => {
             const id = u ? `u_${u.id}` : "u_new";
             return (

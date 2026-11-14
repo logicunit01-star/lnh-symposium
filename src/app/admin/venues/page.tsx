@@ -11,12 +11,15 @@ import { deleteVenue, saveVenue } from "../workshops/actions";
 
 export const metadata = { title: "Venues & map" };
 
-export default async function Venues({ searchParams }: { searchParams: { v?: string } }) {
+const USAGE: Record<string, string> = { WORKSHOP: "Workshops", SCIENTIFIC: "Scientific sessions", BOTH: "Both" };
+
+export default async function Venues({ searchParams }: { searchParams: { v?: string; use?: string } }) {
   const u = await requirePerm("venues");
   const venues = await db.select({
     v: s.venues,
     n: sql<number>`(select count(*) from sessions se where se.venue_id = venues.id and se.status <> 'REJECTED')::int`,
-  }).from(s.venues).orderBy(asc(s.venues.building), asc(s.venues.name));
+  }).from(s.venues).orderBy(asc(s.venues.building), asc(s.venues.name))
+    .then((r) => searchParams.use && USAGE[searchParams.use] ? r.filter((x) => x.v.usage === searchParams.use || x.v.usage === "BOTH") : r);
   const sel = searchParams.v === "new" ? null : venues.find((x) => x.v.id === searchParams.v)?.v ?? null;
   const editing = searchParams.v === "new" || !!sel;
   const T = ({ n, l, v, t = "text", req }: { n: string; l: string; v?: any; t?: string; req?: boolean }) => <div><label className="a-label">{l}</label><input name={n} type={t} required={req} defaultValue={v ?? ""} className="a-input" step={t === "number" ? "any" : undefined} /></div>;
@@ -31,14 +34,17 @@ export default async function Venues({ searchParams }: { searchParams: { v?: str
             <CampusMap pins={venues.filter((x) => x.v.active).map((x) => x.v)} active={sel?.id} href={(p) => `/admin/venues?v=${p.id}`} className="w-full rounded-lg" />
             <p className="px-2 pt-2 text-xs text-slate-500">Schematic, not to scale. Click a pin to edit. Replace the building blocks with LNH's site plan when available.</p>
           </div>
+          <div className="flex flex-wrap gap-2 text-xs">{[["", "All rooms"], ["WORKSHOP", "Workshop rooms"], ["SCIENTIFIC", "Scientific session rooms"]].map(([k, l]) => (
+            <Link key={k} href={k ? `/admin/venues?use=${k}` : "/admin/venues"} className={cn("rounded-full border px-3 py-1 font-semibold", (searchParams.use ?? "") === k ? "border-lnh-blue bg-lnh-blue text-white" : "border-slate-200 text-slate-600")}>{l}</Link>))}
+            <span className="self-center text-slate-500">The 43-room list (4 Nov) is for workshops only (LNH, 13 Nov).</span></div>
           <div className="a-card overflow-x-auto">
             <table className="a-table">
-              <thead><tr><th>Venue</th><th>Location</th><th>Seats</th><th>Online facility</th><th>Workshops</th><th /></tr></thead>
+              <thead><tr><th>Venue</th><th>Location</th><th>Seats</th><th>Used for</th><th>Online facility</th><th>Sessions</th><th /></tr></thead>
               <tbody>{venues.map(({ v, n }) => (
                 <tr key={v.id} className={cn(!v.active && "opacity-50", sel?.id === v.id && "bg-lnh-blue/5")}>
                   <td className="font-medium">{v.name}{!v.active && <span className="ml-1 text-xs text-slate-400">(inactive)</span>}</td>
                   <td className="text-xs text-slate-500">{v.building}{v.floor ? `, ${v.floor}` : ""}</td>
-                  <td>{v.capacity}</td><td className="text-xs">{v.onlineFacility ?? "—"}</td><td>{n}</td>
+                  <td>{v.capacity}{v.equipment && v.usage === "WORKSHOP" && <span className="block text-[11px] text-slate-400">{v.equipment}</span>}</td><td className="text-xs">{USAGE[v.usage] ?? v.usage}</td><td className="text-xs">{v.onlineFacility ?? "—"}</td><td>{n}</td>
                   <td><Link href={`/admin/venues?v=${v.id}`} className="text-xs font-semibold text-lnh-blue hover:underline">Edit</Link></td>
                 </tr>
               ))}</tbody>
@@ -54,7 +60,8 @@ export default async function Venues({ searchParams }: { searchParams: { v?: str
               <T n="equipment" l="Fixed equipment" v={sel?.equipment} />
               <div><label className="a-label">Directions</label><textarea name="directions" rows={2} defaultValue={sel?.directions ?? ""} className="a-input" /></div>
               <div className="grid grid-cols-2 gap-3"><T n="mapX" l="Map X (0–100, left→right)" t="number" v={sel?.mapX ?? 50} /><T n="mapY" l="Map Y (0–100, top→bottom)" t="number" v={sel?.mapY ?? 50} /></div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={sel?.active ?? true} />Active (offered in Form A)</label>
+              <div><label className="a-label">Used for</label><select name="usage" defaultValue={sel?.usage ?? "WORKSHOP"} className="a-input">{Object.entries(USAGE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={sel?.active ?? true} />Active (offered in the forms)</label>
               <div className="flex gap-2"><button className="a-btn-primary">Save venue</button><Link href="/admin/venues" className="a-btn-ghost">Cancel</Link></div>
               {sel && <button formAction={deleteVenue.bind(null, sel.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete (deactivates if workshops use it)</button>}
             </form>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { AlertTriangle, CalendarRange, Lock, Megaphone, Users } from "lucide-react";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
@@ -22,7 +22,7 @@ export default async function Programme({ searchParams }: { searchParams: { day?
   const day = days.includes(searchParams.day ?? "") ? searchParams.day! : days[0];
   const [props, rooms, conflicts, fixed] = await Promise.all([
     db.query.sessions.findMany({ where: and(eq(s.sessions.proposal, true), inArray(s.sessions.status, ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"])), orderBy: asc(s.sessions.createdAt), with: { venue: true, people: true } }),
-    db.select().from(s.venues).where(and(eq(s.venues.active, true), inArray(s.venues.building, SC_BUILDINGS))).orderBy(asc(s.venues.building), asc(s.venues.name)),
+    db.select().from(s.venues).where(and(eq(s.venues.active, true), ne(s.venues.usage, "WORKSHOP"), inArray(s.venues.building, SC_BUILDINGS))).orderBy(asc(s.venues.building), asc(s.venues.name)),
     personConflicts(),
     db.select().from(s.sessions).where(and(eq(s.sessions.proposal, false), inArray(s.sessions.type, ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "CEREMONY"]))),
   ]);

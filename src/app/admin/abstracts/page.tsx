@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL, ne } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -27,7 +27,7 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
     db.select({ name: s.departments.name }).from(s.departments).orderBy(asc(s.departments.name)),
     db.select({ unnotified: sql<number>`count(*)::int` }).from(s.abstracts).where(and(sql`status in ('ACCEPTED','REJECTED')`, isNull(s.abstracts.authorNotifiedAt))),
   ]);
-  const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building }).from(s.venues).where(eq(s.venues.active, true)).orderBy(asc(s.venues.building), asc(s.venues.name));
+  const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building }).from(s.venues).where(and(eq(s.venues.active, true), ne(s.venues.usage, "WORKSHOP"))).orderBy(asc(s.venues.building), asc(s.venues.name));
   const canAssign = can(u.role, "abstracts.review");
   const here = `/admin/abstracts${Object.keys(searchParams).length ? "?" + new URLSearchParams(searchParams as any).toString() : ""}`;
   const cnt = (k: string) => counts.find((x) => x.k === k)?.n ?? 0;

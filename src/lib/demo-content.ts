@@ -26,12 +26,15 @@ export const EVENT_DEFAULTS = {
   eventDays: ["2027-01-29", "2027-01-30", "2027-01-31"],
   venue: "Liaquat National Hospital, Stadium Road, Karachi",
   regPrefix: "SYM",
+  // LNH social media (13 Nov 2026), footer icons
+  instagram: "https://www.instagram.com/lnhandmc", linkedin: "https://www.linkedin.com/company/lnhandmc/",
+  facebook: "https://www.facebook.com/share/1CJDxrqEDS/", youtube: "https://www.youtube.com/@lnhandmc",
   earlyBirdUntil: D("2026-12-10T23:59:59+05:00"),
   // SC feedback (29 Oct 2026): abstracts open 15 Nov, close 15 Dec; decisions and invitations 31 Dec
   abstractOpen: D("2026-11-15T00:00:00+05:00"),
   abstractDeadline: D("2026-12-15T23:59:59+05:00"),
-  workshopStart: D("2026-12-14T00:00:00+05:00"),
-  workshopEnd: D("2027-01-14T23:59:59+05:00"),
+  workshopStart: D("2026-12-15T00:00:00+05:00"),
+  workshopEnd: D("2027-01-16T23:59:59+05:00"),
   themeWeeks: [
     { from: "2026-12-14", label: "Emergency, trauma and critical care" },
     { from: "2026-12-21", label: "Women and child health" },
@@ -198,7 +201,7 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
     bio: `${x.title} ${x.name} (${x.degrees}) is ${x.designation.toLowerCase()} at ${x.institution}, working on ${x.topic.toLowerCase()}. (Placeholder bio — replace from the admin panel.)`,
   }))).returning({ id: s.speakers.id });
 
-  await db.insert(s.venues).values(VENUES).onConflictDoNothing();
+  await db.insert(s.venues).values(VENUES.map((v) => ({ ...v, usage: "SCIENTIFIC" }))).onConflictDoNothing(); // D5: the 43 workshop rooms come from migration 0015
   const venueRows = await db.select({ id: s.venues.id, name: s.venues.name }).from(s.venues);
   const venueId = (name: string) => venueRows.find((v) => v.name === name)?.id ?? null;
 

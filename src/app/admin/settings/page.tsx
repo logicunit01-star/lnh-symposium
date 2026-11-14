@@ -7,6 +7,7 @@ import { PageTitle } from "@/components/admin/ui";
 import { TZ } from "@/lib/utils";
 import { saveSettings, saveFee, resetDemoContent } from "../actions";
 import { DEFAULT_QC_GUIDELINES, SESSION_FORMATS } from "@/lib/scientific";
+import { GALLERY_DEFAULT, TICKER_DEFAULT } from "@/lib/event";
 
 const dt = (d: Date | null) => {
   if (!d) return "";
@@ -62,7 +63,11 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <F n="contactEmail" l="Contact email" v={ev.contactEmail} /><F n="contactPhone" l="Contact phone" v={ev.contactPhone} />
         <F n="facebook" l="Facebook" v={ev.facebook} /><F n="instagram" l="Instagram" v={ev.instagram} />
         <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} />
-        <div className="sm:col-span-2"><label className="a-label">Homepage videos (YouTube URLs, one per line)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
+        <div className="sm:col-span-2"><label className="a-label">Homepage teaser / promo videos (YouTube URLs, one per line; the first is the main video)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
+        <div className="sm:col-span-2"><label className="a-label">Homepage ticker (one message per line)</label><textarea name="tickerItems" rows={3} defaultValue={(ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT).join("\n")} className="a-input" /></div>
+        <F n="galleryUrl" l="Previous symposium gallery link" v={ev.galleryUrl ?? GALLERY_DEFAULT} /><F n="galleryThumbUrl" l="Gallery thumbnail image URL (optional)" v={ev.galleryThumbUrl} />
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="agendaLive" defaultChecked={ev.agendaLive} /> Agenda is live (shows "View Agenda" in the homepage hero)</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="speakersLive" defaultChecked={ev.speakersLive} /> Speakers are live (shows "Explore Speakers" and the speakers section on the homepage)</label>
         <div className="sm:col-span-2"><button className="a-btn-primary">Save settings</button></div>
       </form>
       <form action={resetDemoContent} className="a-card mt-6 flex flex-wrap items-center justify-between gap-3 border-rose-200 p-5">

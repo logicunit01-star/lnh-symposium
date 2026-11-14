@@ -26,7 +26,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
     db.select().from(s.venues),
   ]);
   const own = !sc.all && w.department === sc.department;
-  const canEdit = !w.locked && (can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")));
+  const canEdit = (!w.locked || can(u.role, "workshops.review")) && (can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")));
   const canReview = can(u.role, "workshops.review");
   const canMark = can(u.role, "workshops.edit");
   const free = w.capacity ? Math.max(0, w.capacity - row.booked) : 0;
@@ -61,27 +61,33 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
           <div className="a-card p-5">
             <div className="flex flex-wrap items-center gap-3">
               <WpStatus s={w.status} locked={w.locked} />
-              {w.locked && <span className="flex items-center gap-1 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />Core fields locked {w.reviewedAt ? `since ${fmtDateTime(w.reviewedAt)}` : ""}</span>}
+              {w.locked && <span className="flex items-center gap-1 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />Decided {w.reviewedAt ? fmtDateTime(w.reviewedAt) : ""}; only the committee or Super Admin can edit</span>}
               {w.status === "APPROVED" && <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", w.flyerStatus === "APPROVED" ? "bg-emerald-100 text-emerald-800" : w.flyerStatus === "CHANGES" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800")}>Flyer: {w.flyerStatus === "APPROVED" ? "approved by Marketing" : w.flyerStatus === "CHANGES" ? "changes requested" : "awaiting Marketing review"}</span>}
               {row.clash && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Venue/time clash</span>}
               {w.coChairDecision && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Co-Chair decision: {DECISION_LABEL[w.coChairDecision]}</span>}
             </div>
             <dl className="mt-5 grid gap-4 sm:grid-cols-3">
-              <F l="Date" v={fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} />
+              <F l={w.days > 1 ? "Dates" : "Date"} v={w.days > 1 ? `${fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(w.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} (${w.days} full days)` : fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} />
               <F l="Time (24h)" v={<span className="font-mono">{row.time}</span>} />
-              <F l="Venue" v={venue ? `${venue.name}, ${venue.building}` : w.hall} />
+              <F l="Venue" v={w.mode === "ONLINE" ? "Online" : venue ? `${venue.name}, ${venue.building}` : w.hall} />
               <F l="Seat cap" v={w.capacity} /><F l="Fee" v={pkr(w.fee)} /><F l="CME hours" v={w.cmeHours} />
               <F l="Format" v={w.format} /><F l="Contributing departments" v={w.contributors} /><F l="Submitted" v={w.submittedAt ? fmtDateTime(w.submittedAt) : null} />
+              <F l="Mode" v={{ ONSITE: "Onsite", ONLINE: "Online", HYBRID: "Hybrid" }[w.mode] ?? w.mode} /><F l="Organising person" v={w.organiser} /><F l="Target audience" v={w.targetAudience} />
+              {w.onlineLink && <F l="Online link" v={<a href={w.onlineLink} className="break-all text-lnh-blue hover:underline" target="_blank" rel="noreferrer">{w.onlineLink}</a>} />}
+              {w.proposedTitle && w.proposedTitle !== w.title && <F l="Proposed title" v={w.proposedTitle} />}
             </dl>
             {w.description && <p className="mt-5 border-t border-slate-100 pt-4 text-sm text-slate-600">{w.description}</p>}
+            {w.objectives && <div className="mt-4 border-t border-slate-100 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Educational objectives</p><p className="mt-1 whitespace-pre-line text-sm text-slate-600">{w.objectives}</p></div>}
+            {w.prelimProgramme && <div className="mt-4 border-t border-slate-100 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Preliminary programme</p><p className="mt-1 whitespace-pre-line font-mono text-xs text-slate-600">{w.prelimProgramme}</p></div>}
           </div>
 
           <div className="a-card p-5">
-            <h2 className="font-display text-base font-bold">Lead faculty</h2>
+            <h2 className="font-display text-base font-bold">Workshop Director</h2>
             <dl className="mt-3 grid gap-4 sm:grid-cols-3">
               <F l="Name" v={w.leadFaculty} /><F l="Degrees" v={w.facultyDegrees} /><F l="Contact" v={w.facultyContact} />
             </dl>
             {w.facultyProfile && <p className="mt-3 whitespace-pre-line text-sm text-slate-600">{w.facultyProfile}</p>}
+            {w.facilitatorNames.length > 0 && <div className="mt-4 border-t border-slate-100 pt-3"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Facilitators</p><ul className="mt-1 list-disc pl-5 text-sm text-slate-600">{w.facilitatorNames.map((n, i) => <li key={i}>{n}</li>)}</ul></div>}
           </div>
 
           <div className="a-card p-5">

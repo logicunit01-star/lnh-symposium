@@ -156,9 +156,17 @@ npm install && npm run db:setup && npm run build && npm start   # behind Nginx/I
 
 Edit in `src/lib/permissions.ts`.
 
+## Deploying to the LNH server
+See [`deploy/LNH-SERVER.md`](deploy/LNH-SERVER.md) (PM2 + cPanel Apache proxy, PostgreSQL, scheduled jobs, PayPro, backups).
+
 ## Payments
 - `PAYMENT_PROVIDER=mock` — a simulated gateway page (approve/decline) for demos and UAT.
 - `PAYMENT_PROVIDER=jazzcash` — JazzCash hosted checkout with HMAC-SHA256 secure hash and verified callback (`/api/payments/jazzcash/callback`). **Verify field names against your merchant integration guide and test in sandbox before go-live.**
+- `PAYMENT_PROVIDER=paypro` — PayPro API v2 (card, bank app, ATM, over the counter). Variables: `PAYPRO_BASE_URL` (demo `https://demoapi.paypro.com.pk`; live URL from PayPro), `PAYPRO_CLIENT_ID`, `PAYPRO_CLIENT_SECRET`, `PAYPRO_MERCHANT_ID` (your PayPro username), `PAYPRO_CALLBACK_USERNAME`, `PAYPRO_CALLBACK_PASSWORD` (you choose these and give them to PayPro), optional `PAYPRO_DUE_DAYS` (default 3).
+  - Give PayPro the callback address `https://<your domain>/paypro/uis` with the callback username and password. Bank/ATM/OTC payments are confirmed through it.
+  - Card payments return to `/api/payments/paypro/return`, which asks PayPro for the order status (the result in the address is not trusted).
+  - The daily cron (`/api/cron/reminders`) also checks pending PayPro orders from the last 10 days, so a missed callback is caught before any "payment pending" reminder.
+  - Test locally: `node .e2e/paypro-mock.cjs` (stand-in on port 4555) and `node .e2e/r6paypro.cjs <3 pending registration tokens>` with `PAYPRO_BASE_URL=http://localhost:4555`, `PAYPRO_CLIENT_ID=cid`, `PAYPRO_CLIENT_SECRET=sec`, `PAYPRO_CALLBACK_USERNAME=ppuser`, `PAYPRO_CALLBACK_PASSWORD=pp-pass-123`.
 - `PAYMENT_PROVIDER=manual` — shows bank details; desk staff mark payments as received.
 - PayFast / bank IPG / Easypaisa: add a branch in `src/lib/payments.ts → startCheckout()` and a callback that calls `settlePayment()`.
 

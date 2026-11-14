@@ -9,7 +9,7 @@ import { getEvent } from "@/lib/event";
 import { themeWeekOf } from "@/lib/demo-content";
 import { sendEmail, emailLayout } from "@/lib/notify";
 import { appUrl, fmtDate, ymdPk } from "@/lib/utils";
-import { isSunday, roomClash, todayPk } from "@/lib/wp-avail";
+import { addDays, isSunday, roomClash, spanHasSunday, todayPk } from "@/lib/wp-avail";
 
 export type FormResult = { error?: string; ok?: string } | null;
 
@@ -43,7 +43,8 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
     if (!existing || existing.type !== "WORKSHOP") return { error: "Workshop not found." };
     const own = !sc.all && existing.department === sc.department;
     if (!(can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")))) return { error: "You cannot edit this request." };
-    if (existing.locked) return { error: "This request is locked after the committee decision. Ask a Co-Chair to unlock it for revision." };
+    // D3 (13 Nov): editable until the committee decides; after that only the committee (Co-Chairs) or Super Admin can edit
+    if (existing.locked && !can(u.role, "workshops.review")) return { error: "This request is locked after the committee decision. The committee or Super Admin can still edit it." };
   }
 
   const title = str(f, "title") ?? "";
@@ -53,7 +54,10 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   const dur = int(f, "duration"), sm = Number(str(f, "startH")) * 60 + Number(str(f, "startM"));
   const end = dur >= 30 && sm + dur <= 24 * 60 ? `${String(Math.floor((sm + dur) / 60)).padStart(2, "0")}:${String((sm + dur) % 60).padStart(2, "0")}` : `${str(f, "endH")}:${str(f, "endM")}`;
   const department = sc.all ? str(f, "department") : sc.department;
-  const venueId = str(f, "venueId");
+  const mode = ["ONSITE", "ONLINE", "HYBRID"].includes(str(f, "mode") ?? "") ? str(f, "mode")! : "ONSITE";
+  const days = Math.min(3, Math.max(1, int(f, "days", 1)));
+  const venueId = mode === "ONLINE" ? null : str(f, "venueId");
+  const onlineLink = mode === "ONSITE" ? null : str(f, "onlineLink");
   const capacity = int(f, "capacity");
   const contact = str(f, "facultyContact");
 
@@ -64,28 +68,38 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   const keepsDate = !!existing && ymdPk(existing.startsAt) === date;
   if (!keepsDate && date < todayPk()) return { error: "The date has passed. Choose a date from today onwards." };
   if (!keepsDate && isSunday(date)) return { error: "Workshops cannot be held on a Sunday. Choose another day." };
-  const startsAt = new Date(`${date}T${start}:00+05:00`), endsAt = new Date(`${date}T${end}:00+05:00`);
-  if (ev.workshopStart && ev.workshopEnd && (startsAt < ev.workshopStart || startsAt > ev.workshopEnd))
+  if (days > 1 && spanHasSunday(date, days)) return { error: `A ${days}-day workshop cannot include a Sunday. Choose another start date.` };
+  // D1: multi-day workshops run 09:00-17:00 on consecutive days; the record spans first day 09:00 to last day 17:00
+  const [s0, e0] = days > 1 ? ["09:00", "17:00"] : [start, end];
+  const startsAt = new Date(`${date}T${s0}:00+05:00`), endsAt = new Date(`${addDays(date, days - 1)}T${e0}:00+05:00`);
+  if (ev.workshopStart && ev.workshopEnd && (startsAt < ev.workshopStart || endsAt > ev.workshopEnd) && !keepsDate)
     return { error: `The date must fall inside the workshop window (${fmtDate(ev.workshopStart, { day: "numeric", month: "short", year: "numeric" })} – ${fmtDate(ev.workshopEnd, { day: "numeric", month: "short", year: "numeric" })}).` };
-  if (!HHMM.test(start) || !HHMM.test(end) || endsAt <= startsAt) return { error: "End time must be after start time (24-hour HH:MM)." };
-  if (!venueId) return { error: "Choose a venue." };
-  const [venue] = await db.select().from(s.venues).where(eq(s.venues.id, venueId));
-  if (!venue) return { error: "Venue not found." };
+  if (!HHMM.test(s0) || !HHMM.test(e0) || endsAt <= startsAt) return { error: "End time must be after start time (24-hour HH:MM)." };
+  if (mode !== "ONLINE" && !venueId) return { error: "Choose a venue." };
+  const [venue] = venueId ? await db.select().from(s.venues).where(eq(s.venues.id, venueId)) : [];
+  if (venueId && !venue) return { error: "Venue not found." };
   if (capacity < 1) return { error: "Seat cap must be at least 1." };
-  if (capacity > venue.capacity) return { error: `Seat cap ${capacity} exceeds the capacity of ${venue.name} (${venue.capacity}).` };
+  if (venue && capacity > venue.capacity) return { error: `Seat cap ${capacity} exceeds the capacity of ${venue.name} (${venue.capacity}).` };
+  if (onlineLink && !/^https?:\/\/\S+$/i.test(onlineLink)) return { error: "The online link must start with https://" };
+  const organiser = str(f, "organiser"), objectives = str(f, "objectives"), targetAudience = str(f, "targetAudience");
+  if (!organiser) return { error: "Enter the organising person." };
+  if (!objectives) return { error: "Enter the educational objectives." };
+  if (!targetAudience) return { error: "Enter the target audience." };
+  const facilitatorNames = (str(f, "facilitatorNames") ?? "").split(/\n/).map((x) => x.trim()).filter(Boolean).slice(0, 30);
   if (contact && !PHONE.test(contact.replace(/\s/g, ""))) return { error: "Speaker contact number must look like 0300-1234567." };
 
   // First come, first served: a room booked (or awaiting approval) for an overlapping time cannot be booked again
-  const clash = await roomClash(venueId, startsAt, endsAt, id);
-  if (clash) return { error: `${venue.name} is already booked ${clash.from}–${clash.to} that day for “${clash.title}”${clash.status === "APPROVED" ? "" : " (awaiting approval)"}. Choose another time or venue.` };
+  const clash = venueId ? await roomClash(venueId, startsAt, endsAt, id) : null;
+  if (clash && venue) return { error: `${venue.name} is already booked ${clash.from}–${clash.to} that day for “${clash.title}”${clash.status === "APPROVED" ? "" : " (awaiting approval)"}. Choose another time or venue.` };
 
   const fee = int(f, "fee"), earlyFee = str(f, "earlyFee") ? int(f, "earlyFee") : null;
   const data = {
     title, description: str(f, "description"), department, contributors: str(f, "contributors"), format: str(f, "format"),
     category: str(f, "category") === "A" ? "A" : "B", themeWeek: themeWeekOf(date, ev.themeWeeks),
-    startsAt, endsAt, venueId, hall: venue.name, capacity, fee, earlyFee, cmeHours: str(f, "cmeHours") ? Number(str(f, "cmeHours")) : null,
+    startsAt, endsAt, venueId, hall: venue ? venue.name : "Online", capacity, days, mode, onlineLink,
+    organiser, objectives, targetAudience, prelimProgramme: str(f, "prelimProgramme"), facilitatorNames, fee, earlyFee, cmeHours: str(f, "cmeHours") ? Number(str(f, "cmeHours")) : null,
     leadFaculty: str(f, "leadFaculty"), facultyDegrees: str(f, "facultyDegrees"), facultyContact: contact, facultyProfile: str(f, "facultyProfile"),
-    facilitators: int(f, "facilitators"), volunteers: int(f, "volunteers"), technicians: int(f, "technicians"),
+    facilitators: facilitatorNames.length, volunteers: int(f, "volunteers"), technicians: int(f, "technicians"),
     equipment: parseEquipment(str(f, "equipment")),
   };
 
@@ -96,7 +110,7 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   } else {
     const slug = `ws-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 6)}`;
     const [row] = await db.insert(s.sessions).values({
-      ...data, slug, type: "WORKSHOP", day: 0, registrable: true, status: "SUBMITTED", submittedAt: new Date(), proposedById: u.sub,
+      ...data, proposedTitle: title, slug, type: "WORKSHOP", day: 0, registrable: true, status: "SUBMITTED", submittedAt: new Date(), proposedById: u.sub,
     }).returning({ id: s.sessions.id });
     sid = row.id;
     await log(sid, u, null, "SUBMITTED", "Form A submitted");
@@ -193,6 +207,7 @@ export async function saveVenue(id: string | null, f: FormData) {
     name: str(f, "name")!, building: str(f, "building") || "—", floor: str(f, "floor"), capacity: int(f, "capacity", 1),
     onlineFacility: str(f, "onlineFacility"), equipment: str(f, "equipment"), directions: str(f, "directions"),
     mapX: pct("mapX"), mapY: pct("mapY"), active: f.get("active") === "on",
+    usage: ["WORKSHOP", "SCIENTIFIC", "BOTH"].includes(str(f, "usage") ?? "") ? str(f, "usage")! : "BOTH",
   };
   if (id) {
     await db.update(s.venues).set(data).where(eq(s.venues.id, id));

@@ -15,6 +15,10 @@ export async function feedbackStats(sessionId: string) {
   const dist = await db.select({ k: s.feedback.overall, n: sql<number>`count(*)::int` }).from(s.feedback).where(eq(s.feedback.sessionId, sessionId)).groupBy(s.feedback.overall);
   const comments = await db.select({ c: s.feedback.comments, o: s.feedback.overall, t: s.feedback.createdAt }).from(s.feedback)
     .where(sql`${s.feedback.sessionId} = ${sessionId} and ${s.feedback.comments} is not null and ${s.feedback.comments} <> ''`).orderBy(desc(s.feedback.createdAt)).limit(20);
-  return { ...agg, dist: [1, 2, 3, 4, 5].map((k) => dist.find((d) => d.k === k)?.n ?? 0), comments, at: new Date().toISOString() };
+  // N7 workshop form: average per statement (raw 1-5, as answered), Yes/Maybe/No and contact opt-ins
+  const wf = await db.select({ a: s.feedback.answers, r: s.feedback.recommendChoice, c: s.feedback.contactOk }).from(s.feedback).where(sql`${s.feedback.sessionId} = ${sessionId} and ${s.feedback.answers} is not null`);
+  const statements = wf.length ? Array.from({ length: (wf[0].a ?? []).length }, (_, i) => Math.round((wf.reduce((t, x) => t + (x.a?.[i] ?? 0), 0) / wf.length) * 100) / 100) : null;
+  const workshopForm = wf.length ? { n: wf.length, statements, yes: wf.filter((x) => x.r === "YES").length, maybe: wf.filter((x) => x.r === "MAYBE").length, no: wf.filter((x) => x.r === "NO").length, contact: wf.filter((x) => x.c).length } : null;
+  return { ...agg, workshopForm, dist: [1, 2, 3, 4, 5].map((k) => dist.find((d) => d.k === k)?.n ?? 0), comments, at: new Date().toISOString() };
 }
 export type FeedbackStats = Awaited<ReturnType<typeof feedbackStats>>;

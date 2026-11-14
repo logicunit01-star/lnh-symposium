@@ -11,10 +11,6 @@ async function main() {
     id: 1,
     ...EVENT_DEFAULTS,
     abstractWordLimit: 300,
-    facebook: "https://www.facebook.com/",
-    instagram: "https://www.instagram.com/",
-    linkedin: "https://www.linkedin.com/",
-    youtube: "https://www.youtube.com/",
     videos: [],
   }).onConflictDoNothing();
 
@@ -29,7 +25,9 @@ async function main() {
   const pw = process.env.SEED_ADMIN_PASSWORD || "ChangeMe!2026";
   await db.insert(s.users).values({ name: "Super Admin", email, passwordHash: await bcrypt.hash(pw, 10), role: "SUPER_ADMIN" }).onConflictDoNothing();
 
-  for (const u of DEMO_STAFF) {
+  // Production (LNH server): SEED_DEMO=0 skips the demo staff logins and the dummy programme content
+  const demo = process.env.SEED_DEMO !== "0";
+  if (demo) for (const u of DEMO_STAFF) {
     await db.insert(s.users).values({ ...u, role: u.role as any, passwordHash: await bcrypt.hash(pw, 10) }).onConflictDoNothing();
   }
 
@@ -39,7 +37,7 @@ async function main() {
     await db.update(s.event).set({ themeWeeks: EVENT_DEFAULTS.themeWeeks, workshopStart: EVENT_DEFAULTS.workshopStart, workshopEnd: EVENT_DEFAULTS.workshopEnd }).where(eq(s.event.id, 1));
   }
   const [{ nv }] = await db.select({ nv: sql<number>`count(*)::int` }).from(s.venues);
-  if (!nv) await db.insert(s.venues).values(VENUES).onConflictDoNothing();
+  if (!nv) await db.insert(s.venues).values(VENUES.map((v) => ({ ...v, usage: "SCIENTIFIC" }))).onConflictDoNothing(); // D5: the 43 workshop rooms come from migration 0015
 
   await seedDepartments(db);
   // SC feedback: official sender for automated emails, and the default dispatch schedule (31 Dec)
@@ -53,6 +51,7 @@ async function main() {
     const { sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt } = EVENT_DEFAULTS;
     await db.update(s.event).set({ sessionSlots, agendaTemplates, abstractP1Open, abstractP1Close, abstractP2Open, abstractP2Close, sciLockAt }).where(eq(s.event.id, 1));
   }
+  if (!demo) { console.log("Seed complete (no demo content, SEED_DEMO=0)."); return; }
   const added = await seedDemoContent(db);
   if (!added) { console.log("Content already present — skipped dummy content."); return; }
   console.log("Seed complete.");

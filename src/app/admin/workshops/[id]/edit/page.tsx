@@ -16,13 +16,17 @@ export default async function EditWorkshop({ params }: { params: { id: string } 
   if (!w || w.type !== "WORKSHOP") notFound();
   const own = !sc.all && w.department === sc.department;
   if (!sc.all && !own) notFound();
-  if (w.locked || !(can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")))) redirect(`/admin/workshops/${w.id}?locked=1`);
+  const committee = can(u.role, "workshops.review");
+  // D3 (13 Nov): after the committee decision only the committee (Co-Chairs) or Super Admin can edit
+  if ((w.locked && !committee) || !(can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")))) redirect(`/admin/workshops/${w.id}?locked=1`);
   const c = await formAContext();
+  // keep the current room in the list even if it is no longer a workshop venue
+  if (w.venueId && !c.venues.some((v) => v.id === w.venueId)) { const [cur] = await db.select().from(s.venues).where(eq(s.venues.id, w.venueId)); if (cur) c.venues.unshift(cur); }
   return (
     <>
       <p className="mb-2 text-sm"><Link href={`/admin/workshops/${w.id}`} className="text-lnh-blue hover:underline">← Back to request</Link></p>
-      <PageTitle title={`Edit: ${w.title}`} sub="Changes are logged in the request history." />
-      <WorkshopForm venues={c.venues} weeks={c.weeks} window={c.window} departments={c.depts} fixedDepartment={sc.all ? null : sc.department}
+      <PageTitle title={`Edit: ${w.title}`} sub={w.locked ? "This request has been decided. Your changes are logged in the request history." : "Changes are logged in the request history."} />
+      <WorkshopForm committee={committee} venues={c.venues} weeks={c.weeks} window={c.window} departments={c.depts} fixedDepartment={sc.all ? null : sc.department}
         init={{ ...w, date: ymdPk(w.startsAt), start: fmtTime24(w.startsAt), end: fmtTime24(w.endsAt) }} />
     </>
   );

@@ -13,12 +13,14 @@ export function toWorkshopDTO(s: ProgrammeSession, taken: Record<string, number>
   const fee = s.fee;
   return {
     id: s.id, slug: s.slug, venueId: s.venueId, building: s.venue ? `${s.venue.building}${s.venue.floor ? `, ${s.venue.floor} floor` : ""}` : null, title: s.title, description: s.description, department: s.department, format: s.format, track: s.track,
-    date: ymdPk(s.startsAt), dateLabel: fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
-    timeLabel: `${fmtTime24(s.startsAt)}–${fmtTime24(s.endsAt)}`, hall: s.hall, cme: s.cmeHours,
+    date: ymdPk(s.startsAt),
+    dateLabel: s.days > 1 ? `${fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" })} – ${fmtDate(s.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}` : fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+    timeLabel: `${fmtTime24(s.startsAt)}–${fmtTime24(s.endsAt)}${s.days > 1 ? ` daily (${s.days} days)` : ""}`, hall: s.mode === "ONLINE" ? "Online" : s.mode === "HYBRID" ? `${s.hall ?? ""} + online` : s.hall, cme: s.cmeHours,
     capacity: s.capacity, left: s.capacity == null ? null : Math.max(0, s.capacity - (taken[s.id] ?? 0)),
     fee, regularFee: s.fee, facility: s.venue?.building ?? s.hall ?? null,
     faculty: s.speakers.length
       ? s.speakers.map(({ speaker, role }) => ({ name: `${speaker.title ?? ""} ${speaker.name}`.trim(), degrees: speaker.degrees, designation: speaker.designation, role }))
-      : s.leadFaculty ? [{ name: s.leadFaculty, degrees: s.facultyDegrees, designation: null, role: "Lead Faculty" }] : [],
+      : [...(s.leadFaculty ? [{ name: s.leadFaculty, degrees: s.facultyDegrees, designation: null, role: "Workshop Director" }] : []),
+        ...(s.facilitatorNames ?? []).map((n) => ({ name: n, degrees: null, designation: null, role: "Facilitator" }))],
   };
 }

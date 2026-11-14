@@ -2,6 +2,10 @@ import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { db, schema as s } from "./db";
 
+/** Homepage defaults (homepage changes 11.11.2026) until the admin edits them in Event Settings. */
+export const TICKER_DEFAULT = ["Registrations are open", "Avail early bird discount", "Register now"];
+export const GALLERY_DEFAULT = "https://www.lnh.edu.pk/gallery/symposium-2025-gallery";
+
 export const getEvent = cache(async () => {
   const [e] = await db.select().from(s.event).where(eq(s.event.id, 1));
   if (!e) throw new Error("Event settings missing — run `npm run db:seed`.");

@@ -20,10 +20,17 @@ export async function roomClash(venueId: string, startsAt: Date, endsAt: Date, e
 }
 
 /** For the form: is the chosen room free, which other rooms are free at that time, and on which dates this room is free at that time. */
-export async function availability(q: { date: string; start: string; end: string; venueId: string | null; excludeId?: string | null; seats?: number }) {
+/** D1 (13 Nov): a 2- or 3-day workshop runs 09:00-17:00 on consecutive days (no Sunday inside); the room is held for the whole span. */
+export const addDays = (ymd: string, n: number) => new Date(new Date(`${ymd}T12:00:00Z`).getTime() + n * 864e5).toISOString().slice(0, 10);
+export const spanHasSunday = (ymd: string, days: number) => Array.from({ length: days }, (_, i) => addDays(ymd, i)).some(isSunday);
+export const FULL_DAY = { start: "09:00", end: "17:00" };
+
+export async function availability(q: { date: string; start: string; end: string; venueId: string | null; excludeId?: string | null; seats?: number; days?: number }) {
+  const days = Math.min(3, Math.max(1, q.days ?? 1));
   const ev = await getEvent();
-  const startsAt = at(q.date, q.start), endsAt = at(q.date, q.end);
-  const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building, capacity: s.venues.capacity }).from(s.venues).where(eq(s.venues.active, true)).orderBy(asc(s.venues.name));
+  const span = (d: string) => [at(d, q.start), at(addDays(d, days - 1), q.end)] as const;
+  const [startsAt, endsAt] = span(q.date);
+  const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building, capacity: s.venues.capacity }).from(s.venues).where(and(eq(s.venues.active, true), ne(s.venues.usage, "SCIENTIFIC"))).orderBy(asc(s.venues.name));
   const busy = await db.select({ venueId: s.sessions.venueId, a: s.sessions.startsAt, b: s.sessions.endsAt }).from(s.sessions).where(and(
     ne(s.sessions.status, "REJECTED"), sql`${s.sessions.venueId} is not null`, q.excludeId ? ne(s.sessions.id, q.excludeId) : undefined));
   const freeAt = (venueId: string, a: Date, b: Date) => !busy.some((x) => x.venueId === venueId && x.a < b && x.b > a);
@@ -36,8 +43,8 @@ export async function availability(q: { date: string; start: string; end: string
   const otherDates: string[] = [];
   if (q.venueId) for (let d = new Date(`${from}T12:00:00Z`); ymdPk(d) <= to && otherDates.length < 8; d = new Date(d.getTime() + 864e5)) {
     const y = d.toISOString().slice(0, 10);
-    if (y === q.date || isSunday(y)) continue;
-    if (freeAt(q.venueId, at(y, q.start), at(y, q.end))) otherDates.push(y);
+    if (y === q.date || spanHasSunday(y, days) || addDays(y, days - 1) > to) continue;
+    if (freeAt(q.venueId, ...span(y))) otherDates.push(y);
   }
   // smallest rooms that still fit the seat cap first
   return { clash, otherVenues: otherVenues.sort((a, b) => a.capacity - b.capacity).slice(0, 8), otherDates };

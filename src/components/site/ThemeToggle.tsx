@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 
 type Theme = "dark" | "light";
 
-/** Switches the public site between dark (default) and light. The choice is remembered on this device. */
+/** Switches the public site between light (default, "Day view") and dark. The choice is remembered on this device. */
 export function ThemeToggle({ className, withLabel = false, bare = false }: { className?: string; withLabel?: boolean; bare?: boolean }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  useEffect(() => { setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark"); }, []);
+  const [theme, setTheme] = useState<Theme>("light");
+  useEffect(() => { setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light"); }, []);
   const next: Theme = theme === "light" ? "dark" : "light";
   const apply = () => {
     document.documentElement.dataset.theme = next;
