@@ -148,6 +148,13 @@
       "when": 1794830869503,
       "tag": "0020_registration_abstract_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794917269503,
+      "tag": "0021_notification_outbox",
+      "breakpoints": true
     }
   ]
 }

@@ -47,7 +47,7 @@ export async function senderFor(key: TemplateKey, t?: Template) {
 }
 
 /** Send a notification with its template and sender settings, recorded in the sent log. Returns DISABLED when an optional notification is switched off. */
-export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; noCc?: boolean; replyTo?: string | null; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string; cid?: string }[] } = {}) {
+export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; noCc?: boolean; replyTo?: string | null; priority?: number; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string; cid?: string }[] } = {}) {
   const ev = await getEvent();
   const t = await getTemplate(key);
   if (!t.enabled && DEFAULT_TEMPLATES[key].switchable) return "DISABLED";
@@ -55,7 +55,7 @@ export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars
   const snd = await senderFor(key, t);
   return sendEmail(to, subject, html, opts.attachments ?? [], {
     from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: opts.noCc ? null : snd.cc,
-    replyTo: opts.replyTo || snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: opts.ref ?? null,
+    replyTo: opts.replyTo || snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: opts.ref ?? null, priority: opts.priority,
   });
 }
 

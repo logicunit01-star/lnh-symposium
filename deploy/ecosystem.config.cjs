@@ -11,5 +11,19 @@ module.exports = {
     out_file: "../logs/lnh-out.log",
     error_file: "../logs/lnh-error.log",
     time: true,
+  }, {
+    // Sends the outbox (emails, WhatsApp, SMS) separately from the website; needs NOTIFIER=worker in .env (14.11.2026)
+    name: "lnh-notifier",
+    cwd: __dirname + "/..",
+    script: "node_modules/tsx/dist/cli.mjs",
+    args: "scripts/notifier.ts",
+    instances: 1,
+    exec_mode: "fork",
+    max_memory_restart: "512M",
+    kill_timeout: 30000, // lets the message being sent finish
+    env: { NODE_ENV: "production" },
+    out_file: "../logs/notifier-out.log",
+    error_file: "../logs/notifier-error.log",
+    time: true,
   }],
 };

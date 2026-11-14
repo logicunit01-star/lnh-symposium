@@ -522,7 +522,7 @@ export const contactMessages = pgTable("contact_messages", {
 
 export const notificationLog = pgTable("notification_log", {
   id: id(),
-  channel: channelEnum("channel").notNull(),
+  channel: text("channel").notNull(), // EMAIL | WHATSAPP | SMS
   to: text("to").notNull(),
   cc: text("cc"),
   sender: text("sender"),
@@ -530,9 +530,44 @@ export const notificationLog = pgTable("notification_log", {
   ref: text("ref"), // abstract ID, registration no. or session title the message is about
   subject: text("subject"),
   body: text("body").notNull(),
-  status: text("status").notNull(), // SENT | LOGGED | FAILED
+  status: text("status").notNull(), // QUEUED | SENDING | SENT | LOGGED (not sent: Log only mode, or no provider) | FAILED (gave up) | CANCELLED
   error: text("error"),
   createdAt: created(),
+  // outbox (Part C, 14.11.2026): what the sender needs to deliver it; cleared once sent
+  payload: jsonb("payload").$type<OutboxPayload>(),
+  attempts: integer("attempts").notNull().default(0),
+  priority: integer("priority").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  providerRef: text("provider_ref"),
+}, (t) => ({ qIdx: index("nl_queue_idx").on(t.status, t.nextAttemptAt) }));
+export type OutboxPayload = {
+  // EMAIL
+  html?: string; from?: string; accountId?: string | null; replyTo?: string | null;
+  attachments?: { filename: string; content: string /* base64 */; contentType?: string; cid?: string }[];
+  // WHATSAPP / SMS
+  messageKey?: string; templateId?: string; mediaUrl?: string; email?: string; text?: string; via?: "XNOTIFY" | "GATEWAY";
+};
+
+/** Super Admin → Notifications: eOcean xNotify (WhatsApp and SMS), message template IDs and sending limits. API key encrypted (lib/secret-box). */
+export const notifySettings = pgTable("notify_settings", {
+  id: integer("id").primaryKey().default(1),
+  waEnabled: boolean("wa_enabled").notNull().default(false),
+  smsEnabled: boolean("sms_enabled").notNull().default(false),
+  apiUrl: text("api_url").notNull().default("https://api.xnotify.ai/v2/send"),
+  apiKey: text("api_key"),
+  authId: text("auth_id"),
+  authUsername: text("auth_username"),
+  waChannel: text("wa_channel").notNull().default("Whatsapp"),
+  smsChannel: text("sms_channel").notNull().default("SMS"),
+  templates: jsonb("templates").$type<Record<string, { wa?: string; sms?: string }>>().notNull().default({}),
+  emailPerMin: integer("email_per_min").notNull().default(60),
+  msgPerMin: integer("msg_per_min").notNull().default(30),
+  maxAttempts: integer("max_attempts").notNull().default(6),
+  workerSeenAt: timestamp("worker_seen_at", { withTimezone: true }),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 /** Editable automated email templates (SC feedback, 29 Oct 2026). Body uses {{merge_fields}}. */

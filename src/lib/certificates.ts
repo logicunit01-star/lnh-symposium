@@ -21,7 +21,7 @@ export async function issueCertificates(opts: { attendedOnly: boolean; notify: b
     if (opts.notify) {
       const link = `${appUrl()}/api/certificates/${r.accessToken}`;
       await sendTemplate("CERTIFICATE_READY", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, certificate_no: no, link }, { ref: r.regNo });
-      await sendSms(r.phone, `LNH Symposium: Your e-certificate ${no} is ready. Download: ${link}`);
+      await sendSms(r.phone, `LNH Symposium: Your e-certificate ${no} is ready. Download: ${link}`, "CERTIFICATE_READY", r.regNo);
     }
   }
   return rows.length;
@@ -61,7 +61,7 @@ export async function maybeIssueWorkshopCert(itemId: string, opts: { notify?: bo
   if (opts.notify !== false) {
     const link = workshopCertUrl(it.id, r.accessToken);
     await sendTemplate("WORKSHOP_CERTIFICATE", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, workshop: it.session.title, certificate_no: no, link }, { ref: it.ticketNo ?? r.regNo }).catch((e) => console.error(e));
-    await sendSms(r.phone, `LNH Symposium: your certificate for "${it.session.title.slice(0, 60)}" is ready. ${link}`).catch(() => {});
+    await sendSms(r.phone, `LNH Symposium: your certificate for "${it.session.title.slice(0, 60)}" is ready. ${link}`, "CERTIFICATE_READY", it.ticketNo ?? r.regNo).catch(() => {});
   }
   return no;
 }

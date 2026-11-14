@@ -31,8 +31,8 @@ export const phoneDigits = (p: string) => { let d = p.replace(/\D/g, ""); if (d.
 
 async function deliver(code: string, to: { email?: string; phone?: string }, purpose: string) {
   const what = purpose === "SIGNUP" ? "verify your account" : purpose === "SIGNIN" ? "sign in to your account" : purpose === "RESET" ? "set a new password" : "view your registrations";
-  if (to.email) await sendTemplate("SIGN_IN_CODE", to.email, { code, purpose: what });
-  if (to.phone) await sendSms(to.phone, `LNH Symposium: your code is ${code}. It expires in 5 minutes. Do not share it.`);
+  if (to.email) await sendTemplate("SIGN_IN_CODE", to.email, { code, purpose: what }, { priority: 10 });
+  if (to.phone) await sendSms(to.phone, `LNH Symposium: your code is ${code}. It expires in 5 minutes. Do not share it.`, "SIGN_IN_CODE");
 }
 
 export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET", target: string, to: { email?: string; phone?: string }, payload?: unknown) {

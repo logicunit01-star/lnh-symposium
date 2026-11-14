@@ -21,14 +21,23 @@ async function main() {
     { code: "VOLUNTEER", label: "Volunteer", fee: 0, earlyFee: 0, order: 91, tier: "GENERAL", active: false },
   ]).onConflictDoNothing();
 
-  const email = process.env.SEED_ADMIN_EMAIL || "admin@lnh.edu.pk";
-  const pw = process.env.SEED_ADMIN_PASSWORD || "ChangeMe!2026";
-  await db.insert(s.users).values({ name: "Super Admin", email, passwordHash: await bcrypt.hash(pw, 10), role: "SUPER_ADMIN" }).onConflictDoNothing();
+  const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const pw = process.env.SEED_ADMIN_PASSWORD;
+  if (email && pw) {
+    await db.insert(s.users).values({ name: "Super Admin", email, passwordHash: await bcrypt.hash(pw, 10), role: "SUPER_ADMIN" }).onConflictDoNothing();
+  } else {
+    const [{ users }] = await db.select({ users: sql<number>`count(*)::int` }).from(s.users);
+    if (!users) throw new Error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required when creating the first staff login.");
+    console.log("Admin seed skipped (existing staff logins preserved).");
+  }
 
   // Production (LNH server): SEED_DEMO=0 skips the demo staff logins and the dummy programme content
   const demo = process.env.SEED_DEMO !== "0";
-  if (demo) for (const u of DEMO_STAFF) {
-    await db.insert(s.users).values({ ...u, role: u.role as any, passwordHash: await bcrypt.hash(pw, 10) }).onConflictDoNothing();
+  if (demo) {
+    if (!pw) throw new Error("SEED_ADMIN_PASSWORD is required when SEED_DEMO is enabled.");
+    for (const u of DEMO_STAFF) {
+      await db.insert(s.users).values({ ...u, role: u.role as any, passwordHash: await bcrypt.hash(pw, 10) }).onConflictDoNothing();
+    }
   }
 
   // Older databases: fill workshop settings once

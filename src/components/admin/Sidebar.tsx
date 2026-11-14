@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { AtSign, CreditCard, UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
+import { AtSign, MessageSquareText, CreditCard, UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
 import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,7 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin/settings", label: "Event Settings", I: Settings, p: "settings" },
   { href: "/admin/payments", label: "Payments (PayPro)", I: CreditCard, p: "payments" },
   { href: "/admin/email-settings", label: "Email settings", I: AtSign, p: "mail" },
+  { href: "/admin/messaging", label: "WhatsApp & SMS", I: MessageSquareText, p: "messaging" },
   { href: "/admin/users", label: "Users & Roles", I: UserCog, p: "users" },
 ];
 

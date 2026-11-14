@@ -16,7 +16,8 @@
     "db:demo": "tsx --env-file=.env scripts/demo-data.ts",
     "db:setup": "tsx scripts/setup.ts",
     "admin:password": "tsx scripts/admin-password.ts",
-    "vercel-build": "tsx scripts/setup.ts && next build"
+    "vercel-build": "tsx scripts/setup.ts && next build",
+    "notifier": "tsx scripts/notifier.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",

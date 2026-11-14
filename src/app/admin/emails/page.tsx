@@ -102,7 +102,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
           <input type="hidden" name="tab" value="log" />
           <input name="q" defaultValue={searchParams.q} placeholder="Search recipient, subject, abstract ID…" className="a-input" />
           <select name="tpl" defaultValue={searchParams.tpl ?? ""} className="a-input"><option value="">All emails</option>{Object.entries(DEFAULT_TEMPLATES).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select>
-          <select name="st" defaultValue={searchParams.st ?? ""} className="a-input"><option value="">Any status</option><option value="SENT">Sent</option><option value="LOGGED">Logged (SMTP off)</option><option value="FAILED">Failed</option></select>
+          <select name="st" defaultValue={searchParams.st ?? ""} className="a-input"><option value="">Any status</option><option value="SENT">Sent</option><option value="LOGGED">Logged (SMTP off)</option><option value="QUEUED">Waiting / retrying</option><option value="FAILED">Failed</option><option value="CANCELLED">Cancelled</option></select>
           <button className="a-btn-primary">Filter</button>
         </form>
         <div className="a-card overflow-x-auto">
@@ -137,7 +137,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
       {head}
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Template saved.</p>}
       {searchParams.err && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">{searchParams.err === "cc" ? "CC must be one or more email addresses separated by commas." : "Reply-to must be an email address."}</p>}
-      {searchParams.tested && <p className="mb-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">Sample sent to {u.email}: {searchParams.tested === "SENT" ? "delivered to the mail server." : searchParams.tested === "LOGGED" ? "recorded only (delivery is set to Log only, or no mailbox is set up)." : "the mail server refused it; see Sent emails for the reason."}</p>}
+      {searchParams.tested && <p className="mb-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">Sample sent to {u.email}: {searchParams.tested === "SENT" ? "delivered to the mail server." : searchParams.tested === "QUEUED" ? "queued; the sender delivers it shortly (see WhatsApp & SMS → Queue if it does not arrive)." : searchParams.tested === "LOGGED" ? "recorded only (delivery is set to Log only, or no mailbox is set up)." : "the mail server refused it; see Sent emails for the reason."}</p>}
       <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
         <div className="a-card self-start overflow-hidden">
           {CATEGORIES.map((c) => { const list = templates.filter((t) => DEFAULT_TEMPLATES[t.key].category === c); return list.length ? (

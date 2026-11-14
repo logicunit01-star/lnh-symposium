@@ -9,7 +9,7 @@ Instructions for the person (or agent, e.g. Codex) deploying this repository to 
 | cPanel account | `symposium2027` (the app runs as this user, in `/home/symposium2027/lnh-symposium`) |
 | Runtime | Node.js **22 LTS** via nvm for the `symposium2027` user. Do **not** use the system Node 26 (Next.js 14 is not tested on it). |
 | Database | PostgreSQL on the same server (needs version 13 or newer; the migrations use `gen_random_uuid()`) |
-| Process manager | PM2 (`deploy/ecosystem.config.cjs`), app listens on `127.0.0.1:3000` only |
+| Process manager | PM2 (`deploy/ecosystem.config.cjs`): `lnh-symposium` (website, `127.0.0.1:3000` only) and `lnh-notifier` (sends emails, WhatsApp, SMS) |
 | Web server | cPanel Apache as reverse proxy (`deploy/apache-proxy.conf`), SSL from cPanel AutoSSL |
 
 ## Rules (please follow)
@@ -18,7 +18,7 @@ Instructions for the person (or agent, e.g. Codex) deploying this repository to 
 2. **Never commit `.env`** or paste its values into logs, tickets or chat. Permissions: `chmod 600 .env`.
 3. **Database changes only through migrations.** `npm run db:setup` applies `drizzle/*.sql` and seeds settings; it is safe to repeat. The app also applies pending migrations on start. Do not run `drizzle-kit push`, and do not hand-edit tables.
 4. **Do not use the embedded PGlite database** (`DATABASE_URL` empty or `pglite:`) on the server. It is for local development only. `DATABASE_URL` must be `postgresql://...`.
-5. **One app process** (`instances: 1`). Rate limits, sign-in throttling and the PayPro token cache are in memory.
+5. **One process each** (`instances: 1`) for `lnh-symposium` and `lnh-notifier`. Rate limits, sign-in throttling and the PayPro token cache are in memory. `.env` must have `NOTIFIER=worker`: the website then only queues messages and `lnh-notifier` sends them.
 6. Run `npm run db:setup` **before** `npm run build` (the build reads the database).
 7. Install with plain `npm ci` (do not export `NODE_ENV=production` in the shell first): `npm run db:setup` needs the dev dependency `tsx`.
 8. If you are unsure about anything that touches live data (an existing database, payments), stop and ask the project owner instead of guessing.
@@ -61,9 +61,10 @@ cd ~/lnh-symposium
 npm ci
 npm run db:setup        # expect: "Database ready (PostgreSQL)." and "Seed complete (no demo content, SEED_DEMO=0)."
 npm run build
-pm2 start deploy/ecosystem.config.cjs
+pm2 start deploy/ecosystem.config.cjs   # starts lnh-symposium and lnh-notifier
 pm2 save
 curl -sI http://127.0.0.1:3000/ | head -1    # expect HTTP/1.1 200
+pm2 logs lnh-notifier --lines 5 --nostream  # expect "[notifier] started"
 ```
 
 Start PM2 on boot (as root): `pm2 startup systemd -u symposium2027 --hp /home/symposium2027`, run the command it prints, then as the app user `pm2 save` again.
@@ -109,9 +110,11 @@ git pull --ff-only
 npm ci
 npm run db:setup
 npm run build
-pm2 reload lnh-symposium
+pm2 startOrReload deploy/ecosystem.config.cjs   # website and notifier (first time after 14.11.2026 it also starts lnh-notifier); then pm2 save
 curl -sI http://127.0.0.1:3000/ | head -1
 ```
+
+Release with the outbox (14.11.2026 Part C), once: add `NOTIFIER=worker` to `.env` before the reload, then `pm2 save`. Check Admin → WhatsApp & SMS shows "lnh-notifier running".
 
 If `db:setup` fails, do **not** build or reload: the running version keeps working on the old database. Report the error.
 
@@ -128,6 +131,12 @@ Managed in the admin since 14 Nov 2026: **Admin → Payments (Super Admin only)*
 - Give PayPro the callback URL `https://symposium2027.lnh.edu.pk/paypro/uis` with the username/password set in Admin → Payments. LNH's merchant account (Liaquat_OPD) may already send callbacks to another LNH system; pending orders are therefore also checked with PayPro on every `/api/cron/emails` run (every 15 minutes), so the `*/15` cron line in section 6 is required.
 - Our order numbers start with `LNHS` so they never clash with other systems on the same merchant account.
 
+## Emails, WhatsApp and SMS (outbox)
+
+- Every message is written to the database first (`notification_log`, status QUEUED) and sent by `lnh-notifier`, with limits per minute and retries (1, 5, 15, 60, 180, 360 minutes). Admin → WhatsApp & SMS (Super Admin) shows the queue, failed messages ("Send now", "Cancel") and whether the notifier is running.
+- If `lnh-notifier` is stopped, nothing is lost: messages wait and go out when it starts again. `pm2 restart lnh-notifier`; logs `pm2 logs lnh-notifier`.
+- WhatsApp/SMS through eOcean: the Super Admin enters the API key, account ID, username and a template ID per message in Admin → WhatsApp & SMS. eOcean must be able to fetch `https://symposium2027.lnh.edu.pk/api/qr/...` (the QR image sent with WhatsApp messages), so that path must stay public.
+
 ## Backups
 
 - Database: cPanel backups include PostgreSQL databases created through cPanel. Also keep a nightly dump: `pg_dump -Fc "$DATABASE_URL" > ~/backups/lnh-$(date +%F).dump` (keep 14 days).
@@ -135,7 +144,7 @@ Managed in the admin since 14 Nov 2026: **Admin → Payments (Super Admin only)*
 
 ## Troubleshooting
 
-- Logs: `pm2 logs lnh-symposium` or `~/logs/lnh-error.log`. On start the app prints `[db] migrations up to date` or `[db] MIGRATION FAILED ...`.
+- Logs: `pm2 logs lnh-symposium` or `~/logs/lnh-error.log`; sender: `pm2 logs lnh-notifier` or `~/logs/notifier-error.log`. On start the app prints `[db] migrations up to date` or `[db] MIGRATION FAILED ...`.
 - `column ... does not exist`: migrations did not run. Run `npm run db:setup` and `pm2 reload lnh-symposium`.
 - 502/503 from Apache: the app is not running (`pm2 status`) or the proxy include is missing (`/scripts/rebuildhttpdconf`).
 - Sign-in loops on https: check `APP_URL` is the https address and the proxy sends `X-Forwarded-Proto`.

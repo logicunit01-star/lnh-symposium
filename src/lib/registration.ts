@@ -9,7 +9,8 @@ import { randomToken, appUrl, pkr, fmtDate, fmtTime24, processingFee } from "./u
 import QRCode from "qrcode";
 import { qrPayload, ticketPayload } from "./qr-payload";
 import { registrationPdf } from "./pdf";
-import { sendSms } from "./notify";
+import { sendMessage } from "./notify";
+import { qrLink } from "./qr-link";
 import { PHONE_RE, normaliseCnic } from "./reg-fields";
 
 const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
@@ -201,8 +202,13 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
       }, { ref: i.ticketNo ?? r.regNo, attachments: [{ filename: `${i.ticketNo ?? r.regNo}-qr.png`, content: await png(ticketPayload(r, i)), contentType: "image/png", cid: "qr-ws" }] });
     }
   }
-  const sms = confirmed
-    ? `LNH Symposium: Dear ${r.firstName}, your registration ${r.regNo} is CONFIRMED. Fee ${pkr(r.totalFee)} received. See you on ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}.`
-    : `LNH Symposium: Dear ${r.firstName}, registration ${r.regNo} received. Please pay ${pkr(r.totalFee)} to confirm: ${link}`;
-  await sendSms(r.phone, sms);
+  // WhatsApp / SMS (Admin → WhatsApp & SMS): the symposium QR and each workshop's QR go as images (public, unguessable links)
+  if (!confirmed) {
+    await sendMessage("REGISTRATION_RECEIVED", r.phone, { email: r.email, ref: r.regNo, text: `LNH Symposium: Dear ${r.firstName}, registration ${r.regNo} received. Please pay ${pkr(r.totalFee)} to confirm: ${link}` });
+  } else {
+    if (r.hasPass || !r.items.length) await sendMessage("REGISTRATION_CONFIRMED", r.phone, { email: r.email, ref: r.regNo, mediaUrl: qrLink("r", r.id),
+      text: `LNH Symposium: Dear ${r.firstName}, your registration ${r.regNo} is CONFIRMED. Fee ${pkr(r.totalFee)} received. See you on ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}.` });
+    for (const i of r.items) await sendMessage("WORKSHOP_CONFIRMED", r.phone, { email: r.email, ref: i.ticketNo ?? r.regNo, mediaUrl: qrLink("t", i.id),
+      text: r.hasPass ? undefined : `LNH Symposium: Dear ${r.firstName}, workshop "${i.session.title.slice(0, 60)}" is CONFIRMED (${i.ticketNo ?? r.regNo}).` });
+  }
 }

@@ -14,7 +14,9 @@ export type Perm =
   // PayPro switch and credentials: Super Admin only (14 Nov 2026)
   | "payments"
   // Email settings (mailboxes, delivery mode, sender of each notification): Super Admin and Admin (14 Nov 2026)
-  | "mail";
+  | "mail"
+  // WhatsApp & SMS (eOcean settings, template IDs) and the message queue: Super Admin only (14.11.2026 Part C)
+  | "messaging";
 
 const WP: Perm[] = ["workshops", "workshops.all", "workshops.submit", "workshops.edit", "workshops.review", "venues"];
 const SCI: Perm[] = ["programme", "programme.edit", "programme.approve", "invitations", "departments"];
@@ -26,7 +28,7 @@ const ALL: Perm[] = [...SCI, "flyers", "catering", "dashboard", "registrations",
  * After the agenda deadline only the Scientific Committee (and Super Admin) edit and finalise sessions; see editRule().
  */
 export const ROLE_PERMS: Record<string, Perm[]> = {
-  SUPER_ADMIN: [...ALL.filter((p) => !p.startsWith("dept.")), "payments", "mail"],
+  SUPER_ADMIN: [...ALL.filter((p) => !p.startsWith("dept.")), "payments", "mail", "messaging"],
   ADMIN: [...ALL.filter((p) => p !== "users" && !p.startsWith("dept.")), "mail"],
   // Symposium secretariat: runs the event; pre-fills sessions before the deadline; cannot finalise the programme
   SECRETARIAT: ALL.filter((p) => p !== "users" && p !== "settings" && p !== "programme.approve" && !p.startsWith("dept.")),
