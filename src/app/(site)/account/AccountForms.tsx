@@ -82,7 +82,7 @@ function PasswordStep({ email, first, next, back, onCode, onForgot, codeBusy, co
         <h2 className="font-display text-2xl font-bold text-white">Welcome back{first ? `, ${first}` : ""}</h2>
         <p className="mt-1 flex items-center gap-2 text-sm text-slate-300"><Mail className="h-4 w-4" />{email}</p>
       </div>
-      {(error || codeError) && <Alert>{error || codeError}</Alert>}
+      {error && <Alert>{error}</Alert>}
       <Field label="Password" name="pw" required>
         <div className="relative">
           <input id="pw" type={show ? "text" : "password"} autoComplete="current-password" className="input pr-12" value={pw} onChange={(e) => setPw(e.target.value)} required autoFocus />
@@ -94,6 +94,8 @@ function PasswordStep({ email, first, next, back, onCode, onForgot, codeBusy, co
         <button type="button" onClick={onCode} disabled={codeBusy} className="min-h-[44px] text-sm font-semibold text-lnh-sky hover:underline">Email and text me a code instead</button>
         <button type="button" onClick={onForgot} disabled={codeBusy} className="min-h-[44px] text-sm text-slate-300 hover:text-white hover:underline">Forgot password?</button>
       </div>
+      {codeBusy && <p className="text-sm text-slate-300" aria-live="polite">Sending your code…</p>}
+      {codeError && <Alert>{codeError}</Alert>}
       <div>{back}</div>
     </form>
   );

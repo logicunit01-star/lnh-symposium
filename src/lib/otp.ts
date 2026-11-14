@@ -5,6 +5,7 @@ import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { sendSms } from "./notify";
+import { mailState } from "./mail-config";
 
 export const OTP_TTL_MS = 5 * 60_000;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -14,16 +15,21 @@ const hash = (id: string, code: string) => createHmac("sha256", (process.env.AUT
 const newCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
 /** Demo mode: when neither email nor SMS delivery is configured, the code is shown on screen. */
-export const otpDemoMode = () => process.env.OTP_DEMO === "1" || (!process.env.SMTP_HOST && !process.env.SMS_API_URL && process.env.OTP_DEMO !== "0");
+export const otpDemoMode = async () => process.env.OTP_DEMO === "1" || (process.env.OTP_DEMO !== "0" && !(await codeDelivery()));
 /** Email or SMS delivery is configured. */
-export const codeDelivery = () => !!(process.env.SMTP_HOST || process.env.SMS_API_URL);
+/** Email or SMS delivery is configured: an active mailbox in Admin → Email settings (not "Log only"), SMTP_* or the SMS gateway in the server file. */
+export const codeDelivery = async () => {
+  if (process.env.SMTP_HOST || process.env.SMS_API_URL) return true;
+  const st = await mailState().catch(() => null);
+  return !!st && st.mode !== "LOG" && st.accounts.some((a) => a.active);
+};
 /**
  * Codes that grant access to an existing account or its registrations (SIGNIN, RESET, LOOKUP) are shown on screen only when
  * OTP_DEMO=1 is set explicitly (private demos). Otherwise anyone could read the code for someone else's email or mobile.
  */
-const showsCode = (purpose: string) => (purpose === "SIGNUP" ? otpDemoMode() : process.env.OTP_DEMO === "1");
+const showsCode = async (purpose: string) => (purpose === "SIGNUP" ? otpDemoMode() : process.env.OTP_DEMO === "1");
 /** Account-access codes can be used only when a real delivery channel exists (or in an explicit demo). */
-export const accessCodesAvailable = () => codeDelivery() || process.env.OTP_DEMO === "1";
+export const accessCodesAvailable = async () => process.env.OTP_DEMO === "1" || (await codeDelivery());
 
 export const maskEmail = (e: string) => e.replace(/^(.)(.*)(.@.*)$/, (_, a, b, c) => a + "*".repeat(Math.max(1, b.length)) + c);
 export const maskPhone = (p: string) => { const d = p.replace(/\D/g, ""); return d.length > 4 ? `${"*".repeat(d.length - 4)}${d.slice(-4)}` : d; };
@@ -40,7 +46,7 @@ export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET"
   const [row] = await db.insert(s.otpCodes).values({ purpose, target, codeHash: "pending", payload: payload ?? null, expiresAt: new Date(Date.now() + OTP_TTL_MS) }).returning({ id: s.otpCodes.id });
   await db.update(s.otpCodes).set({ codeHash: hash(row.id, code) }).where(eq(s.otpCodes.id, row.id));
   await deliver(code, to, purpose);
-  return { id: row.id, demoCode: showsCode(purpose) ? code : undefined };
+  return { id: row.id, demoCode: (await showsCode(purpose)) ? code : undefined };
 }
 
 export async function resendOtp(id: string, to: { email?: string; phone?: string }) {
@@ -51,7 +57,7 @@ export async function resendOtp(id: string, to: { email?: string; phone?: string
   const code = newCode();
   await db.update(s.otpCodes).set({ codeHash: hash(row.id, code), attempts: 0, sends: row.sends + 1, expiresAt: new Date(Date.now() + OTP_TTL_MS) }).where(eq(s.otpCodes.id, id));
   await deliver(code, to, row.purpose);
-  return { demoCode: showsCode(row.purpose) ? code : undefined };
+  return { demoCode: (await showsCode(row.purpose)) ? code : undefined };
 }
 
 /** Checks a code; on success marks it used and returns the row (with its payload). */

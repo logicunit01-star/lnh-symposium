@@ -7,7 +7,7 @@ import { issueOtp, maskPhone, phoneDigits, accessCodesAvailable } from "@/lib/ot
 /** "My registrations": send a code to the mobile number. The reply is the same whether or not the number is known. */
 export async function POST(req: Request) {
   if (!rateLimit("lookup:" + ipOf(req), 6)) return fail("Too many attempts — please wait a minute.", 429);
-  if (!accessCodesAvailable()) return fail("Look-up by SMS code is not available yet. Use your registration number and email instead.", 503);
+  if (!(await accessCodesAvailable())) return fail("Look-up by SMS code is not available yet. Use your registration number and email instead.", 503);
   const { phone } = await req.json().catch(() => ({}));
   const digits = phoneDigits(String(phone || ""));
   if (!/^03\d{9}$/.test(digits)) return fail("Use format 03XX-XXXXXXX", 400, { phone: "Use format 03XX-XXXXXXX" });
