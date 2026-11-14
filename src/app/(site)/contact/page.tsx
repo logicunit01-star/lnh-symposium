@@ -9,7 +9,7 @@ export default async function Contact() {
   const ev = await getEvent();
   return (
     <>
-      <PageHero eyebrow="Contact us" title={<>Get in <span className="text-grad">touch</span></>} sub="Questions about registration, abstracts, workshops or sponsorship? The symposium secretariat is here to help." />
+      <PageHero eyebrow="Contact us" title={<>Get in <span className="text-grad">touch</span></>} sub="Questions about registration, abstract submission or workshops? Please contact the symposium secretariat." />
       <div className="container-x grid gap-8 lg:grid-cols-5">
         <div className="space-y-4 lg:col-span-2">
           {[

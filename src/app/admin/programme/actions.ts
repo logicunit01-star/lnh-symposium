@@ -1,4 +1,5 @@
 "use server";
+import { sendTemplate } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ne } from "drizzle-orm";
@@ -239,8 +240,10 @@ async function savePrefill(u: { sub: string; name: string; role: string }, raw: 
     sid = row.id;
     await log(sid, u, null, "DRAFT", "Pre-filled by secretariat: day/time and expected participants; department to complete");
     const logins = await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.department, d.department), eq(s.users.active, true)));
-    for (const l of logins) await sendEmail(l.email, `Complete your session details: ${d.department}`, emailLayout("Your scientific session is ready to complete",
-      `<p>Dear ${l.name},</p><p>The symposium secretariat has entered your department's session (${slotOf(ev.sessionSlots, first.key) ? `${first.day} ${first.start}–${first.end}` : ""}, about ${d.expectedAudience} participants).</p><p>Please sign in and add the session title, type, chairperson, co-chairperson, moderator, speakers and presenters before the agenda lock date.</p>`, { label: "Complete the session", href: `${appUrl()}/admin/dept/sessions?edit=${sid}` }));
+    for (const l of logins) await sendTemplate("SESSION_DETAILS_REQUEST", l.email, {
+      name: l.name, department: d.department, session_time: slotOf(ev.sessionSlots, first.key) ? `${first.day} ${first.start}–${first.end}` : null,
+      participants: String(d.expectedAudience ?? ""), link: `${appUrl()}/admin/dept/sessions?edit=${sid}`,
+    }, { ref: d.department });
   }
   revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
   redirect(`/admin/programme/${sid}?saved=1`);

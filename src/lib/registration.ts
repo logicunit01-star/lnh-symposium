@@ -1,12 +1,15 @@
 import "server-only";
+import { sendTemplate } from "./email";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema as s } from "./db";
 import { getEvent, isEarlyBird, editionYear } from "./event";
 import { nextNumber, pad } from "./counters";
-import { randomToken, appUrl, pkr, fmtDate, processingFee } from "./utils";
+import { randomToken, appUrl, pkr, fmtDate, fmtTime24, processingFee } from "./utils";
+import QRCode from "qrcode";
+import { qrPayload, ticketPayload } from "./qr-payload";
 import { registrationPdf } from "./pdf";
-import { sendEmail, sendSms, emailLayout } from "./notify";
+import { sendSms } from "./notify";
 import { PHONE_RE, normaliseCnic } from "./reg-fields";
 
 const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
@@ -70,7 +73,7 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
   const prefix = (ev.regPrefix || "SYM").toUpperCase();
   const wantPass = input.includePass !== false;
   const ids = [...new Set(input.sessionIds)];
-  if (!wantPass && !ids.length) throw new Error("Choose a Symposium Pass or at least one workshop ticket.");
+  if (!wantPass && !ids.length) throw new Error("Choose a Symposium Registration or at least one workshop registration.");
 
   const result = await db.transaction(async (tx) => {
     const [cat] = await tx.select().from(s.feeCategory).where(and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)));
@@ -82,7 +85,7 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
       const mine = await tx.select({ id: s.registrations.id, regNo: s.registrations.regNo, hasPass: s.registrations.hasPass, primaryRegId: s.registrations.primaryRegId })
         .from(s.registrations).where(and(eq(s.registrations.accountId, opts.accountId), inArray(s.registrations.paymentStatus, [...LIVE]))).orderBy(asc(s.registrations.createdAt)).for("update");
       const held = mine.find((r) => r.hasPass);
-      if (wantPass && held) throw new Error(`You already hold a Symposium Pass (${held.regNo}). Add workshop tickets only, or open My tickets to pay or view it.`);
+      if (wantPass && held) throw new Error(`You already hold a Symposium Registration (${held.regNo}). Add Pre-Symposium Workshops only, or open My Registration to pay or view it.`);
       primary = mine.find((r) => !r.primaryRegId) ?? mine[0] ?? null;
     }
     // Extra banquet passes (one is included with every pass, D3); none with workshop-only orders
@@ -157,26 +160,47 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
   const pdf = await registrationPdf(r, ev);
   const confirmed = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
   const link = `${appUrl()}/register/success/${r.accessToken}`;
-  const rows = r.items.map((i) => `<li>${i.session.title} · ${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })}${i.session.hall ? ` · ${i.session.hall}` : ""}</li>`).join("");
-  const html = emailLayout(
-    confirmed ? "Your registration is confirmed" : "Registration received — payment pending",
-    `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p>
-     <p>Thank you for registering for the <b>${ev.name}</b> — <i>${ev.theme}</i>, ${fmtDate(ev.startDate, { day: "numeric", month: "long" })} – ${fmtDate(ev.endDate)} at ${ev.venue}.</p>
-     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
-       <tr><td style="padding:6px 0;color:#5b6b8c">Registration No.</td><td style="font-weight:700;font-size:18px">${r.regNo}</td></tr>
-       ${r.hasPass ? `<tr><td style="padding:6px 0;color:#5b6b8c">Symposium Pass</td><td>${r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label} · all symposium sessions, ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} – ${fmtDate(ev.endDate)}</td></tr>
-       <tr><td style="padding:6px 0;color:#5b6b8c">Banquet passes</td><td>${banquetTotal(r)} (1 included${r.banquetQty ? ` + ${r.banquetQty} extra × ${pkr(r.banquetFee / r.banquetQty)}` : ""})</td></tr>` : ""}
-       <tr><td style="padding:6px 0;color:#5b6b8c">Total fee</td><td><b>${pkr(r.totalFee)}</b></td></tr>
-       <tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:${confirmed ? "#0b8a4c" : "#c47a00"}">${confirmed ? "CONFIRMED" : "PAYMENT PENDING"}</b></td></tr>
+  // the generated details block ({{details_html}} in the templates); every value is escaped
+  const e = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const row = (l: string, v: string) => `<tr><td style="padding:6px 12px 6px 0;color:#5b6b8c;vertical-align:top">${l}</td><td>${v}</td></tr>`;
+  const rows = r.items.map((i) => `<li>${e(i.session.title)} · ${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })}${i.session.hall ? ` · ${e(i.session.hall)}` : ""}</li>`).join("");
+  const details = `<table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:14px">
+       ${row("Event", `${e(ev.theme)}<br>${fmtDate(ev.startDate, { day: "numeric", month: "long" })} – ${fmtDate(ev.endDate)} · ${e(ev.venue)}`)}
+       ${row("Registration No.", `<b style="font-size:18px">${e(r.regNo)}</b>`)}
+       ${r.hasPass ? row("Symposium Registration", `${e(r.regType === "PARTICIPANT" ? `${r.designation ?? ""} (${r.category.label})` : r.category.label)} · all symposium sessions`) + row("Banquet passes", `${banquetTotal(r)} (1 included${r.banquetQty ? ` + ${r.banquetQty} extra × ${pkr(r.banquetFee / r.banquetQty)}` : ""})`) : ""}
+       ${row("Total fee", `<b>${pkr(r.totalFee)}</b>`)}
+       ${row("Status", `<b style="color:${confirmed ? "#0b8a4c" : "#c47a00"}">${confirmed ? "CONFIRMED" : "PAYMENT PENDING"}</b>`)}
      </table>
-     ${rows ? `<p style="margin-bottom:4px">Workshop tickets (separate from the Symposium Pass):</p><ul style="margin-top:0">${rows}</ul>` : ""}
-     <p>A PDF with all the details you submitted is attached. Please bring it (or the QR code) to the registration desk.</p>
-     ${rows ? `<p>Please bring record of this registration confirmation email and keep it with you all the time during the workshop. Workshop questions: <a href="mailto:${WORKSHOP_EMAIL}">${WORKSHOP_EMAIL}</a></p>` : ""}`,
-    { label: confirmed ? "View registration" : "Complete payment", href: link }
-  );
-  await sendEmail(r.email, `${ev.name} — ${confirmed ? "Registration confirmed" : "Registration received"} (${r.regNo})`, html, [
-    { filename: `${r.regNo}.pdf`, content: pdf, contentType: "application/pdf" },
-  ]);
+     ${rows ? `<p style="margin-bottom:4px">Pre-Symposium Workshops (separate from the Symposium Registration):</p><ul style="margin-top:0">${rows}</ul><p>Please keep this confirmation with you during the workshop. Workshop questions: <a href="mailto:${WORKSHOP_EMAIL}">${WORKSHOP_EMAIL}</a></p>` : ""}`;
+  const name = `${r.title} ${r.firstName} ${r.lastName}`;
+  const pdfFile = { filename: `${r.regNo}.pdf`, content: pdf, contentType: "application/pdf" };
+  const common = { name, reg_no: r.regNo, amount: pkr(r.totalFee), details_html: details, link, contact_phone: ev.contactPhone };
+  if (!confirmed) {
+    await sendTemplate("REGISTRATION_RECEIVED", r.email, common, { ref: r.regNo, attachments: [pdfFile] });
+  } else {
+    // 14.11.2026 templates: the symposium confirmation with its QR code, then one confirmation per workshop with that workshop's QR code
+    const qrImg = (cid: string) => `<p style="text-align:center;margin:16px 0"><img src="cid:${cid}" width="200" height="200" alt="Your registration QR code" style="border:8px solid #ffffff"></p>`;
+    const png = (data: string) => QRCode.toBuffer(data, { margin: 1, width: 400, errorCorrectionLevel: "M" });
+    if (r.hasPass) {
+      await sendTemplate("REGISTRATION_CONFIRMED", r.email, { ...common, qr_html: qrImg("qr-pass") }, {
+        ref: r.regNo, attachments: [{ filename: `${r.regNo}-qr.png`, content: await png(qrPayload(r)), contentType: "image/png", cid: "qr-pass" }, pdfFile],
+      });
+    }
+    const [pay] = await db.select({ ref: s.payments.providerRef, txn: s.payments.txnRef }).from(s.payments)
+      .where(and(eq(s.payments.registrationId, r.id), eq(s.payments.status, "PAID"))).orderBy(sql`${s.payments.createdAt} desc`).limit(1);
+    for (const i of r.items) {
+      const w = i.session;
+      await sendTemplate("WORKSHOP_CONFIRMED", r.email, {
+        ...common, workshop: w.title, ticket_no: i.ticketNo ?? r.regNo,
+        workshop_date: w.days > 1 ? `${fmtDate(w.startsAt, { weekday: "long", day: "numeric", month: "long" })} to ${fmtDate(w.endsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}` : fmtDate(w.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+        workshop_time: `${fmtTime24(w.startsAt)} – ${fmtTime24(w.endsAt)}${w.days > 1 ? " each day" : ""}`,
+        venue: w.mode === "ONLINE" ? "Online" : `${w.hall ?? "To be announced"}, LNH Karachi${w.mode === "HYBRID" ? " (also online)" : ""}`,
+        payment_status: r.paymentStatus === "WAIVED" ? "Complimentary" : "Paid", amount: pkr(i.fee),
+        transaction_id: r.paymentStatus === "WAIVED" ? null : (pay?.ref || pay?.txn || null), department: w.department,
+        qr_html: qrImg("qr-ws"),
+      }, { ref: i.ticketNo ?? r.regNo, attachments: [{ filename: `${i.ticketNo ?? r.regNo}-qr.png`, content: await png(ticketPayload(r, i)), contentType: "image/png", cid: "qr-ws" }] });
+    }
+  }
   const sms = confirmed
     ? `LNH Symposium: Dear ${r.firstName}, your registration ${r.regNo} is CONFIRMED. Fee ${pkr(r.totalFee)} received. See you on ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}.`
     : `LNH Symposium: Dear ${r.firstName}, registration ${r.regNo} received. Please pay ${pkr(r.totalFee)} to confirm: ${link}`;

@@ -12,7 +12,7 @@ export default function NotFound() {
           <Link href="/agenda" className="btn-ghost">Agenda</Link>
           <Link href="/workshops" className="btn-ghost">Workshops</Link>
           <Link href="/register" className="btn-ghost">Get your pass</Link>
-          <Link href="/my-registrations" className="btn-ghost">Find my tickets</Link>
+          <Link href="/my-registrations" className="btn-ghost">Find My Registration</Link>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { cn, TITLES, COUNTRIES } from "@/lib/utils";
 import { GUEST_ROLES, PROVINCES, maskCnic, maskPhone } from "@/lib/reg-fields";
 
 /** Guests / Volunteers Registration Form 2027 (LNH). */
-export function GuestForm({ kind, departments }: { kind: "GUEST" | "VOLUNTEER"; departments: string[] }) {
+export function GuestForm({ kind, departments, code }: { kind: "GUEST" | "VOLUNTEER"; departments: string[]; code?: string }) {
   const router = useRouter();
   const [f, setF] = useState<Record<string, string>>({ title: kind === "GUEST" ? "Dr." : "Mr.", gender: "", country: "Pakistan", province: "Sindh", city: "Karachi" });
   const pk = (f.country || "Pakistan") === "Pakistan";
@@ -17,7 +17,7 @@ export function GuestForm({ kind, departments }: { kind: "GUEST" | "VOLUNTEER"; 
   return (
     <form className="hud grid gap-5 p-6 sm:grid-cols-6 sm:p-10" noValidate onSubmit={async (e) => {
       e.preventDefault();
-      const r = await submit({ ...f, regType: kind });
+      const r = await submit({ ...f, regType: kind, code });
       if (r) router.push(`/register/success/${r.accessToken}`);
     }}>
       {error && <Alert className="sm:col-span-6">{error}</Alert>}

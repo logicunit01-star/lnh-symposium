@@ -10,7 +10,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { cn, fmtDate, fmtDateTime, fmtTime, pkr } from "@/lib/utils";
 import { authorStatus } from "@/lib/abstracts";
 
-export const metadata = { title: "My tickets", robots: { index: false } };
+export const metadata = { title: "My Registration", robots: { index: false } };
 const LIVE = ["PENDING", "PAID", "WAIVED"];
 const STATUS: Record<string, [string, string]> = {
   CONFIRMED: ["Confirmed", "bg-emerald-400/15 text-emerald-300"], PENDING: ["Payment pending", "bg-amber-400/15 text-amber-300"],
@@ -39,13 +39,13 @@ export default async function MyTickets() {
   const pk = pass ? statusOf(pass) : null;
   return (
     <>
-      <PageHero eyebrow="My tickets" title={<>Welcome, <span className="text-holo">{a.title} {a.lastName}</span></>} sub={a.email}>
+      <PageHero eyebrow="My Registration" title={<>Welcome, <span className="text-holo">{a.title} {a.lastName}</span></>} sub={a.email}>
         <form action="/api/account/signout" method="POST" className="mt-6"><button className="btn-ghost btn-sm"><LogOut className="h-4 w-4" />Sign out</button></form>
       </PageHero>
       <div className="container-x max-w-5xl space-y-10">
         {/* Symposium Pass */}
         <section aria-labelledby="h-pass">
-          <h2 id="h-pass" className="h-display text-2xl text-white">Symposium Pass</h2>
+          <h2 id="h-pass" className="h-display text-2xl text-white">Symposium Registration</h2>
           {pass ? (
             <div className="mt-4 rounded-3xl border-2 border-lnh-sky/50 bg-lnh-sky/[0.07] p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -68,7 +68,7 @@ export default async function MyTickets() {
             </div>
           ) : (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-dashed border-white/25 p-6">
-              <p className="text-slate-200">No Symposium Pass yet. One pass admits you to every session on all three days, with a banquet pass included.</p>
+              <p className="text-slate-200">No symposium registration yet. It gives access to all sessions across the three symposium days and includes one banquet entry.</p>
               <Link href="/register#pass" className="btn-primary btn-sm">Get your pass</Link>
             </div>
           )}
@@ -77,7 +77,7 @@ export default async function MyTickets() {
         {/* Workshop tickets */}
         <section aria-labelledby="h-ws">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="h-ws" className="h-display text-2xl text-white">Workshop tickets</h2>
+            <h2 id="h-ws" className="h-display text-2xl text-white">Pre-Symposium Workshops</h2>
             <Link href="/register#workshops" className="text-sm text-lnh-sky underline">Add a workshop</Link>
           </div>
           {tickets.length ? (
@@ -103,7 +103,7 @@ export default async function MyTickets() {
               ))}
             </ul>
           ) : (
-            <p className="mt-4 rounded-2xl border border-dashed border-white/25 p-6 text-slate-200">No workshop tickets. Workshops are separate tickets, bought with or without a pass. <Link href="/register#workshops" className="text-lnh-sky underline">Browse workshops</Link></p>
+            <p className="mt-4 rounded-2xl border border-dashed border-white/25 p-6 text-slate-200">No pre-symposium workshops yet. Each workshop has a separate registration fee; register with or without symposium registration. <Link href="/register#workshops" className="text-lnh-sky underline">Explore Workshops</Link></p>
           )}
         </section>
 
@@ -126,7 +126,7 @@ export default async function MyTickets() {
             <summary className="cursor-pointer font-display text-lg font-bold text-white">Orders and payments ({regs.length})</summary>
             <ul className="mt-4 divide-y divide-white/10">{regs.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-                <span><span className="mono text-lnh-sky">{r.regNo}</span><span className="block text-slate-300">{fmtDateTime(r.createdAt)} · {[r.hasPass ? "Symposium Pass" : null, r.items.length ? `${r.items.length} workshop${r.items.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" + ")}</span></span>
+                <span><span className="mono text-lnh-sky">{r.regNo}</span><span className="block text-slate-300">{fmtDateTime(r.createdAt)} · {[r.hasPass ? "Symposium Registration" : null, r.items.length ? `${r.items.length} workshop${r.items.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" + ")}</span></span>
                 <span className="flex items-center gap-3"><b className="text-white">{pkr(r.totalFee)}</b><Chip k={statusOf(r)} /><a href={`/api/registrations/${r.accessToken}/pdf`} className="text-lnh-sky underline">PDF</a></span>
               </li>
             ))}</ul>

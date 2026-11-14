@@ -21,7 +21,7 @@ export default async function Scientific() {
   return (
     <>
       <PageHero eyebrow="Programme" title={<>Scientific <span className="text-grad">sessions</span></>}
-        sub="Every speciality session with its chairs, speakers, panelists and research presentations. All sessions are covered by your Symposium Pass." />
+        sub="Every speciality session with its chairs, speakers, panelists and research presentations. All sessions are covered by your Symposium Registration." />
       <div className="container-x space-y-12">
         {!ev.programmeReleasedAt && <Alert kind="info">The full scientific programme will be published here once the Scientific Committee finalises the agenda.</Alert>}
         {days.length > 1 && (

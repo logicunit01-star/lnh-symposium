@@ -21,8 +21,10 @@ export default async function Register() {
   const earlyUntil = early && ev.earlyBirdUntil ? fmtDate(ev.earlyBirdUntil) : null;
   return (
     <>
-      <PageHero eyebrow="Registration" title={<>Register for the <span className="text-holo">symposium</span></>}
-        sub={`Choose your Symposium Pass, add any workshops, then pay once.${earlyUntil ? ` Early-bird pass prices until ${earlyUntil}.` : ""} LNH staff register online and pay the same fee as everyone. On-site kiosk registration for the symposium and workshops will open soon at the registration desk.`} />
+      <PageHero eyebrow="Registration" title={<>Register for the <span className="text-holo">event</span></>}
+        sub={`Secure your place by selecting your preferred registration category and adding any pre-symposium workshops you wish to attend. Complete your registration and payment in one easy transaction.${earlyUntil ? ` Early-bird registration charges are applicable until ${earlyUntil}.` : ""}`}>
+        <p className="mt-3 text-sm text-slate-300">* LNH employees can also register online</p>
+      </PageHero>
       <div className="container-x grid gap-8 pb-28 lg:grid-cols-12 lg:pb-0">
         <div className="min-w-0 space-y-14 lg:col-span-8">
           {!ev.registrationOpen && <Alert>Registration is currently closed.</Alert>}
@@ -30,20 +32,19 @@ export default async function Register() {
 
           <section id="pass" className="scroll-mt-28">
             <p className="eyebrow">Step 1</p>
-            <h2 className="h-display mt-2 text-3xl text-white">Your Symposium Pass</h2>
+            <h2 className="h-display mt-2 text-3xl text-white">Symposium Registration</h2>
             <div className="mt-5"><PassStep tiers={tiers} early={early} earlyUntil={earlyUntil} banquet={{ fee: ev.banquetFee, max: ev.banquetMax }} open={ev.registrationOpen} /></div>
           </section>
 
           <section id="workshops" className="scroll-mt-28">
             <p className="eyebrow">Step 2 · optional</p>
-            <h2 className="h-display mt-2 text-3xl text-white">Add workshop tickets</h2>
-            <p className="mt-2 mb-5 text-sm text-slate-300">Each workshop is a separate ticket with its own fee and seats. You can buy workshops with or without a Symposium Pass, now or later.</p>
-            <WorkshopCatalog items={workshops} embedded />
+            <h2 className="h-display mt-2 text-3xl text-white">Add Pre-Symposium Workshops</h2>
+            <p className="mt-2 text-sm text-slate-300">Each workshop has a separate registration fee and limited seats. You can register for workshops with or without symposium registration.</p>
+            {/* 14.11.2026: a button to the Workshops page instead of every workshop card here */}
+            <Link href="/workshops" className="btn-primary mt-5">Explore Workshops</Link>
           </section>
 
-          <p className="rounded-2xl border border-dashed border-white/25 px-5 py-4 text-sm text-slate-300">
-            Invited guest or volunteer? Use the free <Link href="/register/guest" className="text-lnh-sky underline">guest</Link> or <Link href="/register/volunteer" className="text-lnh-sky underline">volunteer</Link> registration form.
-          </p>
+          {/* guest and volunteer forms are no longer linked publicly (14.11.2026): invited people use the access link */}
         </div>
         <aside className="hidden lg:col-span-4 lg:block"><div className="lg:sticky lg:top-28"><CartPanel /></div></aside>
       </div>

@@ -14,7 +14,7 @@ export function ContactForm() {
       const r = await submit(Object.fromEntries(new FormData(e.currentTarget)));
       if (r) setDone(true);
     }}>
-      <h2 className="h-display text-3xl text-white sm:col-span-2">Send an enquiry</h2>
+      <h2 className="h-display text-3xl text-white sm:col-span-2">Have Any Query?</h2>
       {error && <Alert className="sm:col-span-2">{error}</Alert>}
       <Field label="Name" name="name" required error={fields.name}><input id="name" name="name" className="input" required /></Field>
       <Field label="Email" name="email" required error={fields.email}><input id="email" name="email" type="email" className="input" required /></Field>

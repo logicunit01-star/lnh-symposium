@@ -45,7 +45,7 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
       )}
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
         <div>
-          <p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop ticket</p>
+          <p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop registration</p>
           <p className="font-display text-lg font-bold text-white">{pkr(w.fee)}</p>
         </div>
         <div className="flex items-center gap-2">

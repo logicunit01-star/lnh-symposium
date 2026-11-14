@@ -127,6 +127,27 @@
       "when": 1794571669503,
       "tag": "0017_payment_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794658069503,
+      "tag": "0018_email_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794744469503,
+      "tag": "0019_description_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794830869503,
+      "tag": "0020_registration_abstract_emails",
+      "breakpoints": true
     }
   ]
 }

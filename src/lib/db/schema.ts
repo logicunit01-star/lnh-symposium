@@ -45,6 +45,14 @@ export const event = pgTable("event", {
   linkedin: text("linkedin"),
   youtube: text("youtube"),
   x: text("x"),
+  whatsapp: text("whatsapp"), // LNH WhatsApp link for the footer (14.11.2026)
+  // 14.11.2026: guest and volunteer forms are not public; they open only from a link with this code
+  guestCode: text("guest_code"),
+  // Abstract decision emails (14.11.2026 templates): dates and the Scientific Committee address shown in them
+  abstractConfirmBy: timestamp("abstract_confirm_by", { withTimezone: true }),
+  scheduleUpdateBy: timestamp("schedule_update_by", { withTimezone: true }),
+  presenterRegBy: timestamp("presenter_reg_by", { withTimezone: true }),
+  scEmail: text("sc_email"),
   videos: jsonb("videos").$type<string[]>().notNull().default([]),
   // Homepage (changes 11.11.2026): ticker text, gallery link, and pages that show only once they go live
   tickerItems: jsonb("ticker_items").$type<string[]>().notNull().default([]),
@@ -534,6 +542,11 @@ export const emailTemplates = pgTable("email_templates", {
   body: text("body").notNull(),
   buttonLabel: text("button_label"),
   enabled: boolean("enabled").notNull().default(true), // automatic reminders can be switched off by the admin
+  // Email settings (14 Nov 2026): who sends this notification. Empty = the default mailbox / its sender name.
+  accountId: text("account_id"),
+  fromName: text("from_name"),
+  cc: text("cc"),
+  replyTo: text("reply_to"),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -674,6 +687,34 @@ export const paymentSettings = pgTable("payment_settings", {
   id: integer("id").primaryKey().default(1),
   mode: text("mode"), // OFF | DEMO | LIVE; null = use the server settings file (PAYMENT_PROVIDER / PAYPRO_*)
   secrets: text("secrets"), // encrypted JSON: { demo: {baseUrl, clientId, clientSecret, merchantId}, live: {...}, callback: {username, password} }
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+/** Email sending accounts (mailboxes) managed by the Super Admin / Admin in Admin → Email settings (14 Nov 2026).
+ *  The SMTP password is encrypted (lib/secret-box.ts) and never sent back to the browser. */
+export const mailAccounts = pgTable("mail_accounts", {
+  id: id(),
+  label: text("label").notNull(),
+  host: text("host").notNull(),
+  port: integer("port").notNull().default(465),
+  security: text("security").notNull().default("SSL"), // SSL (465) | STARTTLS (587) | NONE
+  username: text("username").notNull(),
+  secret: text("secret"), // encrypted password
+  fromName: text("from_name").notNull(),
+  fromAddress: text("from_address").notNull(),
+  replyTo: text("reply_to"),
+  isDefault: boolean("is_default").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One row (id 1): how emails leave the site. SEND = deliver; LOG = record only; TEST = deliver every email to testAddress. */
+export const mailSettings = pgTable("mail_settings", {
+  id: integer("id").primaryKey().default(1),
+  mode: text("mode").notNull().default("SEND"),
+  testAddress: text("test_address"),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 });

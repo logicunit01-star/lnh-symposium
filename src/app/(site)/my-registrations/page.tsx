@@ -3,14 +3,14 @@ import { PageHero } from "@/components/ui/PageHero";
 import { LookupForm } from "@/components/site/LookupForm";
 import { LookupFlow } from "./LookupFlow";
 
-export const metadata = { title: "Find my tickets" };
+export const metadata = { title: "Find My Registration" };
 
 /** One place to find tickets without signing in (release 2): by a code sent to the mobile number, or by registration number and email. */
 export default function FindMyTickets() {
   return (
     <>
-      <PageHero eyebrow="Find my tickets" title={<>Find my <span className="text-grad">tickets</span></>}
-        sub="For registrations made as a guest or volunteer, or without an account. Have an account? Sign in to see everything in My tickets." >
+      <PageHero eyebrow="Find My Registration" title={<>Find my <span className="text-grad">registration</span></>}
+        sub="Retrieve your registration details if you registered as a guest, volunteer, or without creating an account. Already have an account? Sign in to view all your registrations under My Registrations." >
         <div className="mt-6"><Link href="/account?next=/account/bookings" className="btn-ghost btn-sm">Sign in instead</Link></div>
       </PageHero>
       <div className="container-x grid max-w-5xl gap-8 lg:grid-cols-2">

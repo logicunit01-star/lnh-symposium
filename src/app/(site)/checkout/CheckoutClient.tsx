@@ -63,10 +63,10 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   if (ready && empty) return (
     <div className="hud mt-10 p-10 text-center">
       <p className="font-display text-xl font-bold text-white">Your order is empty</p>
-      <p className="mt-2 text-sm text-slate-300">{held ? `You hold a Symposium Pass (${held.regNo}). Add a workshop ticket to continue.` : "Choose your Symposium Pass or add workshop tickets first."}</p>
+      <p className="mt-2 text-sm text-slate-300">{held ? `You hold a Symposium Registration (${held.regNo}). Add a workshop to continue.` : "Register for the Symposium or add pre-symposium workshops first."}</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
-        {!held && <Link href="/register#pass" className="btn-primary">Choose your pass</Link>}
-        <Link href="/register#workshops" className="btn-ghost">Browse workshops</Link>
+        {!held && <Link href="/register#pass" className="btn-primary">Register for the Symposium</Link>}
+        <Link href="/register#workshops" className="btn-ghost">Explore Workshops</Link>
       </div>
     </div>
   );
@@ -75,7 +75,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
     <div className="mt-10 grid gap-6 lg:grid-cols-12">
       {welcome && ready && (
         <div role="status" className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-3 text-sm text-emerald-100 lg:col-span-12">
-          Signed in. {[pass ? "Your Symposium Pass" : null, cart.length ? `${cart.length} workshop ticket${cart.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ")} {pass && cart.length ? "are" : "is"} still selected.
+          Signed in. {[pass ? "Your Symposium Registration" : null, cart.length ? `${cart.length} workshop registration${cart.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ")} {pass && cart.length ? "are" : "is"} still selected.
         </div>
       )}
       <div className="space-y-6 lg:col-span-7">
@@ -87,7 +87,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
               {held && !pass && (
                 <li className="flex items-start gap-3 rounded-2xl border border-lnh-sky/30 p-3 text-sm">
                   <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-lnh-sky" />
-                  <span className="flex-1 text-slate-200"><b className="text-white">Symposium Pass</b> · already yours ({held.regNo}). Not charged again.</span>
+                  <span className="flex-1 text-slate-200"><b className="text-white">Symposium Registration</b> · already yours ({held.regNo}). Not charged again.</span>
                   <span className="text-sm font-bold text-white">{pkr(0)}</span>
                 </li>
               )}
@@ -96,11 +96,11 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
                   <div className="flex items-start gap-3">
                     <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-lnh-sky" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white">Symposium Pass · {pass.designation}</p>
-                      <p className="text-xs text-slate-300">{passCat ? `All sessions, all 3 days · 1 banquet pass included${early ? " · early-bird price" : ""}` : "This designation is no longer offered. Choose your pass again."}</p>
+                      <p className="text-sm font-semibold text-white">Symposium Registration · {pass.designation}</p>
+                      <p className="text-xs text-slate-300">{passCat ? `All sessions, all 3 days · 1 banquet pass included${early ? " · early-bird price" : ""}` : "This designation is no longer offered. Choose your registration again."}</p>
                     </div>
                     <p className="text-sm font-bold text-white">{passCat ? pkr(passFee) : "—"}</p>
-                    <button onClick={() => setPass(null)} aria-label="Remove Symposium Pass" className="grid h-9 w-9 place-items-center rounded-full text-slate-300 hover:text-lnh-rose"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setPass(null)} aria-label="Remove Symposium Registration" className="grid h-9 w-9 place-items-center rounded-full text-slate-300 hover:text-lnh-rose"><Trash2 className="h-4 w-4" /></button>
                   </div>
                   {extra > 0 && <p className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-xs text-slate-300"><span className="flex items-center gap-1.5"><Utensils className="h-3.5 w-3.5" />Extra banquet pass × {extra}</span><b className="text-white">{pkr(banquetTotal)}</b></p>}
                 </li>
@@ -110,7 +110,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
                   <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-lnh-gold" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-white">{l.live?.title ?? l.cartTitle}</p>
-                    <p className="text-xs text-slate-300">{l.live ? `Workshop ticket · ${l.live.when}${l.live.tag ? ` · ${l.live.tag}` : ""}` : "No longer available"}{l.live?.left === 0 && " · Fully booked"}</p>
+                    <p className="text-xs text-slate-300">{l.live ? `Workshop registration · ${l.live.when}${l.live.tag ? ` · ${l.live.tag}` : ""}` : "No longer available"}{l.live?.left === 0 && " · Fully booked"}</p>
                   </div>
                   <p className="text-sm font-bold text-white">{l.live ? pkr(l.live.fee) : "—"}</p>
                   <button onClick={() => remove(l.id)} aria-label={`Remove ${l.cartTitle}`} className="grid h-9 w-9 place-items-center rounded-full text-slate-300 hover:text-lnh-rose"><Trash2 className="h-4 w-4" /></button>
@@ -126,7 +126,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
                   <option value="">Choose…</option>
                   {categories.flatMap((c) => c.designations).map((d) => <option key={d} value={d}>{d}</option>)}
                 </select></label>
-              <p className="mt-2 text-xs text-slate-300">Workshop tickets only: no Symposium Pass is included. Your designation prints on your receipt and certificate. <Link href="/register#pass" className="text-lnh-sky underline">Add a Symposium Pass</Link></p>
+              <p className="mt-2 text-xs text-slate-300">Pre-symposium workshops only: no Symposium Registration is included. Your designation prints on your receipt and certificate. <Link href="/register#pass" className="text-lnh-sky underline">Add Symposium Registration</Link></p>
               {fe("designation") && <p className="err">{fe("designation")}</p>}
             </div>
           )}
@@ -193,7 +193,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
         <div className="hud overflow-hidden lg:sticky lg:top-28">
           <div className="border-b border-white/10 bg-white/[0.04] px-6 py-4"><p className="font-display text-lg font-bold text-white">Payment summary</p></div>
           <div className="space-y-2 p-6 text-sm">
-            {pass && passCat && <div className="flex justify-between gap-3"><span className="text-slate-300">Symposium Pass · {pass.designation}{early ? " (early bird)" : ""}</span><span className="shrink-0 whitespace-nowrap text-white">{pkr(passFee)}</span></div>}
+            {pass && passCat && <div className="flex justify-between gap-3"><span className="text-slate-300">Symposium Registration · {pass.designation}{early ? " (early bird)" : ""}</span><span className="shrink-0 whitespace-nowrap text-white">{pkr(passFee)}</span></div>}
             {extra > 0 && <div className="flex justify-between gap-3"><span className="text-slate-300">Extra banquet pass × {extra}</span><span className="shrink-0 whitespace-nowrap text-white">{pkr(banquetTotal)}</span></div>}
             {valid.map((l) => <div key={l.id} className="flex justify-between gap-3"><span className="text-slate-300">Workshop: {l.live!.title}</span><span className="shrink-0 whitespace-nowrap text-white">{pkr(l.live!.fee)}</span></div>)}
             <div className="flex justify-between border-t border-white/10 pt-3"><span className="text-slate-300">Subtotal</span><span className="text-white">{pkr(subtotal)}</span></div>

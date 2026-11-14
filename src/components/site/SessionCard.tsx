@@ -50,12 +50,12 @@ export function SessionCard({ s, taken, early, showDate, cta, href }: { s: Progr
       )}
       {ws ? (
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
-          <div><p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop ticket</p><p className="font-display text-lg font-bold text-white">{pkr(fee)}</p></div>
+          <div><p className="text-[11px] uppercase tracking-widest text-slate-400">Workshop registration</p><p className="font-display text-lg font-bold text-white">{pkr(fee)}</p></div>
           {s.registrable && <AddTicket disabled={left === 0} item={{ id: s.id, title: s.title, kind: "WORKSHOP", fee, when: fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" }), tag: s.department ?? s.track }} />}
         </div>
       ) : s.type !== "BREAK" && (
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-lnh-sky/40 bg-lnh-sky/10 px-3 py-1.5 text-xs font-semibold text-lnh-sky"><Ticket className="h-3.5 w-3.5" />Covered by your Symposium Pass</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-lnh-sky/40 bg-lnh-sky/10 px-3 py-1.5 text-xs font-semibold text-lnh-sky"><Ticket className="h-3.5 w-3.5" />Covered by your Symposium Registration</span>
           {cta && <Link href={cta.href} className="btn-ghost btn-sm">{cta.label}</Link>}
         </div>
       )}

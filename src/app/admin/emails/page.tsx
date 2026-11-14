@@ -5,9 +5,10 @@ import { requirePerm } from "@/lib/auth";
 import { getEvent } from "@/lib/event";
 import { PageTitle, Pager } from "@/components/admin/ui";
 import { allTemplates, ensureDefaultJobs, renderTemplate, runDueJobs, JOB_KINDS } from "@/lib/email";
-import { DEFAULT_TEMPLATES, MERGE_FIELDS, SAMPLE_VARS } from "@/lib/email-templates";
+import { CATEGORIES, DEFAULT_TEMPLATES, MERGE_FIELDS, SAMPLE_VARS } from "@/lib/email-templates";
+import { can } from "@/lib/permissions";
 import { cn, fmtDateTime, TZ } from "@/lib/utils";
-import { cancelJob, rescheduleJob, runJobNow, saveTemplate, scheduleJob } from "./actions";
+import { cancelJob, rescheduleJob, runJobNow, saveTemplate, scheduleJob, testTemplate } from "./actions";
 
 export const metadata = { title: "Automated emails" };
 export const dynamic = "force-dynamic";
@@ -21,8 +22,8 @@ const TONE: Record<string, string> = { SCHEDULED: "bg-amber-100 text-amber-800",
 const PER = 40;
 
 /** SC feedback (29 Oct 2026): automated email management — templates with merge fields, dispatch schedule, sent log. */
-export default async function Emails({ searchParams }: { searchParams: { tab?: string; t?: string; saved?: string; err?: string; ran?: string; q?: string; tpl?: string; st?: string; page?: string } }) {
-  await requirePerm("emails");
+export default async function Emails({ searchParams }: { searchParams: { tab?: string; t?: string; saved?: string; err?: string; ran?: string; q?: string; tpl?: string; st?: string; page?: string; tested?: string } }) {
+  const u = await requirePerm("emails");
   await ensureDefaultJobs();
   const autoRan = await runDueJobs("Opened by admin");
   const ev = await getEvent();
@@ -36,7 +37,8 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   );
   const head = (
     <>
-      <PageTitle title="Automated emails" sub={`Sent from ${ev.emailFrom || process.env.MAIL_FROM || "the default address"}${ev.emailCc ? `, CC ${ev.emailCc}` : ""}. Change the sender and CC in Event Settings. ${process.env.SMTP_HOST ? "" : "SMTP is not configured yet, so messages are recorded in the log but not delivered."}`} />
+      <PageTitle title="Automated emails" sub={`Every email the site sends has a template here, grouped by type. Each one can use its own mailbox, sender name, CC and reply-to${can(u.role, "mail") ? "" : " (set by the Super Admin / Admin)"}. Mailboxes and the delivery mode: Email settings.`}
+        actions={can(u.role, "mail") ? <Link href="/admin/email-settings" className="a-btn-ghost">Email settings</Link> : undefined} />
       {autoRan.length > 0 && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Due dispatches ran now: {autoRan.join("; ")}</p>}
       {Tabs}
     </>
@@ -125,39 +127,66 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   const templates = await allTemplates();
   const sel = templates.find((t) => t.key === searchParams.t) ?? templates[0];
   const def = DEFAULT_TEMPLATES[sel.key];
-  const preview = renderTemplate(sel, { ...SAMPLE_VARS, event_name: ev.name });
+  const preview = renderTemplate(sel, { ...SAMPLE_VARS, event_name: ev.name, contact_email: ev.contactEmail });
+  const mailboxes = await db.select({ id: s.mailAccounts.id, label: s.mailAccounts.label, fromName: s.mailAccounts.fromName, fromAddress: s.mailAccounts.fromAddress, isDefault: s.mailAccounts.isDefault, active: s.mailAccounts.active }).from(s.mailAccounts);
+  const dflt = mailboxes.find((m) => m.isDefault && m.active) ?? mailboxes.find((m) => m.active);
+  const editSender = can(u.role, "mail");
+  const SC = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"].includes(sel.key);
   return (
     <>
       {head}
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Template saved.</p>}
+      {searchParams.err && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">{searchParams.err === "cc" ? "CC must be one or more email addresses separated by commas." : "Reply-to must be an email address."}</p>}
+      {searchParams.tested && <p className="mb-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">Sample sent to {u.email}: {searchParams.tested === "SENT" ? "delivered to the mail server." : searchParams.tested === "LOGGED" ? "recorded only (delivery is set to Log only, or no mailbox is set up)." : "the mail server refused it; see Sent emails for the reason."}</p>}
       <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-        <div className="a-card divide-y divide-slate-100 self-start">
-          {templates.map((t) => (
-            <Link key={t.key} href={`/admin/emails?t=${t.key}`} className={cn("block px-4 py-3 hover:bg-slate-50", sel.key === t.key && "bg-lnh-blue/5")}>
-              <p className="text-sm font-semibold text-slate-800">{DEFAULT_TEMPLATES[t.key].name}</p>
-              <p className="text-xs text-slate-500">{DEFAULT_TEMPLATES[t.key].audience}</p>
-              {t.custom && <span className="badge mt-1 bg-sky-100 text-sky-800">Edited</span>}{DEFAULT_TEMPLATES[t.key].switchable && !t.enabled && <span className="badge ml-1 mt-1 bg-amber-100 text-amber-800">Off</span>}
-            </Link>
-          ))}
+        <div className="a-card self-start overflow-hidden">
+          {CATEGORIES.map((c) => { const list = templates.filter((t) => DEFAULT_TEMPLATES[t.key].category === c); return list.length ? (
+            <div key={c}>
+              <p className="bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">{c}</p>
+              <div className="divide-y divide-slate-100">{list.map((t) => (
+                <Link key={t.key} href={`/admin/emails?t=${t.key}`} className={cn("block px-4 py-2.5 hover:bg-slate-50", sel.key === t.key && "bg-lnh-blue/5")}>
+                  <p className="text-sm font-semibold text-slate-800">{DEFAULT_TEMPLATES[t.key].name}</p>
+                  <p className="text-xs text-slate-500">{DEFAULT_TEMPLATES[t.key].audience}</p>
+                  {t.custom && <span className="badge mt-1 bg-sky-100 text-sky-800">Edited</span>}{DEFAULT_TEMPLATES[t.key].switchable && !t.enabled && <span className="badge ml-1 mt-1 bg-amber-100 text-amber-800">Off</span>}
+                  {t.accountId && <span className="badge ml-1 mt-1 bg-violet-100 text-violet-800">{mailboxes.find((m) => m.id === t.accountId)?.label ?? "Mailbox"}</span>}
+                </Link>
+              ))}</div>
+            </div>) : null; })}
         </div>
         <div className="space-y-4">
           <form action={saveTemplate.bind(null, sel.key)} className="a-card space-y-3 p-5">
             <div className="flex flex-wrap items-start justify-between gap-2"><div><h2 className="font-display text-lg font-bold">{def.name}</h2><p className="text-xs text-slate-500">To: {def.audience} · Sent: {def.when}</p></div>
               {sel.custom && <p className="text-xs text-slate-500">Edited by {sel.updatedBy}, {sel.updatedAt ? fmtDateTime(sel.updatedAt) : ""}</p>}</div>
+            <fieldset className="rounded-xl border border-slate-200 p-4">
+              <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-500">Sender {editSender ? "" : "(set by the Super Admin / Admin)"}</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><label className="a-label">Mailbox</label>
+                  <select name="accountId" defaultValue={sel.accountId ?? ""} disabled={!editSender} className="a-input">
+                    <option value="">Default mailbox{dflt ? ` (${dflt.fromAddress})` : " (none set up yet)"}</option>
+                    {mailboxes.filter((m) => m.active || m.id === sel.accountId).map((m) => <option key={m.id} value={m.id}>{m.label} ({m.fromAddress})</option>)}
+                  </select></div>
+                <div><label className="a-label">Sender name</label><input name="fromName" defaultValue={sel.fromName ?? ""} disabled={!editSender} placeholder={SC && ev.emailFrom ? `${ev.emailFrom.split("<")[0].trim()} (Event Settings)` : "the mailbox's sender name"} className="a-input" /></div>
+                <div><label className="a-label">CC (comma-separated)</label><input name="cc" defaultValue={sel.cc ?? ""} disabled={!editSender} placeholder={SC && ev.emailCc ? `${ev.emailCc} (Event Settings)` : "none"} className="a-input" /></div>
+                <div><label className="a-label">Reply-to</label><input name="replyTo" defaultValue={sel.replyTo ?? ""} disabled={!editSender} placeholder={`the mailbox's reply-to, else ${ev.contactEmail}`} className="a-input" /></div>
+              </div>
+            </fieldset>
+            {def.composed ? <p className="text-sm text-slate-600">Staff write the subject and message each time they send (Reminders &amp; Certificates); only the sender settings above apply.</p> : <>
             <div><label className="a-label">Subject</label><input name="subject" defaultValue={sel.subject} className="a-input" /></div>
             <div><label className="a-label">Message (blank line = new paragraph, **bold**, a line with an empty field is left out)</label><textarea name="body" rows={14} defaultValue={sel.body} className="a-input font-mono text-xs" /></div>
             <div><label className="a-label">Button label (links to the recipient's page)</label><input name="buttonLabel" defaultValue={sel.buttonLabel ?? ""} className="a-input" /></div>
-            {def.switchable && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={sel.enabled} />Send this reminder automatically</label>}
-            <div className="flex flex-wrap gap-2"><button className="a-btn-primary">Save template</button>{sel.custom && <button name="reset" value="1" className="a-btn-ghost">Restore default</button>}</div>
+            {def.switchable && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={sel.enabled} />Send this email automatically</label>}
+            {def.locked && <p className="text-xs text-slate-500">Always sent: it cannot be switched off.</p>}</>}
+            <div className="flex flex-wrap gap-2"><button className="a-btn-primary">Save</button>{sel.custom && !def.composed && <button name="reset" value="1" className="a-btn-ghost">Restore default text</button>}
+              {!def.composed && <button formAction={testTemplate.bind(null, sel.key)} className="a-btn-ghost">Send a sample to me</button>}</div>
           </form>
-          <div className="a-card p-5">
+          {!def.composed && <><div className="a-card p-5">
             <p className="text-sm font-semibold">Merge fields</p>
             <ul className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">{MERGE_FIELDS.map(([k, l]) => <li key={k}><code className="rounded bg-slate-100 px-1 font-mono">{`{{${k}}}`}</code> {l}</li>)}</ul>
           </div>
           <div className="a-card overflow-hidden">
             <p className="border-b border-slate-100 px-5 py-3 text-sm"><b>Preview</b> with sample values · Subject: {preview.subject}</p>
             <iframe title="Email preview" srcDoc={preview.html} className="h-[640px] w-full bg-slate-100" />
-          </div>
+          </div></>}
         </div>
       </div>
     </>

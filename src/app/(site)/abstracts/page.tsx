@@ -69,9 +69,9 @@ export default async function Abstracts() {
               <div className="hud p-8 text-center">
                 <ShieldCheck className="mx-auto h-10 w-10 text-lnh-sky" />
                 <h2 className="mt-4 font-display text-2xl font-bold text-white">Sign in to submit</h2>
-                <p className="mx-auto mt-2 max-w-md text-slate-400">Abstracts are submitted from a verified author account, so we can confirm your email and keep you updated on the decision.</p>
+                <p className="mx-auto mt-2 max-w-md text-slate-400">Submit your abstract online. It will be reviewed by the relevant specialty/department. You can track its status here from submission to decision.</p>
                 <div className="mt-6 flex justify-center gap-3">
-                  <Link href="/account?mode=signup&next=/abstracts" className="btn-primary">Create account</Link>
+                  <Link href="/account?mode=signup&next=/abstracts" className="btn-primary">Create an account</Link>
                   <Link href="/account?next=/abstracts" className="btn-ghost">Sign in</Link>
                 </div>
               </div>

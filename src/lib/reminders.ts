@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { getEvent } from "./event";
-import { sendEmail, sendSms, emailLayout } from "./notify";
+import { sendSms } from "./notify";
 import { appUrl, fmtDate, fmtTime24, pkr } from "./utils";
 import { getTemplate, sendTemplate } from "./email";
 
@@ -18,8 +18,7 @@ export async function runReminders(now = new Date()) {
   ));
   for (const r of due) {
     const link = `${appUrl()}/register/success/${r.accessToken}`;
-    await sendEmail(r.email, `Payment pending — ${r.regNo}`, emailLayout("Complete your registration",
-      `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Your registration <b>${r.regNo}</b> for the ${ev.name} is awaiting payment of <b>${pkr(r.totalFee)}</b>. Workshop seats are limited and are confirmed on payment.</p>`, { label: "Pay now", href: link }));
+    await sendTemplate("PAYMENT_PENDING", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, reg_no: r.regNo, amount: pkr(r.totalFee), link }, { ref: r.regNo });
     await sendSms(r.phone, `LNH Symposium: Reg ${r.regNo} payment of ${pkr(r.totalFee)} pending. Pay: ${link}`);
     await db.update(s.registrations).set({ remindedAt: now }).where(eq(s.registrations.id, r.id));
     pending++;

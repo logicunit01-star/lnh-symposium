@@ -86,7 +86,7 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   section("Participation & fee summary");
   const pass = r.hasPass ?? true;
   if (pass) {
-    page.drawText(`Symposium Pass, all sessions${r.earlyBird ? " (early-bird)" : ""} - includes 1 banquet pass`, { x: 40, y, size: 10, font: f, color: INK });
+    page.drawText(`Symposium Registration, all sessions${r.earlyBird ? " (early-bird)" : ""} - includes 1 banquet pass`, { x: 40, y, size: 10, font: f, color: INK });
     page.drawText(pkr(r.conferenceFee), { x: W - 40 - b.widthOfTextAtSize(pkr(r.conferenceFee), 10), y, size: 10, font: b, color: INK }); y -= 17;
   }
   if (r.banquetQty) {
@@ -94,7 +94,7 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
     page.drawText(pkr(r.banquetFee ?? 0), { x: W - 40 - b.widthOfTextAtSize(pkr(r.banquetFee ?? 0), 10), y, size: 10, font: b, color: INK }); y -= 17;
   }
   for (const it of r.items) {
-    const line = `Workshop ticket: ${it.session.title}`;
+    const line = `Workshop registration: ${it.session.title}`;
     const lines = wrap(safe(line), f, 10, 360);
     page.drawText(lines[0], { x: 40, y, size: 10, font: f, color: INK });
     const fee = it.fee ? pkr(it.fee) : "Included";
@@ -145,7 +145,7 @@ async function idCardPage(doc: PDFDocument, r: RegForPdf, ev: { name: string }, 
   p.drawText("e-Abstract book", { x: W - 70 - b.widthOfTextAtSize("e-Abstract book", 7.5) / 2, y: 20, size: 7.5, font: b, color: NAVY });
   p.drawLine({ start: { x: 20, y: 110 }, end: { x: W - 20, y: 110 }, thickness: 0.4, color: rgb(0.85, 0.88, 0.94) });
   const bq = ((r.hasPass ?? true) && (r.regType ?? "PARTICIPANT") === "PARTICIPANT" ? 1 : 0) + (r.banquetQty ?? 0);
-  c((r.hasPass ?? true) ? `Symposium Pass${bq ? `  |  Banquet x ${bq}` : ""}` : "Workshop ticket(s) only", 6, 7, b, RED);
+  c((r.hasPass ?? true) ? `Symposium Registration${bq ? `  |  Banquet x ${bq}` : ""}` : "Workshop registration(s) only", 6, 7, b, RED);
 }
 
 /** Back of the ID card (4 x 6 in): the session feedback QR (Dashboard Instructions, revised 06-11-2026:
@@ -174,8 +174,8 @@ async function ticketPage(doc: PDFDocument, r: RegForPdf, it: RegForPdf["items"]
   p.drawRectangle({ x: 0, y: H - 70, width: W, height: 70, color: NAVY });
   p.drawRectangle({ x: 0, y: H - 74, width: W, height: 4, color: GOLD });
   const c = (t: string, y: number, size: number, font: PDFFont, color = INK) => p.drawText(t, { x: (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color });
-  c("WORKSHOP TICKET", H - 30, 11, b, rgb(1, 1, 1));
-  c("Separate from the Symposium Pass", H - 48, 8, f, rgb(0.85, 0.9, 1));
+  c("WORKSHOP REGISTRATION", H - 30, 11, b, rgb(1, 1, 1));
+  c("Separate from the Symposium Registration", H - 48, 8, f, rgb(0.85, 0.9, 1));
   let y = H - 100;
   for (const line of wrap(safe(it.session.title), b, 13, W - 36).slice(0, 3)) { c(line, y, 13, b); y -= 17; }
   c(safe(`${fmtDate(it.session.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}, ${fmtTime(it.session.startsAt)}-${fmtTime(it.session.endsAt)}`), y - 2, 9, f, GREY); y -= 15;
@@ -401,7 +401,7 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
       ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, (w.days ?? 1) > 1 ? "Each day, Pakistan time" : "Pakistan time"],
       w.mode === "ONLINE" ? ["Venue", "Online", "Link sent to registered participants"] : ["Venue", w.hall ?? "-", w.mode === "HYBRID" ? `${w.building ? `${w.building} · ` : ""}also online` : w.building ?? undefined],
       ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
-      ["Fee", pkr(w.fee), "Separate ticket, no Symposium Pass needed"],
+      ["Fee", pkr(w.fee), "Separate fee, no symposium registration required"],
       ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
     ],
     // N3 (13 Nov): one Workshop Director and the facilitators by name, no photos

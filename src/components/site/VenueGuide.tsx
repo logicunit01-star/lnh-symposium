@@ -11,12 +11,12 @@ export type GuideVenue = {
 
 const BLOCKS: { x: number; y: number; w: number; h: number; label: string; key?: string }[] = [
   { x: 34, y: 12, w: 30, h: 32, label: "Convention Centre", key: "Convention Center" },
-  { x: 8, y: 30, w: 24, h: 30, label: "LNMC", key: "LNMC" },
+  { x: 8, y: 30, w: 24, h: 30, label: "Medical College", key: "LNMC" },
   { x: 56, y: 8, w: 14, h: 16, label: "Surgical Tower" },
-  { x: 64, y: 44, w: 22, h: 14, label: "Clinical Skills Centre" },
-  { x: 18, y: 64, w: 26, h: 14, label: "Nursing College", key: "College of Nursing" },
+  { x: 64, y: 44, w: 22, h: 14, label: "RSDC", key: "RSDC" },
+  { x: 18, y: 64, w: 26, h: 14, label: "College of Nursing", key: "College of Nursing" },
   { x: 74, y: 10, w: 20, h: 24, label: "Main Hospital · Radiology", key: "Radiology" },
-  { x: 47, y: 52, w: 14, h: 14, label: "BSMT", key: "BSMT" },
+  { x: 47, y: 52, w: 14, h: 14, label: "Medical Technology", key: "BSMT" },
 ];
 
 /** Static guide map of the 5 scientific session venues (SC feedback, 29 Oct 2026): a pin per venue; tap a pin for venue details and that day's sessions. */

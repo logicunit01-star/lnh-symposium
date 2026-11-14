@@ -2,6 +2,7 @@ import { ok, fail, zodFail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
 import { getEvent } from "@/lib/event";
 import { createGuestRegistration, guestInput, volunteerInput } from "@/lib/guest";
+import { guestCodeOk } from "@/lib/guest-access";
 
 /** Guests and volunteers registration forms 2027 (public, approval required). */
 export async function POST(req: Request) {
@@ -9,6 +10,7 @@ export async function POST(req: Request) {
   const ev = await getEvent();
   if (!ev.registrationOpen) return fail("Registration is currently closed.");
   const body = await req.json().catch(() => ({}));
+  if (!guestCodeOk(ev, body?.code)) return fail("This registration form is by invitation only. Please use the link you received.", 403);
   const p = (body?.regType === "VOLUNTEER" ? volunteerInput : guestInput).safeParse(body);
   if (!p.success) return zodFail(p.error);
   try {

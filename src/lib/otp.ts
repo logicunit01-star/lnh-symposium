@@ -1,9 +1,10 @@
 // One-time codes: 6 digits, 5-minute life, 5 attempts, stored as a keyed hash.
 import "server-only";
+import { sendTemplate } from "./email";
 import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
-import { sendEmail, sendSms, emailLayout } from "./notify";
+import { sendSms } from "./notify";
 
 export const OTP_TTL_MS = 5 * 60_000;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -30,7 +31,7 @@ export const phoneDigits = (p: string) => { let d = p.replace(/\D/g, ""); if (d.
 
 async function deliver(code: string, to: { email?: string; phone?: string }, purpose: string) {
   const what = purpose === "SIGNUP" ? "verify your account" : purpose === "SIGNIN" ? "sign in to your account" : purpose === "RESET" ? "set a new password" : "view your registrations";
-  if (to.email) await sendEmail(to.email, `Your LNH Symposium code: ${code}`, emailLayout("Your one-time code", `<p>Use this code to ${what}:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 5 minutes. If you did not ask for it, ignore this email.</p>`));
+  if (to.email) await sendTemplate("SIGN_IN_CODE", to.email, { code, purpose: what });
   if (to.phone) await sendSms(to.phone, `LNH Symposium: your code is ${code}. It expires in 5 minutes. Do not share it.`);
 }
 

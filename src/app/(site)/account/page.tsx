@@ -18,7 +18,7 @@ export default async function Account({ searchParams }: { searchParams: { next?:
         <div className="lg:col-span-8">
           <span className="eyebrow">Your symposium account</span>
           <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">{next.startsWith("/checkout") ? "Sign in to check out" : "Sign in"}</h1>
-          <p className="mt-3 max-w-xl text-slate-300">{next.startsWith("/checkout") ? "Your selection is kept while you sign in or create an account." : "One account for your Symposium Pass, workshop tickets and abstracts."}</p>
+          <p className="mt-3 max-w-xl text-slate-300">{next.startsWith("/checkout") ? "Your selection is kept while you sign in or create an account." : "One-time registration for the 3-day Symposium, pre-symposium workshops, and abstract submissions; all under one account."}</p>
           <div className="mt-8"><AccountForms next={next} initialMode={searchParams.mode === "signup" ? "signup" : "signin"} /></div>
           <p className="mt-4 text-sm text-slate-300">Registered as a guest or volunteer, or without an account? <Link href="/my-registrations" className="text-lnh-sky underline">Find your tickets with a code</Link>.</p>
         </div>

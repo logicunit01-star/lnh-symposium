@@ -1,4 +1,5 @@
 "use server";
+import { sendTemplate } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -138,8 +139,7 @@ export async function reviewWorkshop(id: string, f: FormData) {
   await log(id, u, w.status, to, note);
   if (decided && w.proposedById) {
     const [p] = await db.select().from(s.users).where(eq(s.users.id, w.proposedById));
-    if (p) await sendEmail(p.email, `Workshop request ${to === "APPROVED" ? "approved" : "not approved"}: ${w.title}`, emailLayout("Workshop request decision",
-      `<p>Dear ${p.name},</p><p>The Workshop Programme Committee has <b>${to === "APPROVED" ? "approved" : "not approved"}</b> “${w.title}” (${fmtDate(w.startsAt)}).</p>${note ? `<p>Committee note: ${note.replace(/</g, "&lt;")}</p>` : ""}${to === "APPROVED" ? `<p>It is now live in the catalogue. The flyer goes to the Marketing department for review; we will email it to you once approved.</p>` : ""}`));
+    if (p) await sendTemplate(to === "APPROVED" ? "WORKSHOP_REQUEST_APPROVED" : "WORKSHOP_REQUEST_REJECTED", p.email, { name: p.name, workshop: w.title, workshop_date: fmtDate(w.startsAt), note }, { ref: w.title });
   }
   revalidatePath("/admin/workshops", "layout"); revalidatePath("/", "layout");
   redirect(`/admin/workshops/${id}`);
@@ -193,7 +193,7 @@ export async function notifyWaitlist(id: string) {
   if (!free) return;
   const next = await db.select().from(s.waitlist).where(and(eq(s.waitlist.sessionId, id), isNull(s.waitlist.notifiedAt))).orderBy(asc(s.waitlist.createdAt)).limit(free);
   for (const p of next) {
-    await sendEmail(p.email, `A seat is free: ${w.title}`, emailLayout("A seat is free", `<p>Dear ${p.name},</p><p>A seat has opened in <b>${w.title}</b> on ${fmtDate(w.startsAt)}. Seats go to whoever pays first: <a href="${appUrl()}/workshops">book now</a>.</p>`));
+    await sendTemplate("WAITLIST_SEAT_FREE", p.email, { name: p.name, workshop: w.title, workshop_date: fmtDate(w.startsAt), link: `${appUrl()}/workshops/${w.slug}` }, { ref: w.title });
     await db.update(s.waitlist).set({ notifiedAt: new Date() }).where(eq(s.waitlist.id, p.id));
   }
   revalidatePath(`/admin/workshops/${id}`);
@@ -238,8 +238,7 @@ export async function reviewFlyer(id: string, f: FormData) {
   await log(id, u, null, to === "APPROVED" ? "FLYER_APPROVED" : "FLYER_CHANGES", note ?? (to === "APPROVED" ? "Flyer approved by Marketing" : null));
   if (to === "APPROVED" && w.proposedById) {
     const [p] = await db.select().from(s.users).where(eq(s.users.id, w.proposedById));
-    if (p) await sendEmail(p.email, `Flyer approved: ${w.title}`, emailLayout("Your workshop flyer is ready",
-      `<p>Dear ${p.name},</p><p>The Marketing department has approved the flyer for “${w.title}” (${fmtDate(w.startsAt)}).</p><p>Download and share it: ${appUrl()}/workshops/${w.slug}/flyer</p>`));
+    if (p) await sendTemplate("WORKSHOP_FLYER_APPROVED", p.email, { name: p.name, workshop: w.title, workshop_date: fmtDate(w.startsAt), link: `${appUrl()}/workshops/${w.slug}/flyer` }, { ref: w.title });
   }
   revalidatePath("/admin/flyers"); revalidatePath(`/admin/workshops/${id}`);
   redirect(`/admin/flyers?w=${id}&saved=${to}`);

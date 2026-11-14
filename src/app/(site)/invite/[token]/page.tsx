@@ -22,9 +22,11 @@ export default async function InvitePage({ params, searchParams }: { params: { t
   const i = await findByToken(params.token);
   if (!i) notFound();
   const answered = i.status === "ACCEPTED" || i.status === "DECLINED";
+  // 14.11.2026 acceptance emails: presenting authors confirm with CONFIRMED / NOT AVAILABLE
+  const presenter = !!i.abstractRef || i.kind === "POSTER";
   return (
     <>
-      <PageHero eyebrow="Invitation" title={<>{i.role}</>} sub={`Dear ${i.name}, the Scientific Committee invites you to take part in the 9th LNH Symposium 2027.`} />
+      <PageHero eyebrow="Invitation" title={<>{i.role}</>} sub={presenter ? `Dear ${i.name}, please confirm whether you can present your accepted abstract${i.abstractRef ? ` (${i.abstractRef})` : ""} at the date and time below.` : `Dear ${i.name}, the Scientific Committee invites you to take part in the 9th LNH Symposium 2027.`} />
       <div className="container-x max-w-2xl">
         <div className="hud space-y-4 p-6 sm:p-8">
           {i.session && <p className="font-display text-2xl font-bold text-white">{i.session}</p>}
@@ -35,13 +37,17 @@ export default async function InvitePage({ params, searchParams }: { params: { t
           </ul>
           {i.status === "WITHDRAWN" ? <p className="rounded-xl bg-white/5 p-4 text-sm text-slate-300">This invitation has been withdrawn by the secretariat.</p>
             : answered || searchParams.done ? (
-              <p className="flex items-center gap-2 rounded-xl bg-white/5 p-4 text-sm text-white">{(searchParams.done ?? i.status) === "ACCEPTED" ? <><CheckCircle2 className="h-5 w-5 text-emerald-400" />Thank you, you have accepted. The secretariat will be in touch with details.</> : <><XCircle className="h-5 w-5 text-lnh-rose" />You have declined. Thank you for letting us know.</>}</p>
+              <p className="flex items-center gap-2 rounded-xl bg-white/5 p-4 text-sm text-white">{(searchParams.done ?? i.status) === "ACCEPTED" ? <><CheckCircle2 className="h-5 w-5 text-emerald-400" />{presenter ? "Thank you, your participation is CONFIRMED. The final schedule will be shared with you." : "Thank you, you have accepted. The secretariat will be in touch with details."}</> : <><XCircle className="h-5 w-5 text-lnh-rose" />{presenter ? "You marked NOT AVAILABLE. The Scientific Committee will consider your preferred alternative and contact you." : "You have declined. Thank you for letting us know."}</>}</p>
             ) : (
               <form action={respond.bind(null, params.token)} className="space-y-3 pt-2">
-                <textarea name="note" rows={2} placeholder="Message to the secretariat (optional)" className="input" />
+                {presenter && <ul className="space-y-2 text-sm text-slate-300">
+                  <li><b className="text-white">CONFIRMED:</b> I accept the invitation, I am available on the date and time above, and I will attend and present in person.</li>
+                  <li><b className="text-white">NOT AVAILABLE:</b> I am unable to present at the scheduled date and time. Please state a preferred alternative day or time slot and the reason below.</li>
+                </ul>}
+                <textarea name="note" rows={presenter ? 3 : 2} placeholder={presenter ? "If not available: preferred alternative day or time slot, and the reason" : "Message to the secretariat (optional)"} className="input" />
                 <div className="flex flex-wrap gap-3">
-                  <button name="answer" value="accept" className="btn-primary"><CheckCircle2 className="h-4 w-4" />Accept invitation</button>
-                  <button name="answer" value="decline" className="btn-ghost"><XCircle className="h-4 w-4" />Decline</button>
+                  <button name="answer" value="accept" className="btn-primary"><CheckCircle2 className="h-4 w-4" />{presenter ? "CONFIRMED" : "Accept invitation"}</button>
+                  <button name="answer" value="decline" className="btn-ghost"><XCircle className="h-4 w-4" />{presenter ? "NOT AVAILABLE" : "Decline"}</button>
                 </div>
               </form>
             )}

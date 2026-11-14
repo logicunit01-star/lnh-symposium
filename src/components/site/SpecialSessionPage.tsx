@@ -38,7 +38,7 @@ export async function SpecialSessionPage({ kind }: { kind: "PLENARY" | "DEBATE" 
             <p className="mt-4 text-slate-300">The keynote speaker, panelists and moderator will be announced here once the Scientific Committee finalises the agenda.</p>
           </div>
         )}
-        <p className="text-sm text-slate-400">Covered by your Symposium Pass. <Link href="/agenda" className="text-lnh-sky underline">See the full agenda</Link></p>
+        <p className="text-sm text-slate-400">Covered by your Symposium Registration. <Link href="/agenda" className="text-lnh-sky underline">See the full agenda</Link></p>
       </div>
     </>
   );

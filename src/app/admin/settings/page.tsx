@@ -1,4 +1,5 @@
 import { templateFiles } from "@/lib/programme";
+import { appUrl } from "@/lib/utils";
 import { asc } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
@@ -50,9 +51,12 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <F n="abstractP1Open" l="Abstract review Phase 1 opens (HODs)" t="datetime-local" v={dt(ev.abstractP1Open)} /><F n="abstractP1Close" l="Phase 1 closes" t="datetime-local" v={dt(ev.abstractP1Close)} />
         <F n="abstractP2Open" l="Phase 2 opens (reassigned abstracts)" t="datetime-local" v={dt(ev.abstractP2Open)} /><F n="abstractP2Close" l="Phase 2 closes" t="datetime-local" v={dt(ev.abstractP2Close)} />
         <F n="sciLockAt" l="Department agenda deadline (locked after this; Scientific Committee edits only)" t="datetime-local" v={dt(ev.sciLockAt)} /><div />
+        <p className="sm:col-span-2 mt-2 text-xs text-slate-500">Dates quoted in the abstract acceptance emails (14 Nov 2026). Leave a date empty to drop that line from the email.</p>
+        <F n="abstractConfirmBy" l="Presenters confirm participation by" t="datetime-local" v={dt(ev.abstractConfirmBy)} /><F n="scheduleUpdateBy" l="Final schedule shared by" t="datetime-local" v={dt(ev.scheduleUpdateBy)} />
+        <F n="presenterRegBy" l="Presenter registration deadline" t="datetime-local" v={dt(ev.presenterRegBy)} /><F n="scEmail" l="Scientific Committee email (in the abstract emails; empty = contact email)" v={ev.scEmail} />
         <div className="sm:col-span-2"><label className="a-label">Abstract quality-check guidelines shown to HODs (one per line)</label><textarea name="qcGuidelines" rows={6} defaultValue={ev.qcGuidelines ?? DEFAULT_QC_GUIDELINES} className="a-input text-xs" /></div>
         <p className="sm:col-span-2 mt-2 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-wider text-slate-500">Automated emails</p>
-        <F n="emailFrom" l="Sender (official Scientific Committee / symposium email ID), e.g. Scientific Committee &lt;sc@lnh.edu.pk&gt;" v={ev.emailFrom} /><F n="emailCc" l="CC on automated emails (comma separated)" v={ev.emailCc} />
+        <F n="emailFrom" l="Scientific Committee emails: sender name, e.g. Scientific Committee, 9th LNH Symposium (the address comes from the mailbox in Email settings)" v={ev.emailFrom} /><F n="emailCc" l="CC on Scientific Committee emails (comma separated; each notification can override it in Automated emails)" v={ev.emailCc} />
         {Object.entries(SESSION_FORMATS).map(([k, label]) => (
           <div key={k} className="sm:col-span-2"><label className="a-label">Agenda template: {label}</label><textarea name={`tpl_${k}`} rows={3} defaultValue={ev.agendaTemplates?.[k] ?? ""} className="a-input font-mono text-xs" />
             <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -62,7 +66,11 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         ))}
         <F n="contactEmail" l="Contact email" v={ev.contactEmail} /><F n="contactPhone" l="Contact phone" v={ev.contactPhone} />
         <F n="facebook" l="Facebook" v={ev.facebook} /><F n="instagram" l="Instagram" v={ev.instagram} />
-        <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} />
+        <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} /><F n="whatsapp" l="WhatsApp (link)" v={ev.whatsapp} />
+        <div className="sm:col-span-2 rounded-xl border border-slate-200 p-4">
+          <F n="guestCode" l="Guest and volunteer forms: access code (letters and numbers, at least 8; change it to stop old links working)" v={ev.guestCode} />
+          {ev.guestCode && <p className="mt-2 break-all text-xs text-slate-600">Invitation links to share: <b>{appUrl()}/register/guest?code={ev.guestCode}</b> · <b>{appUrl()}/register/volunteer?code={ev.guestCode}</b></p>}
+        </div>
         <div className="sm:col-span-2"><label className="a-label">Homepage teaser / promo videos (YouTube URLs, one per line; the first is the main video)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
         <div className="sm:col-span-2"><label className="a-label">Homepage ticker (one message per line)</label><textarea name="tickerItems" rows={3} defaultValue={(ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT).join("\n")} className="a-input" /></div>
         <F n="galleryUrl" l="Previous symposium gallery link" v={ev.galleryUrl ?? GALLERY_DEFAULT} /><F n="galleryThumbUrl" l="Gallery thumbnail image URL (optional)" v={ev.galleryThumbUrl} />

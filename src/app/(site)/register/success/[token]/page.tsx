@@ -65,13 +65,13 @@ export default async function Success({ params, searchParams }: { params: { toke
         {r.hasPass && (
           <article className="grid gap-6 rounded-3xl border-2 border-lnh-sky/50 bg-lnh-sky/[0.07] p-6 sm:grid-cols-[1fr_auto] sm:p-8">
             <div>
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-lnh-sky"><Ticket className="h-4 w-4" />Symposium Pass</p>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-lnh-sky"><Ticket className="h-4 w-4" />Symposium Registration</p>
               <p className="mt-2 font-display text-2xl font-bold text-white">{fmtDate(ev.startDate, { day: "numeric", month: "short" })} – {fmtDate(ev.endDate, { day: "numeric", month: "short", year: "numeric" })}</p>
               <p className="mt-1 text-slate-200">Admits to all scientific, plenary and keynote sessions, panels and ceremonies · {ev.venue}</p>
               {r.regType === "PARTICIPANT" && <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-200"><Utensils className="h-4 w-4" />Banquet passes: {banquetTotal(r)}{r.banquetQty ? ` (1 included + ${r.banquetQty} extra)` : " (included)"}</p>}
               <p className="mono mt-3 text-sm text-slate-300">Pass {r.regNo}</p>
             </div>
-            {passQr && <div className="text-center"><img src={passQr} alt={`Symposium Pass QR code ${r.regNo}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the symposium entrance</p></div>}
+            {passQr && <div className="text-center"><img src={passQr} alt={`Symposium Registration QR code ${r.regNo}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the symposium entrance</p></div>}
           </article>
         )}
 
@@ -79,7 +79,7 @@ export default async function Success({ params, searchParams }: { params: { toke
         {items.map((i, n) => (
           <article key={i.id} className="grid gap-6 rounded-3xl border-2 border-lnh-gold/50 bg-lnh-gold/[0.06] p-6 sm:grid-cols-[1fr_auto] sm:p-8">
             <div>
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-lnh-gold"><Wrench className="h-4 w-4" />Workshop ticket</p>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-lnh-gold"><Wrench className="h-4 w-4" />Workshop registration</p>
               <p className="mt-2 font-display text-xl font-bold text-white">{i.session.title}</p>
               <p className="mt-1 text-slate-200">{i.session.days > 1 ? `${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(i.session.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · daily` : fmtDate(i.session.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {fmtTime(i.session.startsAt)} – {fmtTime(i.session.endsAt)}</p>
               {confirmed && i.session.mode !== "ONSITE" && i.session.onlineLink && <p className="mt-1 text-slate-200">Online: <a href={i.session.onlineLink} className="break-all text-lnh-sky underline" target="_blank" rel="noreferrer">{i.session.onlineLink}</a></p>}
@@ -92,7 +92,7 @@ export default async function Success({ params, searchParams }: { params: { toke
                 {confirmed && !i.certNo && i.session.startsAt <= new Date() && <a href={`/feedback/${i.session.slug}?t=${encodeURIComponent(r.accessToken)}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline">Give feedback{i.verifiedAt ? " to get your certificate" : ""}</a>}
               </div>
             </div>
-            {ticketQrs[n] && <div className="text-center"><img src={ticketQrs[n]} alt={`Workshop ticket QR code ${i.ticketNo ?? ""}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the workshop door</p></div>}
+            {ticketQrs[n] && <div className="text-center"><img src={ticketQrs[n]} alt={`Workshop registration QR code ${i.ticketNo ?? ""}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the workshop door</p></div>}
           </article>
         ))}
 
@@ -119,9 +119,9 @@ export default async function Success({ params, searchParams }: { params: { toke
         <details className="hud p-6" open={!confirmed}>
           <summary className="cursor-pointer font-display text-lg font-bold text-white">Payment summary · {pkr(r.totalFee)}</summary>
           <div className="mt-4">
-            {r.hasPass && <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">{r.regType === "PARTICIPANT" ? `Symposium Pass${r.earlyBird ? " (early-bird)" : ""}, includes 1 banquet pass` : `${r.category.label} (complimentary)`}</span><span className="text-white">{pkr(r.conferenceFee)}</span></div>}
+            {r.hasPass && <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">{r.regType === "PARTICIPANT" ? `Symposium Registration${r.earlyBird ? " (early-bird)" : ""}, includes 1 banquet pass` : `${r.category.label} (complimentary)`}</span><span className="text-white">{pkr(r.conferenceFee)}</span></div>}
             {r.banquetQty > 0 && <div className="flex justify-between py-1.5 text-sm"><span className="text-slate-300">Extra banquet pass × {r.banquetQty}</span><span className="text-white">{pkr(r.banquetFee)}</span></div>}
-            {items.map((i) => <div key={i.id} className="flex justify-between gap-4 py-1.5 text-sm"><span className="text-slate-300">Workshop ticket: {i.session.title}</span><span className="shrink-0 text-white">{pkr(i.fee)}</span></div>)}
+            {items.map((i) => <div key={i.id} className="flex justify-between gap-4 py-1.5 text-sm"><span className="text-slate-300">Workshop registration: {i.session.title}</span><span className="shrink-0 text-white">{pkr(i.fee)}</span></div>)}
             <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-4"><span className="font-semibold uppercase tracking-wider text-white">Total</span><span className="font-display text-3xl font-bold text-lnh-rose">{pkr(r.totalFee)}</span></div>
             {!confirmed && !awaiting && !rejected && (
               <div className="mt-4 text-sm text-slate-300">

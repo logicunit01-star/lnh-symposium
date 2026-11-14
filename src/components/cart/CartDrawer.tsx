@@ -14,16 +14,16 @@ export function OrderSummary({ onNavigate, showCta = true }: { onNavigate?: () =
     <div>
       {held && (
         <div className="mb-3 rounded-2xl border border-lnh-sky/40 bg-lnh-sky/10 p-3 text-sm">
-          <p className="flex items-center gap-2 font-semibold text-white"><Ticket className="h-4 w-4 text-lnh-sky" />Your Symposium Pass</p>
-          <p className="mt-0.5 text-xs text-slate-300">{held.regNo} · {held.status === "PENDING" ? "payment pending" : "confirmed"}. Add workshop tickets below; the pass is not charged again.</p>
+          <p className="flex items-center gap-2 font-semibold text-white"><Ticket className="h-4 w-4 text-lnh-sky" />Your Symposium Registration</p>
+          <p className="mt-0.5 text-xs text-slate-300">{held.regNo} · {held.status === "PENDING" ? "payment pending" : "confirmed"}. Add pre-symposium workshops; your symposium registration is not charged again.</p>
         </div>
       )}
       {empty ? (
         <div className="rounded-2xl border border-dashed border-white/20 p-5 text-center text-sm text-slate-300">
-          Nothing selected yet.{held ? " Add a workshop ticket to continue." : " Choose your Symposium Pass or add workshop tickets."}
+          Nothing selected yet.{held ? " Add a workshop to continue." : " Select your symposium registration option or add pre-symposium workshops to proceed."}
           <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {!held && <Link href="/register#pass" onClick={onNavigate} className="btn-ghost btn-sm">Choose pass</Link>}
-            <Link href="/register#workshops" onClick={onNavigate} className="btn-ghost btn-sm">Browse workshops</Link>
+            {!held && <Link href="/register#pass" onClick={onNavigate} className="btn-ghost btn-sm">Register Now</Link>}
+            <Link href="/workshops" onClick={onNavigate} className="btn-ghost btn-sm">Add Workshops</Link>
           </div>
         </div>
       ) : (
@@ -33,13 +33,13 @@ export function OrderSummary({ onNavigate, showCta = true }: { onNavigate?: () =
               <div className="flex items-start gap-3">
                 <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-lnh-sky" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold leading-snug text-white">Symposium Pass</p>
+                  <p className="text-sm font-semibold leading-snug text-white">Symposium Registration</p>
                   <p className="text-xs text-slate-300">{pass.designation} · {pass.tier}{pass.early ? " · early bird" : ""}</p>
                   <p className="text-xs text-slate-300">All sessions, all 3 days · 1 banquet pass included</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-white">{pkr(pass.fee)}</p>
-                  <button onClick={() => setPass(null)} className="mt-1 inline-grid h-8 w-8 place-items-center rounded-full text-slate-300 hover:bg-white/10 hover:text-lnh-rose" aria-label="Remove Symposium Pass"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => setPass(null)} className="mt-1 inline-grid h-8 w-8 place-items-center rounded-full text-slate-300 hover:bg-white/10 hover:text-lnh-rose" aria-label="Remove Symposium Registration"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
               {pass.extraBanquet > 0 && (
@@ -55,7 +55,7 @@ export function OrderSummary({ onNavigate, showCta = true }: { onNavigate?: () =
               <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-lnh-gold" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold leading-snug text-white">{i.title}</p>
-                <p className="text-xs text-slate-300">Workshop ticket · {i.when}{i.tag ? ` · ${i.tag}` : ""}</p>
+                <p className="text-xs text-slate-300">Workshop registration · {i.when}{i.tag ? ` · ${i.tag}` : ""}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold text-white">{pkr(i.fee)}</p>

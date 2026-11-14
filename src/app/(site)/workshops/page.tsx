@@ -20,7 +20,7 @@ export default async function Workshops() {
         <div className="container-x relative">
           <span className="eyebrow">Pre-conference workshops</span>
           <h1 className="h-display mt-5 max-w-5xl text-[2.5rem] text-white sm:text-6xl lg:text-7xl">Pre-symposium <span className="text-holo">workshops</span></h1>
-          <p className="mt-6 max-w-2xl text-lg text-slate-300">Approved multi-disciplinary skills training before the symposium. Each workshop is a separate ticket: no Symposium Pass needed, and the pass does not include workshops.</p>
+          <p className="mt-6 max-w-2xl text-lg text-slate-300">Approved multi-disciplinary skills training before the symposium. Each workshop has a separate registration fee: no symposium registration required, and symposium registration does not include workshops.</p>
         </div>
       </section>
       <WorkshopCatalog items={items} />

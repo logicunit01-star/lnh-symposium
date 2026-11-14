@@ -5,20 +5,52 @@ import { eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { runJob, JOB_KINDS } from "@/lib/email";
-import { TEMPLATE_KEYS, DEFAULT_TEMPLATES, type TemplateKey } from "@/lib/email-templates";
+import { TEMPLATE_KEYS, DEFAULT_TEMPLATES, SAMPLE_VARS, type TemplateKey } from "@/lib/email-templates";
+import { can } from "@/lib/permissions";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 export async function saveTemplate(key: string, f: FormData) {
   const u = await requirePerm("emails");
   if (!TEMPLATE_KEYS.includes(key as TemplateKey)) throw new Error("Unknown template");
-  if (f.get("reset") === "1") await db.delete(s.emailTemplates).where(eq(s.emailTemplates.key, key));
-  else {
-    const row = { key, subject: str(f, "subject").slice(0, 300) || DEFAULT_TEMPLATES[key as TemplateKey].subject, body: str(f, "body").slice(0, 8000) || DEFAULT_TEMPLATES[key as TemplateKey].body, buttonLabel: str(f, "buttonLabel").slice(0, 60) || null, enabled: DEFAULT_TEMPLATES[key as TemplateKey].switchable ? f.get("enabled") === "on" : true, updatedBy: u.name, updatedAt: new Date() };
-    await db.insert(s.emailTemplates).values(row).onConflictDoUpdate({ target: s.emailTemplates.key, set: row });
-  }
+  const def = DEFAULT_TEMPLATES[key as TemplateKey];
+  const [old] = await db.select().from(s.emailTemplates).where(eq(s.emailTemplates.key, key));
+  // sender settings (mailbox, sender name, CC, reply-to): only Super Admin / Admin ("mail"); others keep what is saved
+  const mail = can(u.role, "mail");
+  const EMAILS = /^([^@\s,;]+@[^@\s,;]+\.[^@\s,;]+)(\s*,\s*[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+)*$/;
+  const cc = str(f, "cc"), replyTo = str(f, "replyTo");
+  if (mail && cc && !EMAILS.test(cc)) redirect(`/admin/emails?t=${key}&err=cc`);
+  if (mail && replyTo && !EMAILS.test(replyTo)) redirect(`/admin/emails?t=${key}&err=reply`);
+  const sender = mail
+    ? { accountId: str(f, "accountId") || null, fromName: str(f, "fromName").slice(0, 120) || null, cc: cc || null, replyTo: replyTo || null }
+    : { accountId: old?.accountId ?? null, fromName: old?.fromName ?? null, cc: old?.cc ?? null, replyTo: old?.replyTo ?? null };
+  const reset = f.get("reset") === "1";
+  const row = {
+    key, ...sender,
+    subject: reset || def.composed ? def.subject : str(f, "subject").slice(0, 300) || def.subject,
+    body: reset || def.composed ? def.body : str(f, "body").slice(0, 8000) || def.body,
+    buttonLabel: reset ? def.buttonLabel ?? null : str(f, "buttonLabel").slice(0, 60) || null,
+    enabled: def.switchable ? (reset ? true : f.get("enabled") === "on") : true,
+    updatedBy: u.name, updatedAt: new Date(),
+  };
+  await db.insert(s.emailTemplates).values(row).onConflictDoUpdate({ target: s.emailTemplates.key, set: row });
   revalidatePath("/admin/emails");
   redirect(`/admin/emails?t=${key}&saved=1`);
+}
+
+/** Sends this notification, filled with sample values, to the signed-in staff member (uses its sender settings and the delivery mode). */
+export async function testTemplate(key: string) {
+  const u = await requirePerm("emails");
+  if (!TEMPLATE_KEYS.includes(key as TemplateKey) || DEFAULT_TEMPLATES[key as TemplateKey].composed) redirect(`/admin/emails?t=${key}`);
+  const { getTemplate, renderTemplate, senderFor } = await import("@/lib/email");
+  const { getEvent } = await import("@/lib/event");
+  const { sendEmail } = await import("@/lib/notify");
+  const ev = await getEvent();
+  const t = await getTemplate(key as TemplateKey);
+  const { subject, html } = renderTemplate(t, { ...SAMPLE_VARS, event_name: ev.name, contact_email: ev.contactEmail });
+  const snd = await senderFor(key as TemplateKey, t);
+  const st = await sendEmail(u.email, `[Sample] ${subject}`, html, [], { from: snd.from, fromName: snd.fromName, accountId: snd.accountId, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: "Sample" });
+  redirect(`/admin/emails?t=${key}&tested=${st}`);
 }
 
 export async function scheduleJob(f: FormData) {

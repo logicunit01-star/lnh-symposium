@@ -1,4 +1,5 @@
 import "server-only";
+import { sendTemplate } from "./email";
 import { and, eq, inArray, isNull, isNotNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
@@ -19,9 +20,7 @@ export async function issueCertificates(opts: { attendedOnly: boolean; notify: b
     await db.update(s.registrations).set({ certificateNo: no, certificateAt: new Date() }).where(eq(s.registrations.id, r.id));
     if (opts.notify) {
       const link = `${appUrl()}/api/certificates/${r.accessToken}`;
-      await sendEmail(r.email, `${ev.name} — your e-certificate`, emailLayout("Your e-certificate is ready",
-        `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Thank you for participating in the <b>${ev.name}</b>. Your certificate of participation (No. <b>${no}</b>) is ready to download.</p>`,
-        { label: "Download certificate", href: link }));
+      await sendTemplate("CERTIFICATE_READY", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, certificate_no: no, link }, { ref: r.regNo });
       await sendSms(r.phone, `LNH Symposium: Your e-certificate ${no} is ready. Download: ${link}`);
     }
   }
@@ -61,9 +60,7 @@ export async function maybeIssueWorkshopCert(itemId: string, opts: { notify?: bo
   if (!done) return null; // issued by a parallel request
   if (opts.notify !== false) {
     const link = workshopCertUrl(it.id, r.accessToken);
-    await sendEmail(r.email, `Workshop certificate: ${it.session.title}`, emailLayout("Your workshop certificate is ready",
-      `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Thank you for attending <b>${it.session.title}</b> and for your feedback. Your workshop certificate (No. <b>${no}</b>) is ready to download.</p>`,
-      { label: "Download certificate", href: link })).catch((e) => console.error(e));
+    await sendTemplate("WORKSHOP_CERTIFICATE", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, workshop: it.session.title, certificate_no: no, link }, { ref: it.ticketNo ?? r.regNo }).catch((e) => console.error(e));
     await sendSms(r.phone, `LNH Symposium: your certificate for "${it.session.title.slice(0, 60)}" is ready. ${link}`).catch(() => {});
   }
   return no;
@@ -87,8 +84,6 @@ export async function requestWorkshopFeedback(itemId: string) {
   if (!it || it.certNo || !it.verifiedAt) return false;
   const r = it.registration;
   const link = `${appUrl()}/feedback/${it.session.slug}?t=${encodeURIComponent(r.accessToken)}`;
-  await sendEmail(r.email, `Your feedback on ${it.session.title}`, emailLayout("One step to your workshop certificate",
-    `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Your department has confirmed your attendance at <b>${it.session.title}</b>. Please complete the short feedback form; your e-certificate is emailed as soon as you submit it.</p>`,
-    { label: "Give feedback", href: link })).catch((e) => console.error(e));
+  await sendTemplate("WORKSHOP_FEEDBACK_REQUEST", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, workshop: it.session.title, link }, { ref: it.ticketNo ?? r.regNo }).catch((e) => console.error(e));
   return true;
 }

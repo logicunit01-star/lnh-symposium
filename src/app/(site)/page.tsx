@@ -127,7 +127,7 @@ export default async function Home() {
         <div className="circuit absolute inset-0 opacity-60" />
         <div className="container-x relative">
           <SectionHead eyebrow="Pre-conference · limited seats" title={<>Pre-symposium <span className="text-holo">workshops</span></>}
-            sub="Simulation labs, AI tools and skills stations. Each workshop is a separate ticket with its own fee; no Symposium Pass needed."
+            sub="Simulation labs, AI tools and skills stations. Each workshop has a separate registration fee; no symposium registration required."
             action={<Link href="/workshops" className="btn-blue shrink-0">Workshops details and Registration <ArrowRight className="h-4 w-4" /></Link>} />
         </div>
       </section>
@@ -228,7 +228,7 @@ export default async function Home() {
               <div className="orb -bottom-24 -left-10 h-80 w-80 bg-lnh-blue/30" />
               <FileText className="relative h-8 w-8 text-lnh-sky" />
               <h3 className="h-display relative mt-6 text-4xl text-white sm:text-5xl">Call for abstracts</h3>
-              <p className="relative mt-4 max-w-lg text-slate-300">Share your research on AI, robotics, digitization, cost and quality of care. Selected work is presented as oral papers or posters and competes for the symposium awards.</p>
+              <p className="relative mt-4 max-w-lg text-slate-300">Abstracts are invited! Accepted submissions will be presented as oral or poster presentations.</p>
               <div className="relative mt-8 flex flex-wrap gap-3">
                 <Link href="/abstracts" className="btn-primary">Submit an abstract</Link>
               </div>
@@ -245,10 +245,10 @@ export default async function Home() {
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
             <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/85">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-[2.5rem] text-white sm:text-7xl">Be part of the new era</h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-white/90">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
+            <p className="relative mx-auto mt-5 max-w-xl text-white/90">One Symposium Registration admits you to every session on all three days, with a banquet pass included. Add pre-symposium workshops and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="btn-light px-8 py-4 text-base">Register <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Browse workshops</Link>
+              <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Explore Workshops</Link>
             </div>
           </div>
         </Reveal>

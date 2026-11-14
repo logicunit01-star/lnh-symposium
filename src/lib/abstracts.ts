@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
 import { getEvent, abstractWindow, editionYear } from "./event";
-import { appUrl } from "./utils";
+import { appUrl, fmtDate, randomToken } from "./utils";
 import { DEPARTMENTS, SECTIONS, SECTION_LIMITS, ABSTRACT_TOTAL_WORDS, charLimit, titleKey, words, slotLabel } from "./scientific";
 import { sendTemplate } from "./email";
 
@@ -85,17 +85,36 @@ export async function sendDecisionEmails(actor: string) {
   const ev = await getEvent();
   const rows = await db.query.abstracts.findMany({ where: and(inArray(s.abstracts.status, ["ACCEPTED", "REJECTED"]), isNull(s.abstracts.authorNotifiedAt)), with: { session: true } });
   const venues = await db.select({ id: s.venues.id, name: s.venues.name }).from(s.venues);
+  const fmt = (d: Date | null) => (d ? fmtDate(d, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : null);
+  const common = {
+    confirm_by: fmt(ev.abstractConfirmBy), schedule_update_by: fmt(ev.scheduleUpdateBy), registration_deadline: fmt(ev.presenterRegBy),
+    sc_email: ev.scEmail || ev.contactEmail, schedule_link: `${appUrl()}/agenda`, registration_link: `${appUrl()}/register`,
+  };
+  const invites = rows.some((r) => r.status === "ACCEPTED") ? await (await import("./invitations")).allInvites() : [];
   for (const a of rows) {
-    const ok = a.status === "ACCEPTED";
+    const ok = a.status === "ACCEPTED", poster = a.acceptedAs === "POSTER";
     const sl = a.session?.slotKey ? ev.sessionSlots.find((x) => x.key === a.session!.slotKey) : null;
-    await sendTemplate(ok ? "ABSTRACT_ACCEPTED" : "ABSTRACT_REJECTED", a.email, {
-      name: `${a.title ?? ""} ${a.fullName ?? a.presentingAuthor}`.trim(), abstract_title: a.abstractTitle, abstract_id: a.refNo, author_name: a.presentingAuthor,
-      department: a.specialty, status: ok ? (a.acceptedAs === "POSTER" ? "accepted as a poster" : "accepted as an oral presentation") : "not accepted",
-      session_name: ok ? (a.session?.title ?? (a.acceptedAs === "POSTER" ? "Poster presentation" : "")) : "",
-      session_date: sl ? slotLabel(sl).split(" · ")[0] : "", session_time: sl ? `${sl.start}–${sl.end}` : "",
+    // 14.11.2026 templates: the acceptance email carries the presenter's own "confirm participation" link (CONFIRMED / NOT AVAILABLE),
+    // so the separate presenter invitation is marked sent and not emailed again.
+    let link = ok ? `${appUrl()}/abstracts#my-abstracts` : `${appUrl()}/register`;
+    let invite: { kind: "PERSON" | "POSTER"; id: string; token: string; status: string } | null = null;
+    // only an invitation the response page can open (oral: the presenter's row in an approved, scheduled session)
+    const inv = ok ? invites.find((i) => (poster ? i.kind === "POSTER" && i.id === a.id : i.kind === "PERSON" && i.abstractRef === a.refNo)) : undefined;
+    if (inv) invite = { kind: inv.kind, id: inv.id, token: inv.token ?? randomToken(18), status: inv.status };
+    if (invite) link = `${appUrl()}/invite/${invite.token}`;
+    const r = await sendTemplate(ok ? (poster ? "ABSTRACT_ACCEPTED_POSTER" : "ABSTRACT_ACCEPTED") : "ABSTRACT_REJECTED", a.email, {
+      ...common,
+      name: (a.fullName ?? a.presentingAuthor).replace(/^(dr|prof|mr|ms|mrs)\.?\s+/i, ""), abstract_title: a.abstractTitle, abstract_id: a.refNo, author_name: a.presentingAuthor,
+      department: a.specialty, status: ok ? (poster ? "accepted as an ePoster" : "accepted as an oral presentation") : "not accepted",
+      session_name: ok ? (a.session?.title ?? (poster ? "ePoster presentation" : "")) : "",
+      session_date: sl ? slotLabel(sl).split(" · ")[0] : (poster ? a.placement : ""), session_time: sl ? `${sl.start}–${sl.end}` : "",
       venue: ok ? (a.session?.hall ?? venues.find((v) => v.id === a.venueId)?.name ?? "") : "",
-      link: ok ? `${appUrl()}/register` : `${appUrl()}/abstracts#my-abstracts`,
+      link,
     }, { ref: a.refNo });
+    if (invite && r !== "FAILED" && (invite.status === "NOT_SENT" || invite.status === "FAILED")) {
+      const { setStatus } = await import("./invitations");
+      await setStatus(invite, { inviteToken: invite.token, inviteStatus: "SENT", invitedAt: new Date() });
+    }
     await db.update(s.abstracts).set({ authorNotifiedAt: new Date() }).where(eq(s.abstracts.id, a.id));
     await logAbstract(a.id, actor, "Decision emailed to author");
   }

@@ -13,13 +13,13 @@ export default async function Sessions() {
   const groups = [
     { t: "Plenary sessions", d: "Evidence and debate on the symposium's three themes.", items: prog.filter((p) => p.type === "PLENARY") },
     { t: "Scientific sessions", d: "Peer-reviewed oral abstract presentations judged for the symposium awards.", items: prog.filter((p) => p.type === "SCIENTIFIC") },
-    { t: "Keynotes & panels", d: "Covered by your Symposium Pass, like every symposium session.", items: prog.filter((p) => p.type === "KEYNOTE" || p.type === "PANEL") },
+    { t: "Keynotes & panels", d: "Covered by your Symposium Registration, like every symposium session.", items: prog.filter((p) => p.type === "KEYNOTE" || p.type === "PANEL") },
   ];
   return (
     <>
       <PageHero eyebrow="Scientific & plenary" title={<>Science on <span className="text-grad">stage</span></>}
-        sub="Keynotes, plenaries, scientific sessions and panels on all three symposium days. One Symposium Pass admits you to every session; there is nothing to book per session.">
-        <div className="mt-8 flex flex-wrap gap-3"><Link href="/register#pass" className="btn-primary">Get your Symposium Pass</Link><Link href="/agenda" className="btn-ghost">Open the agenda</Link></div>
+        sub="Keynotes, plenaries, scientific sessions and panels on all three symposium days. One Symposium Registration admits you to every session; there is nothing to book per session.">
+        <div className="mt-8 flex flex-wrap gap-3"><Link href="/register#pass" className="btn-primary">Register for the Symposium</Link><Link href="/agenda" className="btn-ghost">Open the agenda</Link></div>
       </PageHero>
       <div className="container-x space-y-20">
         {groups.map((g) => (

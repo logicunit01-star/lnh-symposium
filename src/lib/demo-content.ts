@@ -29,7 +29,9 @@ export const EVENT_DEFAULTS = {
   // LNH social media (13 Nov 2026), footer icons
   instagram: "https://www.instagram.com/lnhandmc", linkedin: "https://www.linkedin.com/company/lnhandmc/",
   facebook: "https://www.facebook.com/share/1CJDxrqEDS/", youtube: "https://www.youtube.com/@lnhandmc",
-  earlyBirdUntil: D("2026-12-10T23:59:59+05:00"),
+  earlyBirdUntil: D("2026-12-05T23:59:59+05:00"), // 14.11.2026: early bird until 5 December
+  contactEmail: "symposium2027@lnh.edu.pk", // 14.11.2026
+  guestCode: crypto.randomUUID().replace(/-/g, "").slice(0, 12), // guest / volunteer invitation links (14.11.2026)
   // SC feedback (29 Oct 2026): abstracts open 15 Nov, close 15 Dec; decisions and invitations 31 Dec
   abstractOpen: D("2026-11-15T00:00:00+05:00"),
   abstractDeadline: D("2026-12-15T23:59:59+05:00"),

@@ -136,7 +136,7 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
             <div className="hud p-5">
               <p className="eyebrow mb-4">Your order</p>
               <OrderSummary />
-              <p className="mt-4 text-xs text-slate-400">Each workshop is a separate ticket. No Symposium Pass needed.</p>
+              <p className="mt-4 text-xs text-slate-400">Each workshop has a separate registration fee. No symposium registration required.</p>
             </div>
           </aside>
         )}

@@ -1,11 +1,11 @@
 import "server-only";
+import { sendTemplate } from "./email";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema as s } from "./db";
 import { getEvent, editionYear } from "./event";
 import { nextNumber, pad } from "./counters";
 import { appUrl, randomToken } from "./utils";
-import { sendEmail, emailLayout } from "./notify";
 import { basicInfo, sendRegistrationNotice } from "./registration";
 import { GUEST_ROLES, normaliseCnic } from "./reg-fields";
 import { DEPARTMENTS } from "./scientific";
@@ -43,16 +43,15 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
   }).returning();
   const what = input.regType === "GUEST" ? `as ${GUEST_ROLES[input.guestRole]} (${input.guestSession})` : "as a volunteer";
   const approver = input.regType === "GUEST" ? `the Head of the ${input.department} department` : "the Chairperson, Facilitation Committee";
-  await sendEmail(r.email, `${ev.name}: registration received (${regNo})`, emailLayout("Registration received",
-    `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Your registration ${what} has been received. Registration number: <b>${regNo}</b>.</p><p>It will be confirmed after approval by ${approver}. Your pass and QR code are emailed once approved.</p>`,
-    { label: "View your registration", href: `${appUrl()}/register/success/${r.accessToken}` }), [], { ref: regNo }).catch(() => {});
+  await sendTemplate("GUEST_RECEIVED", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, role: what, reg_no: regNo, approver, link: `${appUrl()}/register/success/${r.accessToken}` }, { ref: regNo }).catch(() => {});
   // tell the approvers
   const approvers = input.regType === "GUEST"
     ? await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "HOD"), eq(s.users.department, input.department), eq(s.users.active, true)))
     : await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "FACILITATION_CHAIR"), eq(s.users.active, true)));
-  for (const a of approvers) await sendEmail(a.email, `${ev.name}: ${input.regType === "GUEST" ? "guest" : "volunteer"} registration to approve (${regNo})`, emailLayout("Registration awaiting your approval",
-    `<p>Dear ${a.name},</p><p>${r.title} ${r.firstName} ${r.lastName} (${r.institution}) has registered ${what}.</p><p>Please approve or decline in the portal.</p>`,
-    { label: "Review", href: `${appUrl()}${input.regType === "GUEST" ? "/admin/dept/guests" : "/admin/volunteers"}` }), [], { ref: regNo }).catch(() => {});
+  for (const a of approvers) await sendTemplate("GUEST_TO_APPROVE", a.email, {
+    name: a.name, author_name: `${r.title} ${r.firstName} ${r.lastName}`, institution: r.institution, role: what, reg_no: regNo,
+    registration_type: input.regType === "GUEST" ? "guest" : "volunteer", link: `${appUrl()}${input.regType === "GUEST" ? "/admin/dept/guests" : "/admin/volunteers"}`,
+  }, { ref: regNo }).catch(() => {});
   return r;
 }
 
@@ -63,7 +62,6 @@ export async function decideGuest(id: string, approve: boolean, actor: string, n
   if (approve) await sendRegistrationNotice(r.id, "paid").catch(() => {});
   else {
     const ev = await getEvent();
-    await sendEmail(r.email, `${ev.name}: registration ${r.regNo}`, emailLayout("Registration not approved",
-      `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p><p>Your ${r.regType === "GUEST" ? "guest" : "volunteer"} registration <b>${r.regNo}</b> could not be approved.${note ? ` Note: ${note.replace(/</g, "&lt;")}` : ""}</p><p>For questions, contact ${ev.contactEmail}.</p>`), [], { ref: r.regNo }).catch(() => {});
+    await sendTemplate("GUEST_NOT_APPROVED", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, registration_type: r.regType === "GUEST" ? "guest" : "volunteer", reg_no: r.regNo, note, contact_email: ev.contactEmail }, { ref: r.regNo }).catch(() => {});
   }
 }

@@ -4,17 +4,18 @@ import { db, schema as s } from "./db";
 import { getEvent } from "./event";
 import { sendEmail, emailLayout } from "./notify";
 import { appUrl, fmtDateTime } from "./utils";
-import { DEFAULT_TEMPLATES, TEMPLATE_KEYS, bodyToHtml, type MergeVars, type TemplateKey } from "./email-templates";
+import { DEFAULT_TEMPLATES, SC_KEYS, TEMPLATE_KEYS, bodyToHtml, type MergeVars, type TemplateKey } from "./email-templates";
 
-export type Template = { key: TemplateKey; subject: string; body: string; buttonLabel: string | null; enabled: boolean; custom: boolean; updatedBy: string | null; updatedAt: Date | null };
+export type Template = { key: TemplateKey; subject: string; body: string; buttonLabel: string | null; enabled: boolean; custom: boolean; updatedBy: string | null; updatedAt: Date | null;
+  accountId: string | null; fromName: string | null; cc: string | null; replyTo: string | null };
 
 /** Template text: the admin's saved version, or the default. */
 export async function getTemplate(key: TemplateKey): Promise<Template> {
   const [row] = await db.select().from(s.emailTemplates).where(eq(s.emailTemplates.key, key));
   const d = DEFAULT_TEMPLATES[key];
   return row
-    ? { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, enabled: row.enabled, custom: true, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
-    : { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, enabled: true, custom: false, updatedBy: null, updatedAt: null };
+    ? { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, enabled: d.locked ? true : row.enabled, custom: row.subject !== d.subject || row.body !== d.body || (row.buttonLabel ?? null) !== (d.buttonLabel ?? null), updatedBy: row.updatedBy, updatedAt: row.updatedAt, accountId: row.accountId, fromName: row.fromName, cc: row.cc, replyTo: row.replyTo }
+    : { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, enabled: true, custom: false, updatedBy: null, updatedAt: null, accountId: null, fromName: null, cc: null, replyTo: null };
 }
 export async function allTemplates() { return Promise.all(TEMPLATE_KEYS.map(getTemplate)); }
 
@@ -26,12 +27,36 @@ export function renderTemplate(t: Pick<Template, "subject" | "body" | "buttonLab
   return { subject, html };
 }
 
-/** Send a templated email from the official Scientific Committee address (with CC), recorded in the sent log. */
-export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; noCc?: boolean; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string }[] } = {}) {
+/**
+ * Sender settings of a notification (Admin → Automated emails → sender): mailbox, sender name, CC, reply-to.
+ * Not set on the template: the Scientific Committee templates keep the sender name and CC from Event Settings; others use the
+ * default mailbox's name. Reply-to falls back to the mailbox's reply-to, then the symposium contact email.
+ */
+export async function senderFor(key: TemplateKey, t?: Template) {
+  const ev = await getEvent();
+  const tpl = t ?? (await getTemplate(key));
+  const sc = SC_KEYS.includes(key);
+  return {
+    accountId: tpl.accountId,
+    fromName: tpl.fromName || (sc && ev.emailFrom ? ev.emailFrom.split("<")[0].trim() : null),
+    from: sc ? ev.emailFrom : null,
+    cc: tpl.cc ?? (sc ? ev.emailCc : null),
+    replyTo: tpl.replyTo || null,
+    fallbackReplyTo: ev.contactEmail,
+  };
+}
+
+/** Send a notification with its template and sender settings, recorded in the sent log. Returns DISABLED when an optional notification is switched off. */
+export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars, opts: { ref?: string | null; noCc?: boolean; replyTo?: string | null; attachments?: { filename: string; content: Buffer | Uint8Array; contentType?: string; cid?: string }[] } = {}) {
   const ev = await getEvent();
   const t = await getTemplate(key);
-  const { subject, html } = renderTemplate(t, { event_name: ev.name, ...vars });
-  return sendEmail(to, subject, html, opts.attachments ?? [], { from: ev.emailFrom, cc: opts.noCc ? null : ev.emailCc, replyTo: ev.contactEmail, templateKey: key, ref: opts.ref ?? null });
+  if (!t.enabled && DEFAULT_TEMPLATES[key].switchable) return "DISABLED";
+  const { subject, html } = renderTemplate(t, { event_name: ev.name, contact_email: ev.contactEmail, ...vars });
+  const snd = await senderFor(key, t);
+  return sendEmail(to, subject, html, opts.attachments ?? [], {
+    from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: opts.noCc ? null : snd.cc,
+    replyTo: opts.replyTo || snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: opts.ref ?? null,
+  });
 }
 
 // ---------------- scheduled dispatches ----------------

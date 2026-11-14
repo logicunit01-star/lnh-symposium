@@ -52,7 +52,7 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
             </div>
           )}
           <div className="hud mt-8 flex flex-wrap items-center justify-between gap-4 p-6">
-            <div><p className="text-xs uppercase tracking-widest text-slate-300">Workshop ticket</p><p className="font-display text-3xl font-bold text-white">{pkr(w.fee)}</p></div>
+            <div><p className="text-xs uppercase tracking-widest text-slate-300">Workshop registration</p><p className="font-display text-3xl font-bold text-white">{pkr(w.fee)}</p></div>
             <div className="flex flex-wrap items-center gap-3">
               <a href={`/workshops/${w.slug}/flyer`} className="btn-ghost btn-sm"><Download className="h-4 w-4" />Flyer</a>
               {full ? <Link href={`/workshops#${w.slug}`} className="btn-ghost">Join the waitlist</Link> : <AddTicket item={{ id: w.id, title: w.title, kind: "WORKSHOP", fee: w.fee, when: w.dateLabel, tag: w.department }} />}

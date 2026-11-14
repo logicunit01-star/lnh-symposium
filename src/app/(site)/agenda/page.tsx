@@ -43,7 +43,7 @@ export default async function Agenda({ searchParams }: { searchParams: { type?: 
   };
   return (
     <>
-      <PageHero eyebrow="Agenda / schedule" title={<>The full <span className="text-grad">programme</span></>} sub="Pre-conference workshops followed by three symposium days on AI, Robotics and Digitization. All times are Pakistan Standard Time (PKT); the programme is subject to change. Your Symposium Pass covers every symposium session; workshops are separate tickets." />
+      <PageHero eyebrow="Agenda / schedule" title={<>The full <span className="text-grad">programme</span></>} sub="Pre-conference workshops followed by three symposium days on AI, Robotics and Digitization. All times are Pakistan Standard Time (PKT); the programme is subject to change. Your Symposium Registration covers every symposium session; workshops are separate tickets." />
       <div className="container-x">
         {/* filters */}
         <nav aria-label="Filter the agenda" className="mb-8 flex flex-wrap items-center gap-2">

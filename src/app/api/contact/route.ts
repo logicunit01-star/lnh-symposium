@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sendTemplate } from "@/lib/email";
 import { db, schema as s } from "@/lib/db";
 import { ok, fail, zodFail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
@@ -17,7 +18,6 @@ export async function POST(req: Request) {
   const { website, ...data } = p.data;
   await db.insert(s.contactMessages).values({ ...data, phone: data.phone || null });
   const ev = await getEvent();
-  await sendEmail(ev.contactEmail, `[Website enquiry] ${data.subject}`, emailLayout("New website enquiry",
-    `<p><b>${data.name}</b> &lt;${data.email}&gt; ${data.phone ?? ""}</p><p>${data.message.replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`));
+  await sendTemplate("CONTACT_ENQUIRY", ev.contactEmail, { status: data.subject, enquiry_from: `${data.name} <${data.email}> ${data.phone ?? ""}`.trim(), message: data.message }, { ref: data.email, replyTo: data.email }); // Reply goes straight to the person who wrote
   return ok({ ok: true });
 }

@@ -1,39 +1,57 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import { db, schema as s } from "./db";
+import { accountTransport, fromHeader, mailState, pickAccount } from "./mail-config";
 
-type Attachment = { filename: string; content: Buffer | Uint8Array; contentType?: string };
+/** cid: shown inside the email as <img src="cid:…"> (e.g. the QR code) instead of as a separate attachment. */
+type Attachment = { filename: string; content: Buffer | Uint8Array; contentType?: string; cid?: string };
 
-let transporter: nodemailer.Transporter | null = null;
-function getTransport() {
+let envTransport: nodemailer.Transporter | null = null;
+/** Fallback when no mailbox is set up in Admin → Email settings: SMTP_* in the server settings file. */
+function getEnvTransport() {
   if (!process.env.SMTP_HOST) return null;
-  transporter ??= nodemailer.createTransport({
+  envTransport ??= nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: Number(process.env.SMTP_PORT) === 465,
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
-  return transporter;
+  return envTransport;
 }
 
-export type MailOpts = { from?: string | null; cc?: string | null; replyTo?: string | null; templateKey?: string; ref?: string | null };
+/** from: legacy "Name <address>" (its name is used as the sender name); fromName / accountId / cc / replyTo come from the notification's settings. */
+/** Reply-to order: replyTo (the notification's own) > the mailbox's reply-to > fallbackReplyTo (the symposium contact email). */
+export type MailOpts = { from?: string | null; fromName?: string | null; accountId?: string | null; cc?: string | null; replyTo?: string | null; fallbackReplyTo?: string | null; templateKey?: string; ref?: string | null };
 
-/** Sends an email (or logs it when SMTP isn't configured). Never throws. Every message is recorded in the sent log. */
+/**
+ * Sends an email. Never throws. Every message is recorded in the sent log.
+ * Mailbox: the notification's chosen mailbox, else the default one (Admin → Email settings), else SMTP_* from the server file, else logged only.
+ * Mode (Email settings): SEND delivers, LOG records only, TEST delivers every email to the test address instead of the recipient.
+ */
 export async function sendEmail(to: string, subject: string, html: string, attachments: Attachment[] = [], opts: MailOpts = {}) {
-  const t = getTransport();
-  const from = opts.from || process.env.MAIL_FROM || "LNH Symposium <no-reply@lnh.edu.pk>";
-  const cc = opts.cc?.trim() || undefined;
+  const st = await mailState().catch(() => null);
+  const account = await pickAccount(opts.accountId).catch(() => null);
+  const legacyName = opts.from?.includes("<") ? opts.from.split("<")[0] : null;
+  const from = account ? fromHeader(opts.fromName || legacyName || account.fromName, account.fromAddress)
+    : opts.from || process.env.MAIL_FROM || "LNH Symposium <no-reply@lnh.edu.pk>";
+  let cc = opts.cc?.trim() || undefined;
+  const replyTo = opts.replyTo || account?.replyTo || opts.fallbackReplyTo || undefined;
+  let rcpt = to, subj = subject;
+  if (st?.mode === "TEST" && st.testAddress) { rcpt = st.testAddress; subj = `[TEST for ${to}${cc ? `, cc ${cc}` : ""}] ${subject}`; cc = undefined; }
   let status = "LOGGED", error: string | undefined;
-  if (t) {
+  if (st?.mode !== "LOG") {
     try {
-      await t.sendMail({
-        from, to, cc, replyTo: opts.replyTo || undefined, subject, html,
-        attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content), contentType: a.contentType })),
-      });
-      status = "SENT";
-    } catch (e: any) { status = "FAILED"; error = String(e?.message || e); }
+      const t = account ? accountTransport(account) : getEnvTransport();
+      if (t) {
+        await t.sendMail({
+          from, to: rcpt, cc, replyTo, subject: subj, html,
+          attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content), contentType: a.contentType, ...(a.cid ? { cid: a.cid, contentDisposition: "inline" as const } : {}) })),
+        });
+        status = "SENT";
+      }
+    } catch (e: any) { status = "FAILED"; error = String(e?.message || e).slice(0, 500); }
   }
-  await db.insert(s.notificationLog).values({ channel: "EMAIL", to, cc: cc ?? null, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject, body: html.slice(0, 20000), status, error }).catch(() => {});
+  await db.insert(s.notificationLog).values({ channel: "EMAIL", to: rcpt === to ? to : `${rcpt} (test, for ${to})`, cc: cc ?? null, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: subj, body: html.slice(0, 20000), status, error }).catch(() => {});
   return status;
 }
 

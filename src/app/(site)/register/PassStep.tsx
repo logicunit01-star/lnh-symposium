@@ -14,27 +14,29 @@ export function ProductCards({ fromFee, early }: { fromFee: number; early: boole
     <div className="grid gap-4 sm:grid-cols-2">
       <a href="#pass" className="group rounded-3xl border-2 border-lnh-sky/60 bg-lnh-sky/[0.08] p-6 transition hover:bg-lnh-sky/[0.14]">
         <Ticket className="h-7 w-7 text-lnh-sky" />
-        <p className="mt-3 font-display text-2xl font-bold text-white">Symposium Pass</p>
+        <p className="mt-3 font-display text-2xl font-bold text-white">Symposium Registration</p>
         {held ? (
           <p className="mt-2 text-sm text-slate-200">Yours: <b className="text-white">{held.regNo}</b> · {held.status === "PENDING" ? "payment pending" : "confirmed"}</p>
         ) : (
           <ul className="mt-2 space-y-1 text-sm text-slate-200">
-            <li>All sessions on all 3 symposium days</li>
-            <li>1 banquet pass included</li>
-            <li>From <b className="text-white">{pkr(fromFee)}</b>{early ? " early bird" : ""}</li>
+            <li>Access all sessions across the three symposium days.</li>
+            <li>Includes one banquet entry</li>
+            <li>{early ? "Early-bird registration starting from" : "Registration starting from"} <b className="text-white">{pkr(fromFee)}</b></li>
           </ul>
         )}
-        <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-sky/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-sky/20">{held ? "View your pass" : "Choose your pass"}</span>
+        <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-sky/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-sky/20">{held ? "View your registration" : "Register for the Symposium"}</span>
       </a>
-      <a href="#workshops" className="group rounded-3xl border-2 border-lnh-gold/60 bg-lnh-gold/[0.07] p-6 transition hover:bg-lnh-gold/[0.13]">
+      <a href="/workshops" className="group rounded-3xl border-2 border-lnh-gold/60 bg-lnh-gold/[0.07] p-6 transition hover:bg-lnh-gold/[0.13]">
         <Wrench className="h-7 w-7 text-lnh-gold" />
-        <p className="mt-3 font-display text-2xl font-bold text-white">Workshop tickets</p>
+        <p className="mt-3 font-display text-2xl font-bold text-white">Pre-Symposium Workshops</p>
+        <p className="mt-2 text-sm text-slate-200">Enhance your learning through specialised pre-symposium workshops.</p>
         <ul className="mt-2 space-y-1 text-sm text-slate-200">
-          <li>One ticket per workshop, seat-limited</li>
-          <li>Separate from the pass; no pass needed</li>
-          <li>Each workshop has its own fee</li>
+          <li>Register separately for each workshop</li>
+          <li>Limited seats available</li>
+          <li>No symposium registration required</li>
+          <li>Each workshop has a separate registration fee</li>
         </ul>
-        <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-gold/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-gold/20">Browse workshops</span>
+        <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-gold/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-gold/20">Explore Workshops</span>
       </a>
     </div>
   );
@@ -48,9 +50,9 @@ export function PassStep({ tiers, early, earlyUntil, banquet, open }: { tiers: T
   if (held) {
     return (
       <div className="hud p-6">
-        <p className="flex items-center gap-2 font-semibold text-white"><Check className="h-5 w-5 text-emerald-400" />You already hold a Symposium Pass ({held.regNo}).</p>
-        <p className="mt-1 text-sm text-slate-300">{held.status === "PENDING" ? "Its payment is pending. " : ""}One pass covers every session, so there is nothing more to buy here. Add workshop tickets below if you like.</p>
-        <Link href={`/register/success/${held.accessToken}`} className="btn-ghost btn-sm mt-4">{held.status === "PENDING" ? "Pay for your pass" : "View your pass"}</Link>
+        <p className="flex items-center gap-2 font-semibold text-white"><Check className="h-5 w-5 text-emerald-400" />You already hold a Symposium Registration ({held.regNo}).</p>
+        <p className="mt-1 text-sm text-slate-300">{held.status === "PENDING" ? "Its payment is pending. " : ""}It covers every session, so there is nothing more to add here. Add Pre-Symposium Workshops below if you like.</p>
+        <Link href={`/register/success/${held.accessToken}`} className="btn-ghost btn-sm mt-4">{held.status === "PENDING" ? "Complete your payment" : "View your registration"}</Link>
       </div>
     );
   }
@@ -64,7 +66,7 @@ export function PassStep({ tiers, early, earlyUntil, banquet, open }: { tiers: T
   };
   return (
     <div className="space-y-5">
-      <p className="text-sm text-slate-300">Pick the tier that matches your designation, then your exact designation. {early && earlyUntil ? `Early-bird prices apply until ${earlyUntil}.` : ""} Your designation sets the price and prints on your certificate.</p>
+      <p className="text-sm text-slate-300">Select your registration category and designation. {early && earlyUntil ? `Early-bird fee applies until ${earlyUntil}.` : ""} Your designation determines the registration fee and will appear on your certificate.</p>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label="Pass tier">
         {tiers.map((t) => {
           const on = sel?.id === t.id;
@@ -103,7 +105,7 @@ export function PassStep({ tiers, early, earlyUntil, banquet, open }: { tiers: T
           </div>
           {pass && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-400/10 px-4 py-3 text-sm">
-              <span className="flex items-center gap-2 text-emerald-200"><Check className="h-4 w-4" />Symposium Pass added: {pass.designation}, {pkr(pass.fee)}{pass.extraBanquet ? ` + ${pass.extraBanquet} extra banquet` : ""}</span>
+              <span className="flex items-center gap-2 text-emerald-200"><Check className="h-4 w-4" />Symposium Registration added: {pass.designation}, {pkr(pass.fee)}{pass.extraBanquet ? ` + ${pass.extraBanquet} extra banquet` : ""}</span>
               <button type="button" onClick={() => setPass(null)} className="min-h-[44px] px-2 text-sm text-slate-200 underline">Remove pass</button>
             </div>
           )}

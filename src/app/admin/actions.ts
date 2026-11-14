@@ -121,7 +121,8 @@ export async function saveSettings(f: FormData) {
     startDate: d("startDate")!, endDate: d("endDate")!, venue: str(f, "venue")!, virtualLink: str(f, "virtualLink"), heroVideoUrl: str(f, "heroVideoUrl"),
     registrationOpen: bool(f, "registrationOpen"), earlyBirdUntil: d("earlyBirdUntil"), abstractOpen: d("abstractOpen"), abstractDeadline: d("abstractDeadline"),
     abstractWordLimit: num(f, "abstractWordLimit") ?? 300, contactEmail: str(f, "contactEmail")!, contactPhone: str(f, "contactPhone")!,
-    facebook: str(f, "facebook"), instagram: str(f, "instagram"), linkedin: str(f, "linkedin"), youtube: str(f, "youtube"), x: str(f, "x"),
+    facebook: str(f, "facebook"), instagram: str(f, "instagram"), linkedin: str(f, "linkedin"), youtube: str(f, "youtube"), x: str(f, "x"), whatsapp: str(f, "whatsapp"),
+    ...(/^[A-Za-z0-9]{8,40}$/.test(str(f, "guestCode") ?? "") ? { guestCode: str(f, "guestCode") } : {}),
     videos: (str(f, "videos") || "").split(/\s+/).filter(Boolean),
     tickerItems: (str(f, "tickerItems") || "").split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 12),
     galleryUrl: str(f, "galleryUrl"), galleryThumbUrl: str(f, "galleryThumbUrl"),
@@ -134,6 +135,7 @@ export async function saveSettings(f: FormData) {
       .sort((a, b) => a.key.localeCompare(b.key)),
     abstractP1Open: d("abstractP1Open"), abstractP1Close: d("abstractP1Close"), abstractP2Open: d("abstractP2Open"), abstractP2Close: d("abstractP2Close"),
     sciLockAt: d("sciLockAt"), qcGuidelines: str(f, "qcGuidelines"),
+    abstractConfirmBy: d("abstractConfirmBy"), scheduleUpdateBy: d("scheduleUpdateBy"), presenterRegBy: d("presenterRegBy"), scEmail: str(f, "scEmail"),
     banquetFee: Math.max(0, num(f, "banquetFee") ?? 4000), banquetMax: Math.max(0, Math.min(10, num(f, "banquetMax") ?? 2)),
     emailFrom: str(f, "emailFrom"), emailCc: str(f, "emailCc"),
     agendaTemplates: Object.fromEntries([...f.entries()].filter(([k]) => k.startsWith("tpl_")).map(([k, v]) => [k.slice(4), String(v)])),
@@ -186,8 +188,11 @@ export async function broadcast(f: FormData) {
   const list = await audienceRecipients(str(f, "audience") || "PAID", str(f, "sessionId"));
   const subject = str(f, "subject")!, body = str(f, "body")!, sms = str(f, "sms");
   const channels = f.getAll("channel").map(String);
+  // sender settings of "Messages from staff" (Automated emails), 14 Nov 2026
+  const { senderFor } = await import("@/lib/email");
+  const snd = await senderFor("BROADCAST");
   for (const r of list) {
-    if (channels.includes("EMAIL")) await sendEmail(r.email, subject, emailLayout(subject, `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p>${body.split(/\n{2,}/).map((p) => `<p>${p.replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`).join("")}<p style="color:#5b6b8c;font-size:13px">Registration No. ${r.regNo}</p>`));
+    if (channels.includes("EMAIL")) await sendEmail(r.email, subject, emailLayout(subject, `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p>${body.split(/\n{2,}/).map((p) => `<p>${p.replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`).join("")}<p style="color:#5b6b8c;font-size:13px">Registration No. ${r.regNo}</p>`), [], { accountId: snd.accountId, fromName: snd.fromName, cc: snd.cc, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: "BROADCAST", ref: r.regNo });
     if (channels.includes("SMS") && sms) await sendSms(r.phone, sms.replace("{name}", r.firstName).replace("{regNo}", r.regNo));
   }
   redirect(`/admin/communications?sent=${list.length}`);
