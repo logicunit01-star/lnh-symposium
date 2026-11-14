@@ -28,7 +28,7 @@ export default async function Success({ params, searchParams }: { params: { toke
   const ticketQrs = awaiting ? [] : await Promise.all(items.map((i) => QRCode.toDataURL(ticketPayload(r, i), qrOpts)));
   // SC feedback: separate QR codes for the Scientific Agenda and the e-abstract book
   const [qrAgenda, qrBook] = await Promise.all([`${appUrl()}/agenda`, `${appUrl()}/abstracts/book`].map((u) => QRCode.toDataURL(u, { margin: 1, width: 200, color: { dark: "#232667", light: "#ffffff" } })));
-  const prov = provider();
+  const prov = await provider();
   const status = confirmed ? ["Confirmed", "bg-emerald-400/15 text-emerald-300"] : rejected ? ["Not approved", "bg-rose-400/15 text-rose-300"] : awaiting ? ["Awaiting approval", "bg-sky-400/15 text-sky-300"] : ["Payment pending", "bg-amber-400/15 text-amber-300"];
   const ics = `/api/registrations/${r.accessToken}/ics`;
   return (

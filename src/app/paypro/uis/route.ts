@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const reply = (rows: { StatusCode: string; InvoiceID: string | null; Description: string }[]) => Response.json(rows);
   if (!b || !b.username) return reply([{ StatusCode: "01", InvoiceID: null, Description: "Invalid Data. Username cannot be empty" }]);
   if (!b.password) return reply([{ StatusCode: "01", InvoiceID: null, Description: "Invalid Data. Password cannot be empty" }]);
-  if (!callbackAuthOk(b.username, b.password)) return reply([{ StatusCode: "01", InvoiceID: null, Description: "Invalid Data. Username or password is invalid" }]);
+  if (!(await callbackAuthOk(b.username, b.password))) return reply([{ StatusCode: "01", InvoiceID: null, Description: "Invalid Data. Username or password is invalid" }]);
   const ids = String(b.csvinvoiceids || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 200);
   if (!ids.length) return reply([{ StatusCode: "03", InvoiceID: null, Description: "No data available" }]);
   const out = [];

@@ -5,13 +5,15 @@ import { db, schema as s } from "./db";
 import { appUrl, randomToken } from "./utils";
 import { sendRegistrationNotice } from "./registration";
 import { createOrder, orderStatus, click2PayUrl } from "./paypro";
+import { paymentConfig } from "./payment-config";
 
 export type Checkout =
   | { kind: "redirect"; url: string }
   | { kind: "form"; action: string; fields: Record<string, string> }
   | { kind: "manual"; instructions: string[] };
 
-export const provider = () => (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
+/** Active payment provider: Admin → Payments (Off = manual, Demo / Live = paypro) or PAYMENT_PROVIDER in the server file. */
+export const provider = async () => (await paymentConfig()).provider;
 
 export const BANK_DETAILS = [
   "Account title: Liaquat National Hospital Association (placeholder)",
@@ -30,10 +32,12 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
   const reg = await db.query.registrations.findFirst({ where: eq(s.registrations.id, registrationId) });
   if (!reg) throw new Error("Registration not found");
   if (reg.paymentStatus === "PAID" || reg.paymentStatus === "WAIVED") throw new Error("Already paid");
-  const prov = provider();
+  const prov = await provider();
   if (prov === "manual") return { kind: "manual", instructions: BANK_DETAILS };
 
-  const txnRef = `T${pktStamp()}${randomToken(3).replace(/[^A-Za-z0-9]/g, "").toUpperCase()}`.slice(0, 20);
+  // Order number sent to the gateway. "LNHS" + yyMMddHHmmss (PKT) + random: distinct from other LNH systems that use the
+  // same PayPro merchant account (e.g. Liaquat_OPD), max 20 characters.
+  const txnRef = `LNHS${pktStamp().slice(2)}${randomToken(4).replace(/[^A-Za-z0-9]/g, "").toUpperCase()}`.slice(0, 20);
   await db.insert(s.payments).values({ registrationId, provider: prov, amount: reg.totalFee, txnRef });
 
   if (prov === "paypro") {
@@ -82,7 +86,8 @@ export async function checkPayPro(txnRef: string) {
   return { pay, paid: st.paid, status: st.status };
 }
 
-/** Cron: PayPro orders still pending from the last 10 days are checked with PayPro (catches missed callbacks). */
+/** Cron (daily reminders and the 15-minute email job): PayPro orders still pending from the last 10 days are checked with PayPro.
+ *  This confirms bank/ATM/OTC payments even when PayPro's callback goes elsewhere (one callback URL per merchant account). */
 export async function reconcilePayPro() {
   const rows = await db.select({ txnRef: s.payments.txnRef }).from(s.payments).where(and(eq(s.payments.provider, "paypro"), eq(s.payments.status, "PENDING"),
     isNotNull(s.payments.providerRef), gt(s.payments.createdAt, new Date(Date.now() - 10 * 864e5)))).orderBy(desc(s.payments.createdAt)).limit(300);

@@ -6,7 +6,7 @@ import { appUrl } from "@/lib/utils";
 
 // Mock gateway callback — only active when PAYMENT_PROVIDER=mock.
 export async function POST(req: Request) {
-  if (provider() !== "mock") return new Response("Disabled", { status: 404 });
+  if ((await provider()) !== "mock") return new Response("Disabled", { status: 404 });
   const form = await req.formData();
   const txn = String(form.get("txn")); const approve = form.get("result") === "approve";
   const pay = await settlePayment(txn, approve, `MOCK-${Date.now()}`, { mock: true });

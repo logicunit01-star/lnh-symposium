@@ -10,7 +10,9 @@ export type Perm =
   // Automated email management (templates, schedule, sent log) and volunteer approvals
   | "emails" | "volunteers"
   // N5 (13 Nov): workshop attendance verification by the department focal person
-  | "attendance";
+  | "attendance"
+  // PayPro switch and credentials: Super Admin only (14 Nov 2026)
+  | "payments";
 
 const WP: Perm[] = ["workshops", "workshops.all", "workshops.submit", "workshops.edit", "workshops.review", "venues"];
 const SCI: Perm[] = ["programme", "programme.edit", "programme.approve", "invitations", "departments"];
@@ -22,7 +24,7 @@ const ALL: Perm[] = [...SCI, "flyers", "catering", "dashboard", "registrations",
  * After the agenda deadline only the Scientific Committee (and Super Admin) edit and finalise sessions; see editRule().
  */
 export const ROLE_PERMS: Record<string, Perm[]> = {
-  SUPER_ADMIN: ALL.filter((p) => !p.startsWith("dept.")),
+  SUPER_ADMIN: [...ALL.filter((p) => !p.startsWith("dept.")), "payments"],
   ADMIN: ALL.filter((p) => p !== "users" && !p.startsWith("dept.")),
   // Symposium secretariat: runs the event; pre-fills sessions before the deadline; cannot finalise the programme
   SECRETARIAT: ALL.filter((p) => p !== "users" && p !== "settings" && p !== "programme.approve" && !p.startsWith("dept.")),

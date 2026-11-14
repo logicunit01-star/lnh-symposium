@@ -8,7 +8,7 @@ import { pkr } from "@/lib/utils";
 export const metadata = { title: "Test payment", robots: { index: false } };
 
 export default async function MockPay({ searchParams }: { searchParams: { txn?: string } }) {
-  if (provider() !== "mock" || !searchParams.txn) notFound();
+  if ((await provider()) !== "mock" || !searchParams.txn) notFound();
   const pay = await db.query.payments.findFirst({ where: eq(s.payments.txnRef, searchParams.txn), with: { registration: true } });
   if (!pay) notFound();
   return (

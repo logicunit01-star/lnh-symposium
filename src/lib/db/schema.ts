@@ -666,3 +666,14 @@ export const programmeGuests = pgTable("programme_guests", {
   createdAt: created(),
 }, (t) => ({ pIdx: index("pg_page_idx").on(t.pageKey) }));
 export type ProgrammeGuest = typeof programmeGuests.$inferSelect;
+
+/** PayPro / payment mode set by the Super Admin (Event Settings → Payments). One row (id 1). Credentials are encrypted
+ *  with AES-256-GCM (key from AUTH_SECRET) and never sent back to the browser. Kept out of the event table so public
+ *  pages that read event settings can never carry them. */
+export const paymentSettings = pgTable("payment_settings", {
+  id: integer("id").primaryKey().default(1),
+  mode: text("mode"), // OFF | DEMO | LIVE; null = use the server settings file (PAYMENT_PROVIDER / PAYPRO_*)
+  secrets: text("secrets"), // encrypted JSON: { demo: {baseUrl, clientId, clientSecret, merchantId}, live: {...}, callback: {username, password} }
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});

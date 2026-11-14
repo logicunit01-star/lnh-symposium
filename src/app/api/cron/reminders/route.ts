@@ -9,6 +9,6 @@ export async function GET(req: Request) {
   if (!process.env.CRON_SECRET || auth !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
   // The daily cron also runs any scheduled email dispatch that is due (abstract decisions, invitations)
   // PayPro: pending orders are checked with PayPro first, so nobody gets a "payment pending" reminder after paying
-  const payPro = provider() === "paypro" ? await reconcilePayPro().catch((e) => ({ error: String(e) })) : undefined;
+  const payPro = (await provider()) === "paypro" ? await reconcilePayPro().catch((e) => ({ error: String(e) })) : undefined;
   return Response.json({ payPro, ...(await runReminders()), emailDispatches: await runDueJobs("Daily scheduler") });
 }

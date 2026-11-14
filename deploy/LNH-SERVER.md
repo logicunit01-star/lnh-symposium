@@ -52,7 +52,7 @@ cp deploy/lnh-server.env.example .env && chmod 600 .env
 # fill in DATABASE_URL, AUTH_SECRET, CRON_SECRET (openssl rand -hex 32 each), SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
 ```
 
-Keep `PAYMENT_PROVIDER=manual` until PayPro sends credentials (see "PayPro" below). SMTP values come from LNH IT; until then emails are not delivered.
+Keep `PAYMENT_PROVIDER=manual`; PayPro is switched on by the Super Admin in Admin → Payments (see "PayPro" below). SMTP values come from LNH IT; until then emails are not delivered.
 
 ### 4. Install, database, build, start
 
@@ -119,11 +119,14 @@ If `db:setup` fails, do **not** build or reload: the running version keeps worki
 
 **Decided 13 Nov 2026 by the project owner: start fresh.** Nothing is copied from the current Vercel site (its data is test data only). Create a new, empty database and run `npm run db:setup` with `SEED_DEMO=0`. Do not import, dump or restore anything from Vercel/Neon.
 
-## PayPro (when LNH receives credentials)
+## PayPro
 
-1. In `.env`: `PAYMENT_PROVIDER=paypro`, `PAYPRO_BASE_URL` (demo `https://demoapi.paypro.com.pk`, live URL from PayPro), `PAYPRO_CLIENT_ID`, `PAYPRO_CLIENT_SECRET`, `PAYPRO_MERCHANT_ID`, and a callback username/password you choose.
-2. Give PayPro the callback URL `https://symposium2027.lnh.edu.pk/paypro/uis` with that username and password.
-3. `pm2 reload lnh-symposium`. Test one small payment by card and one by bank/ATM before go-live.
+Managed in the admin since 14 Nov 2026: **Admin → Payments (Super Admin only)**. The Super Admin chooses Off (bank transfer) / PayPro demo / PayPro live and enters the demo and live credentials and the callback username/password there. They are stored encrypted (AES-256-GCM, key derived from `AUTH_SECRET`) and never shown again. "Test connection" checks the saved credentials without creating anything.
+
+- Do **not** put PayPro credentials in `.env` any more. Leave `PAYMENT_PROVIDER=manual` there; it applies only when the admin choice is "Server settings file".
+- **Never change `AUTH_SECRET`** once credentials are saved: they could no longer be decrypted (the Super Admin would have to enter them again). It also signs everyone out.
+- Give PayPro the callback URL `https://symposium2027.lnh.edu.pk/paypro/uis` with the username/password set in Admin → Payments. LNH's merchant account (Liaquat_OPD) may already send callbacks to another LNH system; pending orders are therefore also checked with PayPro on every `/api/cron/emails` run (every 15 minutes), so the `*/15` cron line in section 6 is required.
+- Our order numbers start with `LNHS` so they never clash with other systems on the same merchant account.
 
 ## Backups
 
