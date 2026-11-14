@@ -67,7 +67,7 @@ export function VenueGuide({ venues, days, released }: { venues: GuideVenue[]; d
             <p className="mt-1 text-sm text-slate-400">{v.info}</p>
             <ul className="mt-3 grid gap-1.5 text-sm sm:grid-cols-2">{v.rooms.map((r) => <li key={r.name} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-1.5 text-slate-200"><span>{r.name}</span><span className="mono flex items-center gap-1 text-[11px] text-slate-400"><Users className="h-3 w-3" />{r.capacity}</span></li>)}</ul>
             <div className="mt-5 flex flex-wrap gap-2">{days.map((d) => (
-              <button key={d.key} onClick={() => setDay(d.key)} className={cn("rounded-full px-4 py-1.5 text-xs font-semibold", day === d.key ? "bg-[#006B96] text-white" : "bg-white/5 text-slate-300")}>{d.label}</button>
+              <button key={d.key} onClick={() => setDay(d.key)} className={cn("rounded-full px-4 py-1.5 text-xs font-semibold", day === d.key ? "bg-[#006B96] text-snow" : "bg-white/5 text-slate-300")}>{d.label}</button>
             ))}</div>
             {!released ? <p className="mt-4 text-sm text-slate-400">Session allocation for this venue is shown here once the scientific programme is released.</p>
               : list.length ? (

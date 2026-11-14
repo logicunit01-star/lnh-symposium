@@ -56,7 +56,7 @@ export function AgendaTools({ items, csvHref }: { items: AgendaItem[]; csvHref: 
 export function ItineraryItem({ id, children }: { id: string; children: React.ReactNode }) {
   const saved = useSaved().includes(id);
   return (
-    <div className="itin-item" data-saved={saved ? "" : undefined}>
+    <div className="itin-item grid grid-rows-[1fr_auto]" data-saved={saved ? "" : undefined}>
       {children}
       <button type="button" onClick={() => { const ids = read(); write(saved ? ids.filter((x) => x !== id) : [...ids, id]); }} aria-pressed={saved}
         className={cn("mt-1.5 inline-flex min-h-[36px] items-center gap-1.5 text-xs", saved ? "font-semibold text-lnh-gold" : "text-slate-400 hover:text-white")}>

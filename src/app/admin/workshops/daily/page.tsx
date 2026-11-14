@@ -49,7 +49,7 @@ export default async function Daily({ searchParams }: { searchParams: { date?: s
 
         <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-slate-500">Rooms and timings</h3>
         <table className="a-table mt-2">
-          <thead><tr><th>Time</th><th>Workshop</th><th>Venue</th><th>Booked / cap</th><th>Staff (F/V/T)</th><th>Lead faculty</th></tr></thead>
+          <thead><tr><th>Time</th><th>Workshop</th><th>Venue</th><th>Booked / cap</th><th>Staff (F/V/T)</th><th>Workshop Director</th></tr></thead>
           <tbody>{sheet.rows.map((r) => (
             <tr key={r.w.id}>
               <td className="whitespace-nowrap font-mono text-xs">{r.time}</td>

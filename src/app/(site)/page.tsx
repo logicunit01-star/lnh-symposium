@@ -214,7 +214,7 @@ export default async function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
               <Images className="relative h-8 w-8 text-white/80" />
               <p className="relative mt-3 font-display text-2xl font-bold text-white">8<sup className="text-[0.55em]">th</sup> LNH Symposium gallery</p>
-              <p className="relative mt-1 flex items-center gap-1.5 text-sm text-white/80">View the photos <ArrowUpRight className="h-4 w-4" /></p>
+              <p className="relative mt-1 flex items-center gap-1.5 text-sm text-white/90">View the photos <ArrowUpRight className="h-4 w-4" /></p>
             </a>
           </Reveal>
         </div>
@@ -240,12 +240,12 @@ export default async function Home() {
       {/* ================= FINAL CTA ================= */}
       <section className="container-x pt-28">
         <Reveal>
-          <div className="noise relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-lnh-navy via-lnh-blue to-lnh-navy px-8 py-16 text-center sm:px-16 sm:py-24">
+          <div className="noise relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-lnh-navy via-[#0A6AA1] to-lnh-navy px-8 py-16 text-center sm:px-16 sm:py-24">
             <NeuralField density={0.5} interactive={false} />
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
-            <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/70">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
+            <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/85">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-[2.5rem] text-white sm:text-7xl">Be part of the new era</h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-white/80">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
+            <p className="relative mx-auto mt-5 max-w-xl text-white/90">One Symposium Pass admits you to every session on all three days, with a banquet pass included. Add workshops as separate tickets and pay once.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="btn-light px-8 py-4 text-base">Register <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Browse workshops</Link>

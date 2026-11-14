@@ -23,9 +23,9 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
       {!compact && w.description && <p className="mt-2 line-clamp-2 text-sm text-slate-400">{w.description}</p>}
       {lead && (
         <p className="mt-3 text-sm text-slate-300">
-          <span className="text-slate-400">Lead faculty: </span><span className="font-semibold text-white">{lead.name}</span>
+          <span className="text-slate-400">{lead.role === "Workshop Director" ? "Workshop Director" : "Lead faculty"}: </span><span className="font-semibold text-white">{lead.name}</span>
           {lead.degrees && <span className="text-slate-400">, {lead.degrees}</span>}
-          {w.faculty.length > 1 && <span className="text-slate-400"> +{w.faculty.length - 1} faculty</span>}
+          {w.faculty.length > 1 && <span className="text-slate-400"> +{w.faculty.length - 1} {lead.role === "Workshop Director" ? (w.faculty.length > 2 ? "facilitators" : "facilitator") : "faculty"}</span>}
         </p>
       )}
       <ul className="mono mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-slate-300">
