@@ -19,7 +19,7 @@ const dt = (d: Date | null) => {
 
 export default async function Settings({ searchParams }: { searchParams: { reset?: string } }) {
   const tplFiles = await templateFiles();
-  await requirePerm("settings");
+  const u = await requirePerm("settings");
   const ev = await getEvent();
   const fees = await db.select().from(s.feeCategory).orderBy(asc(s.feeCategory.order));
   const F = ({ n, l, t = "text", v, span }: { n: string; l: string; t?: string; v?: any; span?: boolean }) => (
@@ -78,10 +78,10 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="speakersLive" defaultChecked={ev.speakersLive} /> Speakers are live (shows "Explore Speakers" and the speakers section on the homepage)</label>
         <div className="sm:col-span-2"><button className="a-btn-primary">Save settings</button></div>
       </form>
-      <form action={resetDemoContent} className="a-card mt-6 flex flex-wrap items-center justify-between gap-3 border-rose-200 p-5">
+      {process.env.ALLOW_DEMO_RESET === "1" && u.role === "SUPER_ADMIN" && <form action={resetDemoContent} className="a-card mt-6 flex flex-wrap items-center justify-between gap-3 border-rose-200 p-5">
         <div><p className="font-semibold text-slate-800">Reset demo content</p><p className="text-sm text-slate-500">Loads the 2027 demo programme (AI · Robotics · Digitization days and pre-conference workshops) and event dates. Deletes all registrations, accounts, programme, speakers and committee. Super Admin only.</p></div>
         <button className="a-btn-red">Reset demo content</button>
-      </form>
+      </form>}
       <h2 className="mb-1 mt-10 font-display text-lg font-bold">Registration fee tiers (PKR)</h2>
       <p className="mb-3 text-sm text-slate-500">Registration Forms 2027: participants choose their designation; the tier gives the early-bird or regular fee. Guest and volunteer categories stay inactive (they are free and approved separately).</p>
       <div className="a-card overflow-x-auto">

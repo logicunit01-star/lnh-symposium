@@ -24,7 +24,9 @@ export default async function SessionDash({ params }: { params: { id: string } }
       <PageTitle title={x.title} sub={`${SESSION_TYPE_LABEL[x.type]} · Day ${x.day}, ${fmtDate(x.startsAt, { weekday: "long", day: "numeric", month: "long" })} · ${fmtTime(x.startsAt)}–${fmtTime(x.endsAt)} · ${x.hall ?? ""}`}
         actions={<>
           {can(u, "registrations.export") && <a href={`/api/admin/export/registrations?session=${x.id}`} className="a-btn-ghost">Export participants</a>}
-          {can(u, "sessions.edit") && <Link href={`/admin/sessions/${x.id}/edit`} className="a-btn-primary">Edit session</Link>}
+          {x.type === "WORKSHOP" ? (can(u, "workshops") && <Link href={`/admin/workshops/${x.id}`} className="a-btn-primary">Open in Workshop Programme</Link>)
+            : x.proposal ? (can(u, "programme") && <Link href={`/admin/programme/${x.id}`} className="a-btn-primary">Open in Scientific Programme</Link>)
+            : can(u, "sessions.edit") && <Link href={`/admin/sessions/${x.id}/edit`} className="a-btn-primary">Edit session</Link>}
         </>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Registered" value={x.registrable ? `${active.length}${x.capacity ? ` / ${x.capacity}` : ""}` : "Open to all"} sub={x.capacity ? `${Math.max(0, x.capacity - active.length)} seats left` : undefined} />
@@ -55,7 +57,7 @@ export default async function SessionDash({ params }: { params: { id: string } }
               <td className="text-slate-600">{i.registration.institution}</td>
               <td className="text-xs text-slate-500">{i.registration.email}<br />{i.registration.phone}</td>
               <td><StatusBadge s={i.registration.paymentStatus} /></td>
-              <td>{can(u, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt)}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? "✓ Present" : "Mark present"}</button></form> : i.attendedAt ? "Present" : "—"}</td>
+              <td>{can(u, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt, "reg")}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? "✓ Present" : "Mark present"}</button></form> : i.attendedAt ? "Present" : "—"}</td>
             </tr>
           ))}</tbody>
         </table>

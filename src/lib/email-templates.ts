@@ -55,7 +55,7 @@ export const TEMPLATE_KEYS = [
   "REGISTRATION_RECEIVED", "REGISTRATION_CONFIRMED", "WORKSHOP_CONFIRMED", "PAYMENT_PENDING",
   "SIGN_IN_CODE",
   "GUEST_RECEIVED", "GUEST_TO_APPROVE", "GUEST_NOT_APPROVED",
-  "WORKSHOP_REQUEST_APPROVED", "WORKSHOP_REQUEST_REJECTED", "WORKSHOP_FLYER_APPROVED", "WAITLIST_SEAT_FREE",
+  "WORKSHOP_REQUEST_APPROVED", "WORKSHOP_REQUEST_REJECTED", "WORKSHOP_FLYER_APPROVED", "WAITLIST_SEAT_FREE", "WORKSHOP_CANCELLED",
   "CERTIFICATE_READY", "WORKSHOP_CERTIFICATE", "WORKSHOP_FEEDBACK_REQUEST",
   "ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_ACCEPTED_POSTER", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER",
   "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "SESSION_DETAILS_REQUEST",
@@ -297,6 +297,20 @@ Ticket: {{ticket_no}}
 
 Please arrive 15 minutes early and show your workshop ticket QR at the door. It is on your ticket page and in your confirmation PDF.`,
     buttonLabel: "Show my ticket",
+  },
+  WORKSHOP_CANCELLED: {
+    category: "Workshops", name: "Workshop cancelled", audience: "Workshop ticket holders", when: "When the Workshop Programme Co-Chairs cancel a workshop (low-fill decision \"Cancel\")",
+    subject: "Workshop cancelled: {{session_name}}",
+    body: `Dear {{name}},
+
+We regret to inform you that the Pre-Symposium Workshop **"{{session_name}}"** ({{session_date}}) has been cancelled.
+
+Ticket: {{ticket_no}}
+
+The symposium secretariat will contact you about a refund, or a seat in another workshop if you prefer. You can also reply to this email or write to {{contact_email}}.
+
+We apologise for the inconvenience.`,
+    buttonLabel: "View my registration",
   },
   SYMPOSIUM_REMINDER: {
     category: "Reminders", name: "Symposium reminder (day before)", audience: "Symposium Pass holders (paid or complimentary)", when: "Automatically, the day before the symposium starts (daily scheduler)", switchable: true,

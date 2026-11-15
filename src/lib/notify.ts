@@ -8,7 +8,7 @@ type Attachment = { filename: string; content: Buffer | Uint8Array; contentType?
 
 /** from: legacy "Name <address>" (its name is used as the sender name); fromName / accountId / cc / replyTo come from the notification's settings. */
 /** Reply-to order: replyTo (the notification's own) > the mailbox's reply-to > fallbackReplyTo (the symposium contact email). */
-export type MailOpts = { from?: string | null; fromName?: string | null; accountId?: string | null; cc?: string | null; replyTo?: string | null; fallbackReplyTo?: string | null; templateKey?: string; ref?: string | null; priority?: number };
+export type MailOpts = { from?: string | null; fromName?: string | null; accountId?: string | null; cc?: string | null; replyTo?: string | null; fallbackReplyTo?: string | null; templateKey?: string; ref?: string | null; priority?: number; defer?: boolean };
 
 /**
  * Sends an email through the outbox (lib/outbox.ts). Never throws. Every message is recorded in the sent log.
@@ -34,7 +34,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
     if (st?.mode === "TEST" && st.testAddress) { rcpt = st.testAddress; subj = `[TEST for ${to}${cc ? `, cc ${cc}` : ""}] ${subject}`; cc = undefined; }
     const base = { channel: "EMAIL" as const, to: rcpt === to ? to : `${rcpt}`, cc: cc ?? null, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: secret ? maskCodes(subj) : subj, body: logBody };
     if (st?.mode === "LOG" || (!account && !envMailTransport())) return logOnly(base);
-    return await enqueue({ ...base, priority: opts.priority, payload: {
+    return await enqueue({ ...base, priority: opts.priority, defer: opts.defer, payload: {
       html, from, accountId: account?.id ?? null, replyTo: replyTo ?? null, ...(secret ? { subject: subj } : {}),
       attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64"), contentType: a.contentType, cid: a.cid })),
     } });
@@ -62,14 +62,14 @@ export const normalisePhone = (p: string) => {
  * - SMS: eOcean when switched on and the message has an SMS template ID; otherwise the free text through the
  *   SMS gateway in the server file (SMS_API_URL); otherwise only recorded, as before.
  */
-export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number } = {}) {
+export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean } = {}) {
   try {
     if (!phone) return;
     const to = normalisePhone(phone);
     if (!/^\d{10,15}$/.test(to)) return;
     const cfg = await notifyConfig();
     const t = cfg.templates[key] ?? {}, free = "freeText" in NOTIFY_MESSAGES[key];
-    const common = { to, templateKey: key, ref: m.ref ?? null, priority: m.priority };
+    const common = { to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer };
     if (cfg.waEnabled && t.wa && !free) {
       await enqueue({ ...common, channel: "WHATSAPP", body: `WhatsApp template ${t.wa}${m.mediaUrl ? " + QR image" : ""}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: t.wa, mediaUrl: m.mediaUrl, email: m.email, via: "XNOTIFY" } });
     }

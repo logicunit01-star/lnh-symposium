@@ -46,7 +46,8 @@ export async function runReminders(now = new Date()) {
   const soon = await db.select({ item: s.registrationItems, reg: s.registrations, ses: s.sessions }).from(s.registrationItems)
     .innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId)).innerJoin(s.sessions, eq(s.sessions.id, s.registrationItems.sessionId))
     .where(and(isNull(s.registrationItems.remindedAt), inArray(s.registrations.paymentStatus, ["PAID", "WAIVED"]),
-      sql`${s.sessions.startsAt} > ${now}`, sql`${s.sessions.startsAt} <= ${new Date(+now + 36 * 3600e3)}`));
+      sql`${s.sessions.startsAt} > ${now}`, sql`${s.sessions.startsAt} <= ${new Date(+now + 36 * 3600e3)}`,
+      sql`${s.sessions.coChairDecision} is distinct from 'CANCEL'`)); // no reminders for a cancelled workshop (audit 16 Nov 2026)
   const wsOn = (await getTemplate("WORKSHOP_REMINDER")).enabled;
   for (const { item, reg: r, ses } of wsOn ? soon : []) {
     await sendTemplate("WORKSHOP_REMINDER", r.email, {

@@ -8,11 +8,14 @@ import { PageTitle, StatusBadge } from "@/components/admin/ui";
 import { fmtDateTime, pkr } from "@/lib/utils";
 import { regMarkPaid, regSetStatus, regResend, regNotes, regCheckIn, itemAttend } from "../../actions";
 
-export default async function RegDetail({ params }: { params: { id: string } }) {
+const ERR: Record<string, string> = { unpaid: "Payment pending: record the payment before checking in.", approval: "This guest / volunteer registration has not been approved.", nopass: "No Symposium Registration: workshop tickets only.", notfound: "Registration not found.", already: "This registration is already paid or waived.", status: "That change is not possible for the current payment status." };
+export default async function RegDetail({ params, searchParams }: { params: { id: string }; searchParams: { err?: string } }) {
   const u = await requirePerm("registrations");
   const r = await loadRegistration({ id: params.id });
   if (!r) notFound();
   const edit = can(u, "registrations.edit");
+  // who changed payments / fees on this registration (audit 16 Nov 2026)
+  const history = await db.select().from(s.staffAudit).where(eq(s.staffAudit.targetId, params.id)).orderBy(desc(s.staffAudit.createdAt)).limit(20);
   const logs = await db.select().from(s.notificationLog).where(eq(s.notificationLog.to, r.email)).orderBy(desc(s.notificationLog.createdAt)).limit(10);
   const paid = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
   return (
@@ -23,6 +26,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
           {r.certificateNo && <a className="a-btn-ghost" href={`/api/certificates/${r.accessToken}`} target="_blank">Certificate</a>}
           {edit && <form action={regResend.bind(null, r.id)}><button className="a-btn-ghost">Resend email + SMS</button></form>}
         </>} />
+      {searchParams.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{ERR[searchParams.err] ?? "Not done."}</p>}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <div className="a-card p-5">
@@ -44,7 +48,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
                   <tr key={i.id}>
                     <td>{i.session.title}<p className="text-xs text-slate-400">{fmtDateTime(i.session.startsAt)} · {i.session.hall}</p></td>
                     <td>{i.fee ? pkr(i.fee) : "Included"}</td>
-                    <td>{can(u, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt)}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? `✓ ${fmtDateTime(i.attendedAt)}` : "Mark attended"}</button></form> : i.attendedAt ? "Yes" : "—"}</td>
+                    <td>{can(u, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt, "reg")}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? `✓ ${fmtDateTime(i.attendedAt)}` : "Mark attended"}</button></form> : i.attendedAt ? "Yes" : "—"}</td>
                   </tr>
                 ))}
                 <tr><td className="font-semibold">Total</td><td className="font-bold">{pkr(r.totalFee)}</td><td /></tr>
@@ -87,7 +91,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
           <div className="a-card p-5">
             <p className="text-xs text-slate-500">Event check-in</p>
             <p className="mt-1 font-semibold">{r.checkedInAt ? `Checked in ${fmtDateTime(r.checkedInAt)}` : "Not checked in"}</p>
-            {can(u, "checkin") && <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)} className="mt-3"><button className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red"}>{r.checkedInAt ? "Undo check-in" : "Check in now"}</button></form>}
+            {can(u, "checkin") && <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt, "reg")} className="mt-3"><button className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red"}>{r.checkedInAt ? "Undo check-in" : "Check in now"}</button></form>}
             {r.certificateNo && <p className="mt-4 text-xs text-slate-500">Certificate <b className="text-slate-800">{r.certificateNo}</b></p>}
           </div>
           {edit && (
@@ -96,6 +100,12 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
               <textarea id="notes" name="notes" defaultValue={r.notes ?? ""} rows={4} className="a-input" />
               <button className="a-btn-ghost">Save notes</button>
             </form>
+          )}
+          {history.length > 0 && (
+            <div className="a-card p-5">
+              <p className="text-sm font-semibold">Staff actions</p>
+              <ul className="mt-2 space-y-2 text-xs">{history.map((h) => <li key={h.id}><span className="text-slate-500">{fmtDateTime(h.createdAt)} · {h.actor}</span><br />{h.action}{h.detail ? `: ${h.detail}` : ""}</li>)}</ul>
+            </div>
           )}
         </div>
       </div>

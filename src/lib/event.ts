@@ -21,6 +21,8 @@ export const abstractWindow = (e: { abstractOpen: Date | null; abstractDeadline:
   return "OPEN" as const;
 };
 /** Edition year shown in branding, e.g. "2027". */
+/** True until the end (23:59 Karachi) of the symposium's last day. */
+export const beforeEventEnd = (e: { endDate: Date }, now = new Date()) => now.getTime() <= Date.parse(`${new Date(e.endDate.getTime() + 5 * 3600_000).toISOString().slice(0, 10)}T23:59:59+05:00`);
 export const editionYear = (e: { startDate: Date }) => new Date(e.startDate).getFullYear();
 
 /** The symposium's own days (may be non-consecutive, e.g. 20, 30 and 31 Jan). Falls back to start/end. */

@@ -65,6 +65,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
               {w.status === "APPROVED" && <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", w.flyerStatus === "APPROVED" ? "bg-emerald-100 text-emerald-800" : w.flyerStatus === "CHANGES" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800")}>Flyer: {w.flyerStatus === "APPROVED" ? "approved by Marketing" : w.flyerStatus === "CHANGES" ? "changes requested" : "awaiting Marketing review"}</span>}
               {row.clash && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Venue/time clash</span>}
               {w.coChairDecision && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Co-Chair decision: {DECISION_LABEL[w.coChairDecision]}</span>}
+              {w.coChairDecision === "CANCEL" && <span className="block w-full text-xs text-rose-700">Cancelled: hidden from the website; ticket holders were emailed. Refund or move them from <Link href={`/admin/sessions/${w.id}`} className="font-semibold underline">the participant list</Link>.</span>}
             </div>
             <dl className="mt-5 grid gap-4 sm:grid-cols-3">
               <F l={w.days > 1 ? "Dates" : "Date"} v={w.days > 1 ? `${fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(w.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} (${w.days} full days)` : fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} />

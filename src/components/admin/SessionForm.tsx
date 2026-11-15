@@ -3,19 +3,21 @@ import { db, schema as s } from "@/lib/db";
 import type { Session } from "@/lib/db/schema";
 import { TZ } from "@/lib/utils";
 import { saveSession, deleteSession } from "@/app/admin/actions";
+import { listDepartments } from "@/lib/departments";
 
 const ymd = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 const hm = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
 
 export async function SessionForm({ session, assigned = [] }: { session?: Session; assigned?: { speakerId: string; role: string }[] }) {
   const speakers = await db.select().from(s.speakers).orderBy(asc(s.speakers.name));
+  const depts = await listDepartments({ includeCommittee: true });
   const x = session;
   const ev = (await db.select().from(s.event))[0];
   const date = x ? ymd(x.startsAt) : ymd(ev.startDate);
   return (
     <form action={saveSession.bind(null, x?.id ?? null)} className="a-card grid gap-4 p-6 sm:grid-cols-2">
       <div className="sm:col-span-2"><label className="a-label">Title *</label><input name="title" required defaultValue={x?.title} className="a-input" /></div>
-      <div><label className="a-label">Type *</label><select name="type" defaultValue={x?.type ?? "WORKSHOP"} className="a-input">{["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "WORKSHOP", "CEREMONY", "BREAK"].map((t) => <option key={t}>{t}</option>)}</select></div>
+      <div><label className="a-label">Type *</label><select name="type" defaultValue={x?.type ?? "SCIENTIFIC"} className="a-input">{["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "CEREMONY", "BREAK"].map((t) => <option key={t}>{t}</option>)}</select></div>
       <div><label className="a-label">Track</label><select name="track" defaultValue={x?.track ?? ""} className="a-input"><option value="">—</option><option>AI</option><option>Robotics</option><option>Digitization</option><option>Cost</option><option>Quality</option><option>Technology</option></select></div>
       <div className="sm:col-span-2"><label className="a-label">Description</label><textarea name="description" rows={3} defaultValue={x?.description ?? ""} className="a-input" /></div>
       <div className="grid grid-cols-4 gap-3 sm:col-span-2">
@@ -24,7 +26,7 @@ export async function SessionForm({ session, assigned = [] }: { session?: Sessio
         <div><label className="a-label">Start *</label><input name="start" type="time" required defaultValue={x ? hm(x.startsAt) : "09:00"} className="a-input" /></div>
         <div><label className="a-label">End *</label><input name="end" type="time" required defaultValue={x ? hm(x.endsAt) : "10:00"} className="a-input" /></div>
       </div>
-      <div><label className="a-label">Department</label><input name="department" defaultValue={x?.department ?? ""} className="a-input" placeholder="e.g. Critical Care" /></div>
+      <div><label className="a-label">Department</label><select name="department" defaultValue={x?.department ?? ""} className="a-input"><option value="">—</option>{x?.department && !depts.includes(x.department) && <option>{x.department}</option>}{depts.map((d) => <option key={d}>{d}</option>)}</select></div>
       <div><label className="a-label">Format</label><select name="format" defaultValue={x?.format ?? ""} className="a-input"><option value="">—</option>{["Hands-on", "Simulation", "Lecture", "Panel", "Drill"].map((t) => <option key={t}>{t}</option>)}</select></div>
       <div><label className="a-label">Approval status</label><select name="status" defaultValue={x?.status ?? "APPROVED"} className="a-input">{["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((t) => <option key={t}>{t}</option>)}</select></div>
       <div><label className="a-label">Hall / venue</label><input name="hall" defaultValue={x?.hall ?? ""} className="a-input" /></div>

@@ -66,7 +66,7 @@ export async function delegateStatus(accountId: string) {
   return { primary, pass, orders: regs };
 }
 
-export async function createRegistration(input: RegistrationInput, opts: { accountId?: string; processingFee?: boolean } = {}) {
+export async function createRegistration(input: RegistrationInput, opts: { accountId?: string; processingFee?: boolean; silent?: boolean } = {}) {
   const ev = await getEvent();
   if (!ev.registrationOpen) throw new Error("Registration is currently closed.");
   const early = isEarlyBird(ev);
@@ -138,7 +138,8 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
     return reg;
   });
 
-  await sendRegistrationNotice(result.id, "created").catch((e) => console.error("notify failed", e));
+  // silent: the onsite desk takes payment (or waives) at once and sends the confirmation itself
+  if (!opts.silent) await sendRegistrationNotice(result.id, "created").catch((e) => console.error("notify failed", e));
   return result;
 }
 

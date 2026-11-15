@@ -1,6 +1,6 @@
 import "server-only";
 import { sendTemplate } from "./email";
-import { and, eq, inArray, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, isNotNull, or } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
 import { getEvent, editionYear } from "./event";
@@ -12,7 +12,9 @@ import { appUrl, fmtDate } from "./utils";
 export async function issueCertificates(opts: { attendedOnly: boolean; notify: boolean }) {
   const ev = await getEvent();
   const yy = String(editionYear(ev)).slice(-2);
-  const conds = [inArray(s.registrations.paymentStatus, ["PAID", "WAIVED"]), isNull(s.registrations.certificateNo)];
+  // audit 16 Nov 2026: symposium certificates only for symposium registrations (not workshop-only) and approved guests / volunteers
+  const conds = [inArray(s.registrations.paymentStatus, ["PAID", "WAIVED"]), isNull(s.registrations.certificateNo), eq(s.registrations.hasPass, true),
+    or(eq(s.registrations.regType, "PARTICIPANT"), eq(s.registrations.approvalStatus, "APPROVED"))!];
   if (opts.attendedOnly) conds.push(isNotNull(s.registrations.checkedInAt));
   const rows = await db.select().from(s.registrations).where(and(...conds));
   for (const r of rows) {

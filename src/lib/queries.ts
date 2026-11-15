@@ -9,6 +9,8 @@ export async function getProgramme(filter?: { types?: string[]; registrable?: bo
     conds.push(eq(s.sessions.status, "APPROVED"));
     // Department proposals appear publicly only after the Scientific Committee releases the programme
     conds.push(sql`(not ${s.sessions.proposal} or exists (select 1 from event e where e.programme_released_at is not null))`);
+    // a workshop cancelled by the Co-Chairs leaves the public site (audit 16 Nov 2026)
+    conds.push(sql`${s.sessions.coChairDecision} is distinct from 'CANCEL'`);
   }
   if (filter?.types) conds.push(inArray(s.sessions.type, filter.types as any));
   if (filter?.registrable != null) conds.push(eq(s.sessions.registrable, filter.registrable));

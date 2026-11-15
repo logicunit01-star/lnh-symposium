@@ -124,10 +124,12 @@ export async function settlePayment(txnRef: string, ok: boolean, providerRef?: s
 }
 
 /** Admin: mark a registration paid manually (bank transfer / cash at desk). */
-export async function markPaidManually(registrationId: string, method: string, ref?: string) {
+/** by: the staff member recording it (kept with the payment). Refuses a registration that is already paid or waived. */
+export async function markPaidManually(registrationId: string, method: string, ref?: string, by?: string) {
   const reg = await db.query.registrations.findFirst({ where: eq(s.registrations.id, registrationId) });
   if (!reg) throw new Error("Not found");
-  await db.insert(s.payments).values({ registrationId, provider: method, amount: reg.totalFee, txnRef: `M${Date.now()}${randomToken(2)}`, status: "PAID", providerRef: ref || null });
+  if (reg.paymentStatus === "PAID" || reg.paymentStatus === "WAIVED") return;
+  await db.insert(s.payments).values({ registrationId, provider: method, amount: reg.totalFee, txnRef: `M${Date.now()}${randomToken(2)}`, status: "PAID", providerRef: ref || null, raw: by ? ({ recordedBy: by } as any) : null });
   await db.update(s.registrations).set({ paymentStatus: "PAID", paymentMethod: method, paidAt: new Date() }).where(eq(s.registrations.id, registrationId));
   await sendRegistrationNotice(registrationId, "paid").catch((e) => console.error(e));
 }

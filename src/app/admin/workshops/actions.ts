@@ -91,6 +91,11 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   if (venueId && !venue) return { error: "Venue not found." };
   if (capacity < 1) return { error: "Seat cap must be at least 1." };
   if (venue && capacity > venue.capacity) return { error: `Seat cap ${capacity} exceeds the capacity of ${venue.name} (${venue.capacity}).` };
+  if (existing) { // audit 16 Nov 2026: never below the people already registered
+    const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems).innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId))
+      .where(and(eq(s.registrationItems.sessionId, existing.id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
+    if (capacity < n) return { error: `${n} people are already registered for this workshop; the seat cap cannot be lower than ${n}.` };
+  }
   if (onlineLink && !/^https?:\/\/\S+$/i.test(onlineLink)) return { error: "The online link must start with https://" };
   const organiser = str(f, "organiser"), objectives = str(f, "objectives"), targetAudience = str(f, "targetAudience");
   if (!organiser) return { error: "Enter the organising person." };
@@ -174,7 +179,16 @@ export async function decideLowFill(id: string, f: FormData) {
   const d = str(f, "decision") ?? "";
   if (!["RUN", "MERGE", "CANCEL", "PROMOTE"].includes(d)) throw new Error("Invalid decision");
   const [w] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
-  await db.update(s.sessions).set({ coChairDecision: d, ...(d === "CANCEL" ? { registrable: false } : {}) }).where(eq(s.sessions.id, id));
+  // audit 16 Nov 2026: Cancel closes registration, leaves the website and tells the ticket holders; undoing it reopens registration
+  await db.update(s.sessions).set({ coChairDecision: d, ...(d === "CANCEL" ? { registrable: false } : w?.coChairDecision === "CANCEL" ? { registrable: true } : {}) }).where(eq(s.sessions.id, id));
+  if (d === "CANCEL" && w?.coChairDecision !== "CANCEL") {
+    const holders = await db.select({ i: s.registrationItems, r: s.registrations }).from(s.registrationItems).innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId))
+      .where(and(eq(s.registrationItems.sessionId, id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
+    for (const { i, r } of holders) await sendTemplate("WORKSHOP_CANCELLED", r.email, {
+      name: `${r.title} ${r.firstName} ${r.lastName}`, session_name: w!.title, session_date: fmtDate(w!.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+      ticket_no: i.ticketNo ?? r.regNo, link: `${appUrl()}/register/success/${r.accessToken}`,
+    }, { ref: i.ticketNo ?? r.regNo }).catch((e) => console.error("cancel notice", e));
+  }
   await log(id, u, w?.status ?? null, w?.status ?? "APPROVED", `Low-fill decision: ${d}${str(f, "note") ? ` — ${str(f, "note")}` : ""}`);
   revalidatePath("/admin/workshops", "layout"); revalidatePath("/", "layout");
 }

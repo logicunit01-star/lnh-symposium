@@ -8,7 +8,8 @@ import { regCheckIn, itemAttend } from "../actions";
 import { ScanInput } from "./ScanInput";
 import { parseScan } from "@/lib/qr-payload";
 
-export default async function CheckIn({ searchParams }: { searchParams: { q?: string } }) {
+const ENTRY_ERR: Record<string, string> = { unpaid: "Payment pending: collect the payment (or record it) before admitting.", approval: "This guest / volunteer registration has not been approved.", nopass: "No Symposium Registration: workshop tickets only.", notfound: "Registration not found.", already: "This registration is already paid or waived.", status: "That change is not possible for the current payment status." };
+export default async function CheckIn({ searchParams }: { searchParams: { q?: string; err?: string } }) {
   await requirePerm("checkin");
   const raw = (searchParams.q || "").trim();
   const scan = raw ? parseScan(raw) : null;
@@ -23,6 +24,7 @@ export default async function CheckIn({ searchParams }: { searchParams: { q?: st
     <>
       <PageTitle title="Check-in desk" sub="Scan a Symposium Pass QR (symposium entry) or a workshop ticket QR (that workshop’s door), or search by registration no., name, email or phone." />
       <ScanInput initial={raw} />
+      {searchParams.err && <p role="alert" className="mt-4 rounded-xl border-l-4 border-l-rose-500 bg-white p-4 text-sm font-semibold text-rose-700">{ENTRY_ERR[searchParams.err] ?? "Not admitted."}</p>}
       {scan?.ticketNo && (() => {
         const hit = results.flatMap((r) => r.items.map((i) => ({ r, i }))).find((x) => x.i.ticketNo === scan.ticketNo);
         if (!hit) return <div className="mt-4 rounded-xl border-l-4 border-l-rose-500 bg-white p-4 text-sm font-semibold text-rose-700">Workshop ticket {scan.ticketNo} not found.</div>;
@@ -35,7 +37,7 @@ export default async function CheckIn({ searchParams }: { searchParams: { q?: st
               <p className="text-sm text-slate-600">{hit.r.title} {hit.r.firstName} {hit.r.lastName} · {fmtDate(hit.i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })} {fmtTime(hit.i.session.startsAt)} · {hit.i.session.hall}</p>
               {!paid && <p className="mt-1 text-sm font-semibold text-amber-700">Payment pending: collect payment before admitting.</p>}
             </div>
-            <form action={itemAttend.bind(null, hit.i.id, !!hit.i.attendedAt)}><button className={hit.i.attendedAt ? "a-btn-ghost" : "a-btn-red px-6"}>{hit.i.attendedAt ? "✓ Admitted — undo" : "Admit to workshop"}</button></form>
+            <form action={itemAttend.bind(null, hit.i.id, !!hit.i.attendedAt, "checkin")}><button disabled={!paid && !hit.i.attendedAt} className={hit.i.attendedAt ? "a-btn-ghost" : "a-btn-red px-6"}>{hit.i.attendedAt ? "✓ Admitted — undo" : "Admit to workshop"}</button></form>
           </div>
         );
       })()}
@@ -55,7 +57,7 @@ export default async function CheckIn({ searchParams }: { searchParams: { q?: st
                 </div>
                 <div className="flex gap-2">
                   <Link href={`/admin/registrations/${r.id}`} className="a-btn-ghost">Details</Link>
-                  <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)}><button disabled={(approval || !r.hasPass) && !r.checkedInAt} title={!r.hasPass ? "No Symposium Pass: workshop tickets only" : undefined} className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red px-6 disabled:opacity-40"}>{r.checkedInAt ? "✓ Checked in — undo" : "Check in"}</button></form>
+                  <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt, "checkin")}><button disabled={(approval || !r.hasPass || !ok) && !r.checkedInAt} title={!r.hasPass ? "No Symposium Pass: workshop tickets only" : undefined} className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red px-6 disabled:opacity-40"}>{r.checkedInAt ? "✓ Checked in — undo" : "Check in"}</button></form>
                 </div>
               </div>
               {r.items.length > 0 && (
@@ -63,7 +65,7 @@ export default async function CheckIn({ searchParams }: { searchParams: { q?: st
                   {r.items.map((i) => (
                     <li key={i.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
                       <span><span className="mr-1 font-mono text-xs text-slate-500">{i.ticketNo}</span>{i.session.title} <span className="text-xs text-slate-400">· {fmtDate(i.session.startsAt, { weekday: "short" })} {fmtTime(i.session.startsAt)} · {i.session.hall}</span></span>
-                      <form action={itemAttend.bind(null, i.id, !!i.attendedAt)}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? "✓ Attended" : "Mark attended"}</button></form>
+                      <form action={itemAttend.bind(null, i.id, !!i.attendedAt, "checkin")}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? "✓ Attended" : "Mark attended"}</button></form>
                     </li>
                   ))}
                 </ul>

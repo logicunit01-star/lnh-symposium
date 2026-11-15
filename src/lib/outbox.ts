@@ -33,13 +33,15 @@ export function envMailTransport() {
 }
 
 /** Queues a message; outside worker mode also sends it at once. Returns the status: SENT | QUEUED (will be retried / sent by the worker) | FAILED. */
-export async function enqueue(v: { channel: "EMAIL" | "WHATSAPP" | "SMS"; to: string; cc?: string | null; sender?: string | null; templateKey?: string | null; ref?: string | null; subject?: string | null; body: string; payload: OutboxPayload; priority?: number }) {
+export async function enqueue(v: { channel: "EMAIL" | "WHATSAPP" | "SMS"; to: string; cc?: string | null; sender?: string | null; templateKey?: string | null; ref?: string | null; subject?: string | null; body: string; payload: OutboxPayload; priority?: number; defer?: boolean }) {
+  // defer: always queue (bulk sends); outside worker mode the sender page drains the queue in steps (audit 16 Nov 2026)
+  const queued = workerMode() || !!v.defer;
   const [row] = await db.insert(s.notificationLog).values({
     channel: v.channel, to: v.to, cc: v.cc ?? null, sender: v.sender ?? null, templateKey: v.templateKey ?? null, ref: v.ref ?? null,
-    subject: v.subject ?? null, body: v.body.slice(0, 20000), status: workerMode() ? "QUEUED" : "SENDING", lockedAt: workerMode() ? null : new Date(),
+    subject: v.subject ?? null, body: v.body.slice(0, 20000), status: queued ? "QUEUED" : "SENDING", lockedAt: queued ? null : new Date(),
     payload: v.payload, priority: v.priority ?? 0,
   }).returning();
-  if (workerMode()) return "QUEUED";
+  if (queued) return "QUEUED";
   return finish(row, await deliver(row));
 }
 
@@ -117,13 +119,13 @@ const rows = (r: any): any[] => r.rows ?? r;
  * Sends due queued messages. Claims rows with FOR UPDATE SKIP LOCKED, so the worker and a scheduled job never send
  * the same message twice. A message stuck in SENDING for 10 minutes (process stopped mid-send) is queued again.
  */
-export async function drainOutbox(o: { max?: number; budgetMs?: number; limiter?: ReturnType<typeof rateLimiter> } = {}) {
+export async function drainOutbox(o: { max?: number; budgetMs?: number; limiter?: ReturnType<typeof rateLimiter>; ref?: string } = {}) {
   const max = o.max ?? 50, until = Date.now() + (o.budgetMs ?? 50_000);
   await db.execute(sql`update notification_log set status = 'QUEUED', locked_at = null where status = 'SENDING' and locked_at < now() - interval '10 minutes'`);
   const out = { sent: 0, retry: 0, failed: 0 };
   while (out.sent + out.retry + out.failed < max && Date.now() < until) {
     const claimed = rows(await db.execute(sql`update notification_log set status = 'SENDING', locked_at = now()
-      where id in (select id from notification_log where status = 'QUEUED' and (next_attempt_at is null or next_attempt_at <= now())
+      where id in (select id from notification_log where status = 'QUEUED' and (next_attempt_at is null or next_attempt_at <= now())${o.ref ? sql` and ref = ${o.ref}` : sql``}
                    order by priority desc, created_at limit ${o.limiter ? 1 : 5} for update skip locked)
       returning id`));
     if (!claimed.length) break;

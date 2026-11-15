@@ -1,34 +1,51 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { markPaidManually } from "@/lib/payments";
 import { sendRegistrationNotice } from "@/lib/registration";
 import { issueCertificates } from "@/lib/certificates";
-import { sendEmail, sendSms, emailLayout } from "@/lib/notify";
+import { sendEmail, sendMessage, emailLayout } from "@/lib/notify";
+import { staffLog } from "@/lib/staff-audit";
 
 const str = (f: FormData, k: string) => { const v = f.get(k); return v == null || v === "" ? null : String(v).trim(); };
 const num = (f: FormData, k: string) => { const v = str(f, k); return v == null ? null : Number(v); };
 const bool = (f: FormData, k: string) => f.get(k) === "on" || f.get(k) === "true";
 
 // ---------------- registrations ----------------
+// audit 16 Nov 2026: every payment / fee change records who made it (Users & roles change log, shown on the registration)
+const regLabel = async (id: string) => { const [r] = await db.select({ regNo: s.registrations.regNo }).from(s.registrations).where(eq(s.registrations.id, id)); return { id, label: `Registration ${r?.regNo ?? id}` }; };
 export async function regMarkPaid(id: string, f: FormData) {
-  await requirePerm("registrations.edit");
-  await markPaidManually(id, str(f, "method") || "Cash at desk", str(f, "ref") || undefined);
+  const me = await requirePerm("registrations.edit");
+  const [r] = await db.select({ st: s.registrations.paymentStatus }).from(s.registrations).where(eq(s.registrations.id, id));
+  // a second click (or a colleague at the same time) must not record a second payment or send the confirmation twice
+  if (!r || r.st === "PAID" || r.st === "WAIVED") redirect(`/admin/registrations/${id}?err=already`);
+  const method = str(f, "method") || "Cash at desk", ref = str(f, "ref");
+  await markPaidManually(id, method, ref || undefined, `${me.name} (${me.email})`);
+  await staffLog(me, await regLabel(id), "Marked paid", `${method}${ref ? `, ref ${ref}` : ""}`);
   revalidatePath(`/admin/registrations/${id}`);
 }
-export async function regSetStatus(id: string, status: "WAIVED" | "PENDING" | "REFUNDED" | "FAILED") {
-  await requirePerm("registrations.edit");
-  await db.update(s.registrations).set({ paymentStatus: status, paidAt: status === "WAIVED" ? new Date() : undefined }).where(eq(s.registrations.id, id));
+const STATUS_LABEL = { WAIVED: "Fee waived", PENDING: "Re-opened (payment pending)", REFUNDED: "Marked refunded", FAILED: "Cancelled (seats freed)" } as const;
+export async function regSetStatus(id: string, status: "WAIVED" | "PENDING" | "REFUNDED" | "FAILED", f?: FormData) {
+  const me = await requirePerm("registrations.edit");
+  const [r] = await db.select({ st: s.registrations.paymentStatus }).from(s.registrations).where(eq(s.registrations.id, id));
+  if (!r) redirect("/admin/registrations");
+  const allowed: Record<string, string[]> = { WAIVED: ["PENDING", "FAILED"], REFUNDED: ["PAID"], FAILED: ["PENDING"], PENDING: ["FAILED", "REFUNDED"] };
+  if (!allowed[status].includes(r.st)) redirect(`/admin/registrations/${id}?err=status`);
+  await db.update(s.registrations).set({ paymentStatus: status, ...(status === "WAIVED" ? { paidAt: new Date(), paymentMethod: "Waived" } : status === "PENDING" ? { paidAt: null } : {}) }).where(eq(s.registrations.id, id));
+  await staffLog(me, await regLabel(id), STATUS_LABEL[status], f ? str(f, "reason") : null);
   if (status === "WAIVED") await sendRegistrationNotice(id, "paid");
   revalidatePath(`/admin/registrations/${id}`);
 }
 export async function regResend(id: string) {
-  await requirePerm("registrations.edit");
-  await sendRegistrationNotice(id, "created");
+  const me = await requirePerm("registrations.edit");
+  // resend what matches the current status (the confirmation with QR codes once paid)
+  const [r] = await db.select({ st: s.registrations.paymentStatus }).from(s.registrations).where(eq(s.registrations.id, id));
+  await sendRegistrationNotice(id, r?.st === "PAID" || r?.st === "WAIVED" ? "paid" : "created");
+  await staffLog(me, await regLabel(id), "Confirmation resent");
   revalidatePath(`/admin/registrations/${id}`);
 }
 export async function regNotes(id: string, f: FormData) {
@@ -36,29 +53,59 @@ export async function regNotes(id: string, f: FormData) {
   await db.update(s.registrations).set({ notes: str(f, "notes") }).where(eq(s.registrations.id, id));
   revalidatePath(`/admin/registrations/${id}`);
 }
-export async function regCheckIn(id: string, undo = false) {
+/** Why someone may not enter: unpaid, not approved (guest / volunteer), or no symposium registration. null = may enter. */
+async function entryBlock(regId: string, forSymposium: boolean) {
+  const [r] = await db.select({ st: s.registrations.paymentStatus, t: s.registrations.regType, a: s.registrations.approvalStatus, pass: s.registrations.hasPass }).from(s.registrations).where(eq(s.registrations.id, regId));
+  if (!r) return "notfound";
+  if (r.t !== "PARTICIPANT" && r.a !== "APPROVED") return "approval";
+  if (r.st !== "PAID" && r.st !== "WAIVED") return "unpaid";
+  if (forSymposium && !r.pass) return "nopass";
+  return null;
+}
+const backTo = async (from: string | undefined, id: string, q: string) => {
+  if (from !== "checkin") redirect(`/admin/registrations/${id}?${q}`);
+  const [r] = await db.select({ regNo: s.registrations.regNo }).from(s.registrations).where(eq(s.registrations.id, id));
+  redirect(`/admin/checkin?q=${encodeURIComponent(r?.regNo ?? "")}&${q}`);
+};
+export async function regCheckIn(id: string, undo = false, from?: string) {
   await requirePerm("checkin");
-  if (!undo) {
-    const [r] = await db.select({ t: s.registrations.regType, a: s.registrations.approvalStatus }).from(s.registrations).where(eq(s.registrations.id, id));
-    if (r && r.t !== "PARTICIPANT" && r.a !== "APPROVED") throw new Error("This guest / volunteer registration has not been approved.");
-  }
+  // audit 16 Nov 2026: the server checks payment, approval and the symposium registration, not only the button
+  if (!undo) { const b = await entryBlock(id, true); if (b) await backTo(from, id, `err=${b}`); }
   await db.update(s.registrations).set({ checkedInAt: undo ? null : new Date() }).where(eq(s.registrations.id, id));
   revalidatePath("/admin/checkin"); revalidatePath(`/admin/registrations/${id}`);
 }
-export async function itemAttend(itemId: string, undo = false) {
+export async function itemAttend(itemId: string, undo = false, from?: string) {
   await requirePerm("checkin");
-  const [it] = await db.update(s.registrationItems).set({ attendedAt: undo ? null : new Date() }).where(eq(s.registrationItems.id, itemId)).returning();
-  if (!undo && it) await db.update(s.registrations).set({ checkedInAt: new Date() }).where(and(eq(s.registrations.id, it.registrationId)));
-  revalidatePath("/admin/checkin"); revalidatePath(`/admin/sessions/${it?.sessionId}`);
+  const [it0] = await db.select().from(s.registrationItems).where(eq(s.registrationItems.id, itemId));
+  if (!it0) return;
+  if (!undo) { const b = await entryBlock(it0.registrationId, false); if (b) await backTo(from, it0.registrationId, `err=${b}`); }
+  // workshop attendance only: it no longer checks the person in to the symposium
+  await db.update(s.registrationItems).set({ attendedAt: undo ? null : new Date() }).where(eq(s.registrationItems.id, itemId));
+  revalidatePath("/admin/checkin"); revalidatePath(`/admin/sessions/${it0.sessionId}`); revalidatePath(`/admin/registrations/${it0.registrationId}`);
 }
 
 // ---------------- sessions ----------------
 export async function saveSession(id: string | null, f: FormData) {
   await requirePerm("sessions.edit");
+  const bad = (m: string) => redirect(`/admin/sessions/${id ? `${id}/edit` : "new"}?err=${encodeURIComponent(m)}`);
+  // audit 16 Nov 2026: workshops and department sessions are changed only in their own editors
+  const [old] = id ? await db.select().from(s.sessions).where(eq(s.sessions.id, id)) : [];
+  if (old && (old.type === "WORKSHOP" || old.proposal)) return bad("Workshops and department sessions are edited in Workshop Programme / Scientific Programme.");
+  if (str(f, "type") === "WORKSHOP") return bad("Workshops are requested through Workshop Programme (Form A).");
   const day = num(f, "day") ?? 1;
-  const date = str(f, "date")!; // yyyy-mm-dd
+  const date = str(f, "date") ?? ""; // yyyy-mm-dd
   const at = (t: string) => new Date(`${date}T${t}:00+05:00`);
-  const title = str(f, "title")!;
+  const title = str(f, "title") ?? "";
+  if (title.length < 3) return bad("Enter the session title.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(+at(str(f, "start") ?? "")) || isNaN(+at(str(f, "end") ?? ""))) return bad("Enter a valid date, start and end time.");
+  if (+at(str(f, "end")!) <= +at(str(f, "start")!)) return bad("The end time must be after the start time.");
+  const dept = str(f, "department");
+  if (dept) { const [d] = await db.select({ n: s.departments.name }).from(s.departments).where(eq(s.departments.name, dept)); if (!d) return bad("Choose the department from the list."); }
+  if (id && num(f, "capacity") != null) {
+    const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems).innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId))
+      .where(and(eq(s.registrationItems.sessionId, id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
+    if (num(f, "capacity")! < n) return bad(`${n} people are already registered; the capacity cannot be lower.`);
+  }
   const data = {
     type: str(f, "type") as any, title, description: str(f, "description"), track: str(f, "track"), day,
     startsAt: at(str(f, "start")!), endsAt: at(str(f, "end")!), hall: str(f, "hall"), capacity: num(f, "capacity"),
@@ -79,6 +126,8 @@ export async function saveSession(id: string | null, f: FormData) {
 }
 export async function deleteSession(id: string) {
   await requirePerm("sessions.edit");
+  const [x] = await db.select({ t: s.sessions.type, p: s.sessions.proposal }).from(s.sessions).where(eq(s.sessions.id, id));
+  if (x && (x.t === "WORKSHOP" || x.p)) throw new Error("Workshops and department sessions are withdrawn in Workshop Programme / Scientific Programme.");
   try { await db.delete(s.sessions).where(eq(s.sessions.id, id)); }
   catch { throw new Error("This session has registrations and cannot be deleted. Set it to non-registrable instead."); }
   revalidatePath("/admin/sessions"); redirect("/admin/sessions");
@@ -162,13 +211,17 @@ export async function toggleMessage(id: string, handled: boolean) {
 
 // ---------------- communications ----------------
 export async function issueCerts(f: FormData) {
-  await requirePerm("certificates");
+  const me = await requirePerm("certificates");
+  const { getEvent, beforeEventEnd } = await import("@/lib/event");
+  if (beforeEventEnd(await getEvent()) && !bool(f, "early")) redirect("/admin/communications?err=early");
   const n = await issueCertificates({ attendedOnly: bool(f, "attendedOnly"), notify: bool(f, "notify") });
+  await staffLog(me, { label: "Symposium certificates" }, "Certificates issued", `${n} certificate(s)${bool(f, "attendedOnly") ? ", checked-in only" : ""}`);
   revalidatePath("/admin/communications");
   redirect(`/admin/communications?issued=${n}`);
 }
 export async function broadcast(f: FormData) {
-  await requirePerm("notifications");
+  const me = await requirePerm("notifications");
+  if (f.get("confirm") !== "on") redirect("/admin/communications?err=confirm");
   const { audienceRecipients } = await import("@/lib/broadcast");
   const list = await audienceRecipients(str(f, "audience") || "PAID", str(f, "sessionId"));
   const subject = str(f, "subject")!, body = str(f, "body")!, sms = str(f, "sms");
@@ -176,16 +229,24 @@ export async function broadcast(f: FormData) {
   // sender settings of "Messages from staff" (Automated emails), 14 Nov 2026
   const { senderFor } = await import("@/lib/email");
   const snd = await senderFor("BROADCAST");
+  // audit 16 Nov 2026: everything is queued under one batch reference and sent in steps (no time-out on Vercel);
+  // names typed by participants are escaped before they go into the email
+  const batch = `BROADCAST-${Date.now().toString(36).toUpperCase()}`;
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html = (r: { title: string | null; firstName: string; lastName: string }) => emailLayout(esc(subject), `<p>Dear ${esc(`${r.title ?? ""} ${r.firstName} ${r.lastName}`.trim())},</p>${body.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("")}`);
   for (const r of list) {
-    if (channels.includes("EMAIL")) await sendEmail(r.email, subject, emailLayout(subject, `<p>Dear ${r.title} ${r.firstName} ${r.lastName},</p>${body.split(/\n{2,}/).map((p) => `<p>${p.replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`).join("")}<p style="color:#5b6b8c;font-size:13px">Registration No. ${r.regNo}</p>`), [], { accountId: snd.accountId, fromName: snd.fromName, cc: snd.cc, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: "BROADCAST", ref: r.regNo });
-    if (channels.includes("SMS") && sms) await sendSms(r.phone, sms.replace("{name}", r.firstName).replace("{regNo}", r.regNo));
+    if (channels.includes("EMAIL")) await sendEmail(r.email, subject, html(r), [], { from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: null, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: "BROADCAST", ref: batch, defer: true });
+    if (channels.includes("SMS") && sms) await sendMessage("BROADCAST", r.phone, { text: sms.replace("{name}", r.firstName).replace("{regNo}", r.regNo), ref: batch, defer: true });
   }
-  redirect(`/admin/communications?sent=${list.length}`);
+  await staffLog(me, { label: `Message to ${list.length} registrant(s)` }, "Message sent", `${batch}: “${subject}” by ${channels.join(" + ")}`);
+  redirect(`/admin/communications?batch=${batch}&sent=${list.length}`);
 }
 
 export async function resetDemoContent() {
   const u = await requirePerm("settings");
   if (u.role !== "SUPER_ADMIN") throw new Error("Only a Super Admin can reset demo content.");
+  // audit 16 Nov 2026: it deletes registrations and the programme, so it only exists where the server allows it (test sites)
+  if (process.env.ALLOW_DEMO_RESET !== "1") throw new Error("Resetting demo content is switched off on this server.");
   const { seedDemoContent } = await import("@/lib/demo-content");
   await seedDemoContent(db, { reset: true });
   revalidatePath("/", "layout");
