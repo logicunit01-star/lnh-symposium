@@ -8,7 +8,7 @@ import { issueOtp, maskEmail, maskPhone } from "@/lib/otp";
 
 /** Step 1 of sign-up (short form): validate, hold the details as "pending verification" and send a 6-digit code by email and SMS. */
 export async function POST(req: Request) {
-  if (!rateLimit("signup:" + ipOf(req), 10)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("signup:" + ipOf(req), 10))) return fail("Too many attempts. Please wait a minute.", 429);
   const p = signupInput.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   const { password, ...d } = p.data;

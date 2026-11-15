@@ -11,7 +11,7 @@ const input = z.object({ otpId: z.string().min(1), code: z.string().trim().regex
 
 /** Forgot password: the emailed / SMS code sets a new password and signs the account in. */
 export async function POST(req: Request) {
-  if (!rateLimit("areset:" + ipOf(req), 20)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("areset:" + ipOf(req), 20))) return fail("Too many attempts. Please wait a minute.", 429);
   const p = input.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   const v = await verifyOtp(p.data.otpId, "RESET", p.data.code);

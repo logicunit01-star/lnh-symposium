@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
-import { requireDept } from "@/lib/dept";
+import { requireDeptOf } from "@/lib/dept";
 import { getEvent } from "@/lib/event";
 import { logAbstract, reviewWindow } from "@/lib/abstracts";
 import { SCORE_CRITERIA, decisionsFor, decisionLabel, scoreText } from "@/lib/scientific";
@@ -17,9 +17,9 @@ async function canReview(phase: number, dept: typeof s.departments.$inferSelect 
 }
 
 export async function deptDecide(abstractId: string, f: FormData) {
-  const { u, dept, deptName } = await requireDept("dept.abstracts");
   const [a] = await db.select().from(s.abstracts).where(eq(s.abstracts.id, abstractId));
-  if (!a || a.assignedDept !== deptName) throw new Error("This abstract is not assigned to your department.");
+  const { u, dept, deptName } = await requireDeptOf("dept.abstracts", a?.assignedDept);
+  if (!a || !deptName) redirect("/admin/dept/abstracts?err=notyours");
   const blocked = await canReview(a.phase, dept);
   if (blocked) throw new Error(blocked);
   const decision = String(f.get("decision") || "");
@@ -38,8 +38,9 @@ export async function deptDecide(abstractId: string, f: FormData) {
 /** Send all of this phase's decisions to the symposium secretariat; the department then has read-only access.
  *  SC feedback (29 Oct 2026): the HOD's decision is the review decision (Accept / Reject / Return to the Symposium Secretariat).
  *  Authors are told on the scheduled decision date (31 Dec), after the agenda is finalised. */
-export async function deptSubmit(phase: number) {
-  const { u, dept, deptName } = await requireDept("dept.abstracts");
+export async function deptSubmit(phase: number, department: string) {
+  const { u, dept, deptName } = await requireDeptOf("dept.abstracts", department);
+  if (!deptName) redirect("/admin/dept/abstracts?err=notyours");
   const blocked = await canReview(phase, dept);
   if (blocked) throw new Error(blocked);
   const rows = await db.select().from(s.abstracts).where(and(eq(s.abstracts.assignedDept, deptName), eq(s.abstracts.phase, phase), eq(s.abstracts.status, "SUBMITTED")));
@@ -60,9 +61,9 @@ export async function deptSubmit(phase: number) {
 
 /** HOD's final approval of the scientific session flyer (after the Scientific Committee approved the content). Approval locks it. */
 export async function hodFlyerDecision(sessionId: string, f: FormData) {
-  const { u, deptName } = await requireDept("dept.flyers");
   const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, sessionId));
-  if (!ses || ses.department !== deptName || !ses.proposal || ses.status !== "APPROVED") throw new Error("This session flyer is not available to your department.");
+  const { u, deptName } = await requireDeptOf("dept.flyers", ses?.department);
+  if (!ses || !deptName || !ses.proposal || ses.status !== "APPROVED") throw new Error("This session flyer is not available to your department.");
   if (ses.flyerStatus === "APPROVED") redirect(`/admin/dept/flyers?s=${sessionId}`);
   const d = String(f.get("flyer") || ""), note = String(f.get("note") || "").trim();
   if (d === "CHANGES" && !note) redirect(`/admin/dept/flyers?s=${sessionId}&err=note`);

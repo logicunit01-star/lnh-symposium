@@ -53,3 +53,31 @@ export async function assignAbstractVenue(id: string, f: FormData) {
   const back = str(f, "back");
   redirect(back.startsWith("/admin/abstracts") ? back : `/admin/abstracts/${id}?saved=1`);
 }
+
+/**
+ * Audit 16 Nov 2026 (RFP "Phase 3: final committee review"): the Scientific Committee Chair has the last word on an
+ * abstract before the author is told: accept as oral, accept as poster or reject, over or instead of the department's decision.
+ */
+export async function finalDecision(id: string, f: FormData) {
+  const u = await requirePerm("abstracts.final");
+  const [a] = await db.select().from(s.abstracts).where(eq(s.abstracts.id, id));
+  if (!a) redirect("/admin/abstracts");
+  const back = (q: string) => redirect(`/admin/abstracts/${id}?${q}`);
+  if (a.authorNotifiedAt) return back("err=notified");
+  const d = str(f, "final"), note = str(f, "note");
+  if (!["ACCEPT_ORAL", "ACCEPT_POSTER", "REJECT"].includes(d)) return back("err=final");
+  if (note.length < 3) return back("err=reason");
+  const accepted = d !== "REJECT", poster = d === "ACCEPT_POSTER";
+  await db.update(s.abstracts).set({
+    status: accepted ? "ACCEPTED" : "REJECTED", acceptedAs: accepted ? (poster ? "POSTER" : "ORAL") : null, type: poster ? "POSTER" : "ORAL",
+    decidedAt: new Date(), scNotes: note,
+    // an abstract that is no longer an accepted oral presentation leaves its session; a rejected one loses its poster placement
+    ...(!accepted || poster ? { sessionId: null, sessionOrder: null } : {}),
+    ...(!accepted ? { venueId: null, placement: null } : {}),
+  }).where(eq(s.abstracts.id, id));
+  if (!accepted || poster) await db.update(s.sessionPeople).set({ abstractId: null }).where(eq(s.sessionPeople.abstractId, id));
+  const label = d === "ACCEPT_ORAL" ? "accepted as oral presentation" : d === "ACCEPT_POSTER" ? "accepted as ePoster" : "not accepted";
+  await logAbstract(id, u.name, `Final decision by the Scientific Committee: ${label}`, note);
+  revalidatePath("/admin/abstracts", "layout"); revalidatePath("/admin/dept/abstracts");
+  back("saved=final");
+}

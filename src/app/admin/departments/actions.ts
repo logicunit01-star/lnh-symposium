@@ -21,7 +21,8 @@ const back = (q: Record<string, string>) => redirect(`/admin/departments?${new U
  * department without one, or resets one department's passcode. Passcodes are shown once.
  */
 export async function issueDeptLogins(_: CredResult, f: FormData): Promise<CredResult> {
-  const me = await requirePerm("departments");
+  // audit 16 Nov 2026: Super Admin only (whoever resets a passcode can sign in as that department and decide its abstracts)
+  const me = await requirePerm("users");
   const only = String(f.get("dept") || "");
   const depts = only ? await db.select().from(s.departments).where(eq(s.departments.name, only))
     : await db.select().from(s.departments).where(and(eq(s.departments.active, true), ne(s.departments.kind, "COMMITTEE")));

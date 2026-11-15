@@ -5,7 +5,7 @@ import { ok, fail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
 
 export async function POST(req: Request) {
-  if (!rateLimit("cert:" + ipOf(req), 10)) return fail("Too many attempts", 429);
+  if (!(await rateLimit("cert:" + ipOf(req), 10))) return fail("Too many attempts", 429);
   const p = z.object({ regNo: z.string().trim().toUpperCase(), email: z.string().trim().toLowerCase() }).safeParse(await req.json().catch(() => ({})));
   if (!p.success) return fail("Enter your registration number and email.");
   const [r] = await db.select({ t: s.registrations.accessToken, c: s.registrations.certificateNo }).from(s.registrations)

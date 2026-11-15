@@ -7,7 +7,7 @@ import { verifyOtp } from "@/lib/otp";
 
 /** Sign in with a one-time code instead of the password (also clears a lock-out). */
 export async function POST(req: Request) {
-  if (!rateLimit("acodev:" + ipOf(req), 20)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("acodev:" + ipOf(req), 20))) return fail("Too many attempts. Please wait a minute.", 429);
   const { otpId, code } = await req.json().catch(() => ({}));
   if (!otpId || !/^\d{6}$/.test(String(code || "").trim())) return fail("Enter the 6-digit code.");
   const v = await verifyOtp(String(otpId), "SIGNIN", String(code));

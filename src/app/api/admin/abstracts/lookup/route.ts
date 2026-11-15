@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import { can } from "@/lib/permissions";
+import { can, deptsWith } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,12 @@ export async function GET(req: Request) {
   if (!/^ABS-\d{4}-\d{3,}$/.test(ref)) return Response.json({ found: false });
   const [a] = await db.select().from(s.abstracts).where(eq(s.abstracts.refNo, ref));
   if (!a) return Response.json({ found: false, message: `${ref} was not found.` });
+  // audit 16 Nov 2026: department staff see only accepted oral abstracts of their own departments (no other authors' contact details)
+  if (!can(u, "programme.edit")) {
+    const mine = deptsWith(u.depts, "dept.sessions");
+    if (!mine.includes(a.specialty) && !mine.includes(a.assignedDept ?? "")) return Response.json({ found: false, message: `${ref} is not one of your department's abstracts.` });
+    if (!(a.status === "ACCEPTED" && a.acceptedAs === "ORAL")) return Response.json({ found: false, message: `${ref} is not an accepted oral abstract.` });
+  }
   const oral = a.status === "ACCEPTED" && a.acceptedAs === "ORAL";
   return Response.json({
     found: true, refNo: a.refNo, title: a.abstractTitle, author: a.presentingAuthor, email: a.email, phone: a.mobile, organization: a.organization,

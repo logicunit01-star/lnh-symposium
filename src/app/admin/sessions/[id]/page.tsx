@@ -23,7 +23,7 @@ export default async function SessionDash({ params }: { params: { id: string } }
     <>
       <PageTitle title={x.title} sub={`${SESSION_TYPE_LABEL[x.type]} · Day ${x.day}, ${fmtDate(x.startsAt, { weekday: "long", day: "numeric", month: "long" })} · ${fmtTime(x.startsAt)}–${fmtTime(x.endsAt)} · ${x.hall ?? ""}`}
         actions={<>
-          {can(u, "registrations") && <a href={`/api/admin/export/registrations?session=${x.id}`} className="a-btn-ghost">Export participants</a>}
+          {can(u, "registrations.export") && <a href={`/api/admin/export/registrations?session=${x.id}`} className="a-btn-ghost">Export participants</a>}
           {can(u, "sessions.edit") && <Link href={`/admin/sessions/${x.id}/edit`} className="a-btn-primary">Edit session</Link>}
         </>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

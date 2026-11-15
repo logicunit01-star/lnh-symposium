@@ -6,7 +6,7 @@ import { resendOtp } from "@/lib/otp";
 
 /** Send a fresh code for a pending sign-up or look-up. */
 export async function POST(req: Request) {
-  if (!rateLimit("resend:" + ipOf(req), 6)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("resend:" + ipOf(req), 6))) return fail("Too many attempts — please wait a minute.", 429);
   const { otpId } = await req.json().catch(() => ({}));
   const [row] = await db.select().from(s.otpCodes).where(eq(s.otpCodes.id, String(otpId || "")));
   if (!row) return fail("Start again.", 404);

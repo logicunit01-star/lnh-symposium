@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
-import { requireDept } from "@/lib/dept";
+import { requireDeptOf } from "@/lib/dept";
 import { decideGuest } from "@/lib/guest";
 
 /** HOD approves a guest (speaker, chair, moderator, panelist) registered for the department's session. */
 export async function decideGuestReg(id: string, f: FormData) {
-  const { u, deptName } = await requireDept("dept.guests");
   const [r] = await db.select().from(s.registrations).where(eq(s.registrations.id, id));
-  if (!r || r.regType !== "GUEST" || r.department !== deptName) throw new Error("This guest is not registered for your department.");
+  const { u, deptName } = await requireDeptOf("dept.guests", r?.department);
+  if (!r || r.regType !== "GUEST" || !deptName) throw new Error("This guest is not registered for your department.");
   await decideGuest(id, f.get("decision") === "APPROVE", `${u.name} (HOD, ${deptName})`, String(f.get("note") || "").trim() || null);
   revalidatePath("/admin/dept/guests");
   redirect("/admin/dept/guests?saved=1");

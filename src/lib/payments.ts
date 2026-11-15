@@ -99,15 +99,18 @@ export async function reconcilePayPro() {
 }
 
 export function jazzHash(fields: Record<string, string>, salt: string) {
+  if (!salt) throw new Error("JazzCash is not configured");
   const keys = Object.keys(fields).filter((k) => k.toLowerCase().startsWith("pp") && k !== "pp_SecureHash" && fields[k] !== "").sort();
   const str = [salt, ...keys.map((k) => fields[k])].join("&");
   return crypto.createHmac("sha256", salt).update(str).digest("hex").toUpperCase();
 }
 
 /** Idempotently settles a payment and confirms the registration. */
-export async function settlePayment(txnRef: string, ok: boolean, providerRef?: string, raw?: unknown) {
+/** expect: the provider this confirmation comes from; a payment started with another provider is refused (audit 16 Nov 2026). */
+export async function settlePayment(txnRef: string, ok: boolean, providerRef?: string, raw?: unknown, expect?: string) {
   const pay = await db.query.payments.findFirst({ where: eq(s.payments.txnRef, txnRef) });
   if (!pay) throw new Error("Unknown transaction");
+  if (expect && pay.provider !== expect) throw new Error("This transaction belongs to another payment method.");
   if (pay.status === "PAID") return pay;
   await db.update(s.payments).set({ status: ok ? "PAID" : "FAILED", providerRef, raw: raw as any }).where(eq(s.payments.id, pay.id));
   if (ok) {

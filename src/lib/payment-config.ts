@@ -62,7 +62,8 @@ export async function paymentConfig(): Promise<PaymentConfig> {
       callback: { username: sec.callback?.username || "", password: sec.callback?.password || "" },
     };
   } else {
-    const provider = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
+    // audit 16 Nov 2026: without an explicit choice a production server takes bank transfer (manual), never the test gateway
+    const provider = (process.env.PAYMENT_PROVIDER || (process.env.NODE_ENV === "production" ? "manual" : "mock")).toLowerCase();
     v = {
       source: "server", mode: null, provider,
       paypro: process.env.PAYPRO_CLIENT_ID ? { baseUrl: (process.env.PAYPRO_BASE_URL || DEMO_BASE).replace(/\/$/, ""), clientId: process.env.PAYPRO_CLIENT_ID || "", clientSecret: process.env.PAYPRO_CLIENT_SECRET || "", merchantId: process.env.PAYPRO_MERCHANT_ID || "", dueDays } : null,

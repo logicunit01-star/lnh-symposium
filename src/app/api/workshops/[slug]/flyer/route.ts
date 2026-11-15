@@ -4,7 +4,7 @@ import { getEvent } from "@/lib/event";
 import { seatsTaken } from "@/lib/queries";
 import { workshopFlyerPdf } from "@/lib/pdf";
 import { currentUser } from "@/lib/auth";
-import { can } from "@/lib/permissions";
+import { can, deptsWith } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,9 @@ export async function GET(_: Request, { params }: { params: { slug: string } }) 
   if (!row) return new Response("Not found", { status: 404 });
   if (row.w.flyerStatus !== "APPROVED") {
     const u = await currentUser();
-    if (!u || !(can(u, "flyers") || can(u, "workshops"))) return new Response("This flyer is awaiting review by the Marketing department.", { status: 404 });
+    // audit 16 Nov 2026: department staff preview only their own departments' flyers
+    const ok = !!u && (can(u, "flyers") || can(u, "workshops.all") || deptsWith(u.depts, "workshops").includes(row.w.department ?? ""));
+    if (!ok) return new Response("This flyer is awaiting review by the Marketing department.", { status: 404 });
   }
   const ev = await getEvent();
   const taken = (await seatsTaken())[row.w.id] ?? 0;

@@ -6,7 +6,7 @@ import { guestCodeOk } from "@/lib/guest-access";
 
 /** Guests and volunteers registration forms 2027 (public, approval required). */
 export async function POST(req: Request) {
-  if (!rateLimit("guest:" + ipOf(req), 8)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("guest:" + ipOf(req), 8))) return fail("Too many attempts — please wait a minute.", 429);
   const ev = await getEvent();
   if (!ev.registrationOpen) return fail("Registration is currently closed.");
   const body = await req.json().catch(() => ({}));

@@ -4,7 +4,7 @@ import { apiUser } from "@/lib/auth";
 import { toCsv, csvResponse } from "@/lib/csv";
 
 export async function GET(req: Request) {
-  if (!(await apiUser("registrations"))) return new Response("Forbidden", { status: 403 });
+  if (!(await apiUser("registrations.export"))) return new Response("Forbidden", { status: 403 });
   const sessionId = new URL(req.url).searchParams.get("session");
   const regs = await db.query.registrations.findMany({ orderBy: asc(s.registrations.createdAt), with: { category: true, items: { with: { session: true } } } });
   const rows = regs.filter((r) => !sessionId || r.items.some((i) => i.sessionId === sessionId)).map((r) => ({

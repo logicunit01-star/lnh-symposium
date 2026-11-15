@@ -7,7 +7,7 @@ import { fmtDate, fmtTime24 } from "@/lib/utils";
 
 /** Code checked → the registrations made with that mobile number. */
 export async function POST(req: Request) {
-  if (!rateLimit("lookupv:" + ipOf(req), 20)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("lookupv:" + ipOf(req), 20))) return fail("Too many attempts — please wait a minute.", 429);
   const { otpId, code } = await req.json().catch(() => ({}));
   if (!otpId || !/^\d{6}$/.test(String(code || "").trim())) return fail("Enter the 6-digit code.");
   const v = await verifyOtp(String(otpId), "LOOKUP", String(code));

@@ -18,7 +18,7 @@ const schema = z.object({
 /** N7 workshop feedback (12 statements, overall rating, recommend, contact opt-in). One response per participant per workshop.
  *  N6: if the department has already confirmed attendance, the workshop certificate is issued straight away. */
 export async function POST(req: Request) {
-  if (!rateLimit(`wf:${ipOf(req)}`, 20, 10 * 60_000)) return fail("Too many submissions. Try again in a few minutes.", 429);
+  if (!(await rateLimit(`wf:${ipOf(req)}`, 20, 10 * 60_000))) return fail("Too many submissions. Try again in a few minutes.", 429);
   const p = schema.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   const d = p.data;

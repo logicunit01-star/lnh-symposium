@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { and, eq, ne } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { currentUser, requirePerm } from "@/lib/auth";
-import { can } from "@/lib/permissions";
+import { can, deptsWith } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { logAbstract } from "@/lib/abstracts";
 import { dayNumber, editRule, flyerLocked, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes, snapshotOriginal } from "@/lib/programme";
@@ -30,9 +30,15 @@ async function log(sessionId: string, user: { sub: string; name: string }, from:
 
 /** Department (or committee) saves the Scientific Sessions' Program Details form. */
 export async function saveProposal(_: ProposalResult, f: FormData): Promise<ProposalResult> {
-  const { u, dept, isDept } = await who();
+  const { u, dept: current, isDept } = await who();
   if (!(can(u, "dept.sessions") || can(u, "programme.edit"))) return { error: "Not allowed." };
   let raw: any; try { raw = JSON.parse(String(f.get("data") || "{}")); } catch { return { error: "Invalid form." }; }
+  // department staff: an existing session keeps its own department (one of theirs), a new one takes the department they are working on
+  const editId = String(f.get("id") || "") || null;
+  const [prev] = editId && isDept ? await db.select({ d: s.sessions.department }).from(s.sessions).where(eq(s.sessions.id, editId)) : [];
+  const mine = deptsWith(u.depts, "dept.sessions");
+  const dept = isDept ? (prev?.d && mine.includes(prev.d) ? prev.d : prev ? null : current) : null;
+  if (isDept && !dept) return { error: "This session belongs to a department you are not part of." };
   if (isDept) raw.department = dept;
   else if (isSpecialFormat(raw?.sessionFormat)) raw.department = SPECIAL_DEPT;
   if (!isDept && raw?.prefill && !isSpecialFormat(raw?.sessionFormat)) return savePrefill(u, raw, String(f.get("id") || "") || null);

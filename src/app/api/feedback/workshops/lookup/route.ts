@@ -7,7 +7,7 @@ import { fmtDate } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 /** N7: the participant's workshops (started, paid) for the feedback drop-down. By access token, or registration no. + email. */
 export async function POST(req: Request) {
-  if (!rateLimit(`wfl:${ipOf(req)}`, 20, 10 * 60_000)) return fail("Too many attempts. Try again in a few minutes.", 429);
+  if (!(await rateLimit(`wfl:${ipOf(req)}`, 20, 10 * 60_000))) return fail("Too many attempts. Try again in a few minutes.", 429);
   const b = await req.json().catch(() => ({}));
   const token = typeof b.token === "string" ? b.token : "";
   const regNo = typeof b.regNo === "string" ? b.regNo.trim().toUpperCase() : "", email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";

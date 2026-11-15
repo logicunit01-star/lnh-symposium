@@ -12,7 +12,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  if (!rateLimit("contact:" + ipOf(req), 5)) return fail("Too many requests, please try later.", 429);
+  if (!(await rateLimit("contact:" + ipOf(req), 5))) return fail("Too many requests, please try later.", 429);
   const p = schema.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   const { website, ...data } = p.data;

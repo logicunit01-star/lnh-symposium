@@ -49,7 +49,7 @@ export default async function Overview({ searchParams }: { searchParams: { denie
     <>
       {searchParams.denied && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">You don’t have access to that section.</p>}
       <PageTitle title={`Welcome, ${user.name.split(" ")[0]}`} sub={`${ev.name} · ${fmtDate(ev.startDate)} · ${daysToGo > 0 ? `${daysToGo} days to go` : "Event in progress / complete"}`}
-        actions={can(user, "registrations") && <a href="/api/admin/export/registrations" className="a-btn-ghost">Export registrations (CSV)</a>} />
+        actions={can(user, "registrations.export") && <a href="/api/admin/export/registrations" className="a-btn-ghost">Export registrations (CSV)</a>} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Registrations" value={tot.n} sub={`${st.PAID ?? 0} paid · ${st.PENDING ?? 0} pending · ${st.WAIVED ?? 0} waived`} />

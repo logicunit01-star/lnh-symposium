@@ -16,7 +16,11 @@ export type Perm =
   // Email settings (mailboxes, delivery mode, sender of each notification): Super Admin and Admin (14 Nov 2026)
   | "mail"
   // WhatsApp & SMS (eOcean settings, template IDs) and the message queue: Super Admin only (14.11.2026 Part C)
-  | "messaging";
+  | "messaging"
+  // Scientific Committee's final word on an abstract (accept as oral / poster, reject), before the author is told (audit 16 Nov 2026)
+  | "abstracts.final"
+  // Download registration lists (CSV with ID card numbers) (audit 16 Nov 2026)
+  | "registrations.export";
 
 const WP: Perm[] = ["workshops", "workshops.all", "workshops.submit", "workshops.edit", "workshops.review", "venues"];
 const SCI: Perm[] = ["programme", "programme.edit", "programme.approve", "invitations", "departments"];
@@ -28,10 +32,12 @@ const ALL: Perm[] = [...SCI, "flyers", "catering", "dashboard", "registrations",
  * After the agenda deadline only the Scientific Committee (and Super Admin) edit and finalise sessions; see editRule().
  */
 export const ROLE_PERMS: Record<string, Perm[]> = {
-  SUPER_ADMIN: [...ALL.filter((p) => !p.startsWith("dept.")), "payments", "mail", "messaging"],
-  ADMIN: [...ALL.filter((p) => p !== "users" && !p.startsWith("dept.")), "mail"],
+  SUPER_ADMIN: [...ALL.filter((p) => !p.startsWith("dept.")), "payments", "mail", "messaging", "abstracts.final", "registrations.export"],
+  // audit 16 Nov 2026: approving sessions and releasing the programme is the Scientific Committee Chair's (and Super Admin's)
+  ADMIN: [...ALL.filter((p) => p !== "users" && p !== "programme.approve" && !p.startsWith("dept.")), "mail", "registrations.export"],
   // Symposium secretariat: runs the event; pre-fills sessions before the deadline; cannot finalise the programme
-  SECRETARIAT: ALL.filter((p) => p !== "users" && p !== "settings" && p !== "programme.approve" && !p.startsWith("dept.")),
+  // audit 16 Nov 2026: workshop approval stays with the WP Committee Co-Chairs
+  SECRETARIAT: [...ALL.filter((p) => p !== "users" && p !== "settings" && p !== "programme.approve" && p !== "workshops.review" && !p.startsWith("dept.")), "registrations.export"],
   // Co-Chairs: change and approve
   WP_CHAIR: ["dashboard", "sessions", "checkin", "feedback", "attendance", ...WP],
   // Committee members: read and change (mark under review, edit unlocked requests), cannot approve/reject
@@ -39,16 +45,16 @@ export const ROLE_PERMS: Record<string, Perm[]> = {
   // Department staff only (Heads, focal persons, coordinators): no global access; everything comes from their department roles below
   DEPARTMENT: [],
   // Scientific Committee: edits and finalises the scientific agenda (also after the deadline)
-  SCIENTIFIC_COMMITTEE: ["dashboard", "sessions", "abstracts", "abstracts.review", "feedback", "programme", "programme.edit", "programme.approve", "invitations"],
+  SCIENTIFIC_COMMITTEE: ["dashboard", "sessions", "abstracts", "abstracts.review", "feedback", "programme", "programme.edit", "invitations"],
   // Scientific Committee Chair: approves sessions, releases the programme, the only role that may change an HOD-approved session flyer
-  SC_CHAIR: ["dashboard", "sessions", "abstracts", "abstracts.review", "feedback", "programme", "programme.edit", "programme.approve", "invitations", "departments", "venues", "emails"],
+  SC_CHAIR: ["dashboard", "sessions", "abstracts", "abstracts.review", "feedback", "programme", "programme.edit", "programme.approve", "invitations", "departments", "venues", "emails", "abstracts.final"],
   // Marketing department designated users: review workshop flyers only
   MARKETING: ["flyers"],
   // Food department: read-only headcounts for catering
   CATERING: ["catering"],
   // Chairperson, Facilitation Committee: approves volunteer registrations
   FACILITATION_CHAIR: ["volunteers"],
-  REGISTRATION_DESK: ["dashboard", "registrations", "registrations.edit", "checkin", "sessions", "certificates", "messages", "workshops", "workshops.all"],
+  REGISTRATION_DESK: ["dashboard", "registrations", "registrations.edit", "checkin", "sessions", "messages", "workshops", "workshops.all", "registrations.export"],
   VIEWER: ["dashboard", "registrations", "sessions", "feedback", "workshops", "workshops.all"],
 };
 /**
@@ -97,6 +103,7 @@ export const PERM_LABEL: Record<Perm, string> = {
   programme: "Scientific programme (view)", "programme.edit": "Edit programme", "programme.approve": "Approve and release programme", invitations: "Invitations",
   departments: "Departments and department logins", flyers: "Workshop flyer review", catering: "Catering headcounts", emails: "Email templates and schedule",
   volunteers: "Volunteer approvals", attendance: "Workshop attendance", payments: "PayPro settings", mail: "Email settings", messaging: "WhatsApp & SMS settings",
+  "abstracts.final": "Final decision on abstracts (overrides the department)", "registrations.export": "Download registration lists (with ID card numbers)",
 };
 /** Roles that may edit and finalise a scientific session after the department deadline. */
 export const POST_LOCK_EDITORS = ["SC_CHAIR", "SCIENTIFIC_COMMITTEE", "SUPER_ADMIN"];

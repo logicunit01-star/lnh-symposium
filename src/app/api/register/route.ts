@@ -3,7 +3,7 @@ import { rateLimit, ipOf } from "@/lib/ratelimit";
 import { createRegistration, registrationInput, CapacityError } from "@/lib/registration";
 
 export async function POST(req: Request) {
-  if (!rateLimit("reg:" + ipOf(req), 8)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("reg:" + ipOf(req), 8))) return fail("Too many attempts — please wait a minute.", 429);
   const body = await req.json().catch(() => ({}));
   const p = registrationInput.safeParse(body);
   if (!p.success) return zodFail(p.error);

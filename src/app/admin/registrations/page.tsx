@@ -2,12 +2,13 @@ import Link from "next/link";
 import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge, Pager, Empty } from "@/components/admin/ui";
 import { fmtDateTime, pkr } from "@/lib/utils";
 
 const PER = 25;
 export default async function Registrations({ searchParams }: { searchParams: { q?: string; status?: string; cat?: string; page?: string } }) {
-  await requirePerm("registrations");
+  const u = await requirePerm("registrations");
   const page = Math.max(1, Number(searchParams.page) || 1);
   const conds: SQL[] = [];
   if (searchParams.q) {
@@ -26,7 +27,7 @@ export default async function Registrations({ searchParams }: { searchParams: { 
   const qs = new URLSearchParams(Object.entries(searchParams).filter(([k, v]) => v && k !== "page") as any).toString();
   return (
     <>
-      <PageTitle title="Registrations" sub={`${n} matching`} actions={<a href="/api/admin/export/registrations" className="a-btn-ghost">Export CSV</a>} />
+      <PageTitle title="Registrations" sub={`${n} matching`} actions={can(u, "registrations.export") ? <a href="/api/admin/export/registrations" className="a-btn-ghost">Export CSV</a> : undefined} />
       <form className="a-card mb-4 grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto_auto]">
         <input name="q" defaultValue={searchParams.q} placeholder="Search name, reg no., email, phone, institution…" className="a-input" />
         <select name="status" defaultValue={searchParams.status ?? ""} className="a-input"><option value="">All statuses</option>{["PENDING", "PAID", "WAIVED", "FAILED", "REFUNDED"].map((x) => <option key={x}>{x}</option>)}</select>

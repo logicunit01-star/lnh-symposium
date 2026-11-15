@@ -6,7 +6,7 @@ import { emailInput } from "@/lib/account";
 
 /** Email-first sign-in: tells the form whether to ask for a password (existing account) or show the short sign-up. */
 export async function POST(req: Request) {
-  if (!rateLimit("acheck:" + ipOf(req), 20)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("acheck:" + ipOf(req), 20))) return fail("Too many attempts. Please wait a minute.", 429);
   const p = emailInput.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   const [a] = await db.select({ id: s.accounts.id, firstName: s.accounts.firstName }).from(s.accounts).where(eq(s.accounts.email, p.data.email));

@@ -9,7 +9,7 @@ const input = z.object({ email: z.string().trim().toLowerCase().email("Enter a v
 
 /** Sends a 6-digit code to the account's email and mobile: sign in without a password (SIGNIN) or set a new password (RESET). */
 export async function POST(req: Request) {
-  if (!rateLimit("acode:" + ipOf(req), 6)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("acode:" + ipOf(req), 6))) return fail("Too many attempts. Please wait a minute.", 429);
   if (!(await accessCodesAvailable())) return fail("Sign-in codes are not available yet (email and SMS are not connected). Please use your password, or contact the symposium secretariat.", 503);
   const p = input.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);

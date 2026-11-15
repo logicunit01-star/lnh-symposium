@@ -6,7 +6,7 @@ import { AtSign, MessageSquareText, CreditCard, UserCheck, LayoutDashboard, User
 import { can, DEPT_ROLE_LABEL, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
+const ITEMS: { href: string; label: string; I: any; p: Perm | Perm[] }[] = [
   { href: "/admin", label: "Overview", I: LayoutDashboard, p: "dashboard" },
   { href: "/admin/registrations", label: "Registrations", I: Users, p: "registrations" },
   { href: "/admin/onsite", label: "Onsite Desk", I: UserPlus, p: "registrations.edit" },
@@ -15,7 +15,7 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin/venues", label: "Venues & Map", I: MapPinned, p: "venues" },
   { href: "/admin/attendance", label: "Workshop Attendance", I: UserCheck, p: "attendance" },
   { href: "/admin/sessions", label: "Sessions & Programme", I: CalendarRange, p: "sessions" },
-  { href: "/admin/dept", label: "My Department", I: Building2, p: "dept.abstracts" },
+  { href: "/admin/dept", label: "My Department", I: Building2, p: ["dept.abstracts", "dept.sessions", "dept.flyers", "dept.guests"] },
   { href: "/admin/dept/abstracts", label: "Abstract Review", I: FileText, p: "dept.abstracts" },
   { href: "/admin/dept/sessions", label: "Session Agenda", I: Presentation, p: "dept.sessions" },
   { href: "/admin/dept/flyers", label: "Session Flyers", I: ImageIcon, p: "dept.flyers" },
@@ -50,7 +50,7 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
         <div className="leading-tight"><p className="font-display text-sm font-bold text-white">9th LNH Symposium</p><p className="text-[10px] uppercase tracking-[0.2em] text-lnh-sky">Admin console</p></div>
       </div>
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
-        {ITEMS.filter((i) => can(user, i.p)).map(({ href, label, I }) => {
+        {ITEMS.filter((i) => (Array.isArray(i.p) ? i.p : [i.p]).some((p) => can(user, p))).map(({ href, label, I }) => {
           const on = href === "/admin" || href === "/admin/dept" ? path === href : path.startsWith(href);
           return (
             <li key={href}>

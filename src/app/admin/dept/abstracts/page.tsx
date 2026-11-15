@@ -31,7 +31,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
     "Returned to the Symposium Secretariat": rows.filter((r) => r.status === "BACK"),
   };
   const qc = (ev.qcGuidelines || DEFAULT_QC_GUIDELINES).split("\n").filter(Boolean);
-  const msg = searchParams.err === "incomplete" ? "Decide every abstract before sending them to the secretariat." : searchParams.err === "score" ? "Score all seven criteria (1, 2, 3 or N/A)." : searchParams.err === "decision" ? "Choose a decision." : null;
+  const msg = searchParams.err === "incomplete" ? "Decide every abstract before sending them to the secretariat." : searchParams.err === "score" ? "Score all seven criteria (1, 2, 3 or N/A)." : searchParams.err === "decision" ? "Choose a decision." : searchParams.err === "notyours" ? "That abstract is not assigned to one of your departments." : null;
 
   return (
     <>
@@ -46,7 +46,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
           <div><p className="text-xs font-bold uppercase tracking-wider text-lnh-red">Phase {activePhase} open</p>
             <p className="font-display text-xl font-bold text-slate-900">{decided} of {open.length} decided</p>
             <p className="text-sm text-slate-500">After sending, this department can no longer change decisions; it keeps read-only access to the lists.</p></div>
-          <form action={deptSubmit.bind(null, activePhase)}><button disabled={!open.length || decided < open.length} className="a-btn-red">Send decisions to the Symposium Secretariat</button></form>
+          <form action={deptSubmit.bind(null, activePhase, deptName)}><button disabled={!open.length || decided < open.length} className="a-btn-red">Send decisions to the Symposium Secretariat</button></form>
         </div>
       ) : (
         <p className="mb-6 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">

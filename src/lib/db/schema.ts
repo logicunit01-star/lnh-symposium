@@ -574,7 +574,7 @@ export const notificationLog = pgTable("notification_log", {
 }, (t) => ({ qIdx: index("nl_queue_idx").on(t.status, t.nextAttemptAt) }));
 export type OutboxPayload = {
   // EMAIL
-  html?: string; from?: string; accountId?: string | null; replyTo?: string | null;
+  html?: string; subject?: string /* real subject when the log keeps a masked one */; from?: string; accountId?: string | null; replyTo?: string | null;
   attachments?: { filename: string; content: string /* base64 */; contentType?: string; cid?: string }[];
   // WHATSAPP / SMS
   messageKey?: string; templateId?: string; mediaUrl?: string; email?: string; text?: string; via?: "XNOTIFY" | "GATEWAY";
@@ -782,4 +782,11 @@ export const mailSettings = pgTable("mail_settings", {
   testAddress: text("test_address"),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+/** Rate limit counters shared by every app instance (audit 16 Nov 2026; lib/ratelimit.ts). */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).defaultNow().notNull(),
+  hits: integer("hits").notNull().default(1),
 });

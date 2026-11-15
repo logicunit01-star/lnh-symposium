@@ -9,7 +9,7 @@ const input = z.object({ sessionId: z.string().min(1).max(64) });
 
 /** Join the waitlist of a full, approved workshop (signed-in visitors). */
 export async function POST(req: Request) {
-  if (!rateLimit("waitlist:" + ipOf(req), 20)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("waitlist:" + ipOf(req), 20))) return fail("Too many attempts — please wait a minute.", 429);
   const a = await currentAccount();
   if (!a) return fail("Please sign in to join the waitlist.", 401);
   const p = input.safeParse(await req.json().catch(() => ({})));

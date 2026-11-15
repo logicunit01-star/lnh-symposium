@@ -7,9 +7,9 @@ import { can } from "@/lib/permissions";
 import { PageTitle, StatusBadge } from "@/components/admin/ui";
 import { KIND_LABEL, PREF_LABEL, SCORE_CRITERIA, SECTIONS, decisionLabel, scoreText, scoreValue } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
-import { assignAbstractVenue, scReassign } from "../actions";
+import { assignAbstractVenue, finalDecision, scReassign } from "../actions";
 
-export default async function AbstractDetail({ params, searchParams }: { params: { id: string }; searchParams: { saved?: string } }) {
+export default async function AbstractDetail({ params, searchParams }: { params: { id: string }; searchParams: { saved?: string; err?: string } }) {
   const u = await requirePerm("abstracts");
   const a = await db.query.abstracts.findFirst({ where: eq(s.abstracts.id, params.id), with: { session: true, events: { orderBy: desc(s.abstractEvents.createdAt) } } });
   if (!a) notFound();
@@ -57,6 +57,19 @@ export default async function AbstractDetail({ params, searchParams }: { params:
             ) : <p className="mt-2 text-sm text-slate-500">Not yet decided by {a.assignedDept ?? a.specialty}.</p>}
           </div>
           {a.authorNotifiedAt && <p className="a-card p-4 text-xs text-slate-500">Author notified {fmtDateTime(a.authorNotifiedAt)}</p>}
+          {searchParams.saved === "final" && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Final decision saved. The author is told on the decision date.</p>}
+          {searchParams.err && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ notified: "The author has already been notified; the decision can no longer change.", final: "Choose the final decision.", reason: "Give the reason for the final decision." }[searchParams.err] ?? "Not saved."}</p>}
+          {can(u, "abstracts.final") && !a.authorNotifiedAt && (
+            <form action={finalDecision.bind(null, a.id)} className="a-card space-y-3 p-5">
+              <p className="text-sm font-semibold">Final decision (Scientific Committee)</p>
+              <p className="text-xs text-slate-500">{a.status === "ACCEPTED" || a.status === "REJECTED" ? `Current: ${a.status === "ACCEPTED" ? `accepted as ${a.acceptedAs === "POSTER" ? "ePoster" : "oral presentation"}` : "not accepted"}. You can change it until the author is notified.` : "Decide here if the department cannot (no decision, window closed, or sent back)."}</p>
+              <div className="grid gap-1.5 text-sm">{([["ACCEPT_ORAL", "Accept as oral presentation"], ["ACCEPT_POSTER", "Accept as ePoster"], ["REJECT", "Not accepted"]] as const).map(([v, l]) => (
+                <label key={v} className="flex items-center gap-2"><input type="radio" name="final" value={v} defaultChecked={(a.status === "ACCEPTED" && ((a.acceptedAs === "POSTER") === (v === "ACCEPT_POSTER")) && v !== "REJECT") || (a.status === "REJECTED" && v === "REJECT")} />{l}</label>
+              ))}</div>
+              <textarea name="note" rows={2} required placeholder="Reason (kept in the history; not sent to the author)" className="a-input text-sm" />
+              <button className="a-btn-primary w-full">Save final decision</button>
+            </form>
+          )}
           {review && a.status === "ACCEPTED" && (
             <form action={assignAbstractVenue.bind(null, a.id)} className="a-card space-y-3 p-5">
               <p className="text-sm font-semibold">Venue and placement</p>

@@ -7,7 +7,7 @@ import { verifyOtp } from "@/lib/otp";
 
 /** Step 2 of sign-up: the code creates the account and signs the visitor in. */
 export async function POST(req: Request) {
-  if (!rateLimit("verify:" + ipOf(req), 20)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (!(await rateLimit("verify:" + ipOf(req), 20))) return fail("Too many attempts. Please wait a minute.", 429);
   const { otpId, code } = await req.json().catch(() => ({}));
   if (!otpId || !/^\d{6}$/.test(String(code || "").trim())) return fail("Enter the 6-digit code.");
   const v = await verifyOtp(String(otpId), "SIGNUP", String(code));

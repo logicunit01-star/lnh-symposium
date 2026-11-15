@@ -23,6 +23,7 @@ const KIND: Record<string, string> = { CLINICAL: "Clinical", NON_CLINICAL: "Non-
 export default async function Departments({ searchParams: sp }: { searchParams: { e?: string; saved?: string; err?: string; q?: string; show?: string } }) {
   const u = await requirePerm("departments");
   const edit = can(u, "settings");
+  const logins = can(u, "users"); // issue / reset department passcodes: Super Admin only
   const ev = await getEvent();
   const w = reviewWindow(ev);
   const rows = await db.select({
@@ -48,7 +49,7 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
       {sp.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sp.saved === "merged" ? "Merged. Every record now uses this department." : "Saved."}</p>}
       {sp.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{sp.err}</p>}
       {review.length > 0 && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{review.length} department name{review.length === 1 ? "" : "s"} came from records that did not match the list ({review.map((r) => `“${r.d.name}”`).join(", ")}). Open each one and rename it or merge it into the right department.</p>}
-      <DeptLoginsPanel />
+      {logins && <DeptLoginsPanel />}
 
       <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-3">
@@ -66,7 +67,7 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
                       <span className="block text-xs text-slate-500">{KIND[d.kind] ?? d.kind}{d.needsReview && <span className="badge ml-1 bg-amber-100 text-amber-800">Needs review</span>}</span></td>
                     <td className="text-xs">{team.map((p) => <span key={p.id} className={cn("block", !p.active && "line-through opacity-60")}><Link href={`/admin/users?u=${p.id}`} className="hover:underline">{p.name}</Link> <span className="text-slate-400">· {DEPT_ROLE_LABEL[p.role as DeptRole]}</span></span>)}
                       {!team.length && <span className="text-slate-400">—</span>}</td>
-                    <td className="text-xs">{login ? <><span className="font-mono">{login.email}</span><span className="block text-slate-400">{login.last ? `last in ${fmtDateTime(login.last)}` : "never signed in"}</span><ResetLogin dept={d.name} /></> : d.kind === "COMMITTEE" ? "—" : <span className="text-slate-400">none</span>}</td>
+                    <td className="text-xs">{login ? <><span className="font-mono">{login.email}</span><span className="block text-slate-400">{login.last ? `last in ${fmtDateTime(login.last)}` : "never signed in"}</span>{logins && <ResetLogin dept={d.name} />}</> : d.kind === "COMMITTEE" ? "—" : <span className="text-slate-400">none</span>}</td>
                     <td className="text-sm">{total}{pending > 0 && <span className="ml-1 text-xs text-amber-700">({pending} undecided)</span>}</td>
                     <td className="text-xs">{d.p1SubmittedAt ? <>P1 sent {fmtDateTime(d.p1SubmittedAt)} <form action={reopenDept.bind(null, d.id, 1)} className="inline"><button className="text-lnh-blue hover:underline">reopen</button></form></> : total ? "P1 open" : "—"}
                       {d.p2Required && <span className="block">{d.p2SubmittedAt ? `P2 sent ${fmtDateTime(d.p2SubmittedAt)}` : "P2 assigned, pending"}</span>}</td>
@@ -98,7 +99,8 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
                   <div><label className="a-label">Short code</label><input name="code" defaultValue={sel.d.code ?? ""} placeholder="e.g. CARD" className="a-input font-mono uppercase" /></div>
                   <div><label className="a-label">Type</label><select name="kind" defaultValue={sel.d.kind} className="a-input">{Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                 </div>
-                <div><label className="a-label">Department email</label><input name="email" type="email" defaultValue={sel.d.email ?? ""} className="a-input" /></div>
+                <div><label className="a-label">Department email</label><input name="email" type="email" defaultValue={sel.d.email ?? ""} className="a-input" />
+                  <p className="mt-1 text-xs text-slate-500">Department notifications (agenda, flyers, guests) go here and to its people's own email addresses. The shared department login has no mailbox.</p></div>
                 <div className="grid grid-cols-2 gap-3 items-end">
                   <div><label className="a-label">Order in lists</label><input name="order" type="number" defaultValue={sel.d.order} className="a-input" /></div>
                   <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="active" defaultChecked={sel.d.active} />Active (shown in forms)</label>

@@ -27,3 +27,15 @@ export async function requireDept(p: Perm) {
   const [d] = await db.select().from(s.departments).where(eq(s.departments.name, deptName));
   return { u, dept: d ?? null, deptName };
 }
+
+/**
+ * For actions on one record (an abstract, a session, a guest): the department comes from the record, not from the
+ * department switcher, so a person in several departments never gets an error after switching in another tab
+ * (audit 16 Nov 2026). deptName is null when the person has no role granting p in that department.
+ */
+export async function requireDeptOf(p: Perm, department: string | null | undefined) {
+  const u = await requirePerm(p);
+  if (!department || !deptsWith(u.depts, p).includes(department)) return { u, dept: null, deptName: null as string | null };
+  const [d] = await db.select().from(s.departments).where(eq(s.departments.name, department));
+  return { u, dept: d ?? null, deptName: department as string | null };
+}

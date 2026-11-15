@@ -5,7 +5,7 @@ import { abstractInput, submitAbstract, titleTaken } from "@/lib/abstracts";
 
 /** Submit an abstract (signed-in, email-verified account required). */
 export async function POST(req: Request) {
-  if (!rateLimit("abs:" + ipOf(req), 6)) return fail("Too many submissions — please wait a minute.", 429);
+  if (!(await rateLimit("abs:" + ipOf(req), 6))) return fail("Too many submissions — please wait a minute.", 429);
   const a = await currentAccount();
   if (!a) return fail("Please sign in with a verified account to submit an abstract.", 401);
   const p = abstractInput.safeParse(await req.json().catch(() => ({})));
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
 /** Live duplicate-title check. */
 export async function GET(req: Request) {
-  if (!rateLimit("absdup:" + ipOf(req), 60)) return fail("Slow down", 429);
+  if (!(await rateLimit("absdup:" + ipOf(req), 60))) return fail("Slow down", 429);
   const t = new URL(req.url).searchParams.get("title") || "";
   if (t.trim().length < 10) return ok({ duplicate: null });
   return ok({ duplicate: await titleTaken(t) });

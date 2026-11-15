@@ -26,11 +26,16 @@ export async function sendEmail(to: string, subject: string, html: string, attac
     let cc = opts.cc?.trim() || undefined;
     const replyTo = opts.replyTo || account?.replyTo || opts.fallbackReplyTo || undefined;
     let rcpt = to, subj = subject;
+    // audit 16 Nov 2026: one-time codes are never shown in the sent log, and never redirected to the Test-mode address
+    const secret = opts.templateKey === "SIGN_IN_CODE";
+    const logBody = secret ? maskCodes(html) : html;
+    if (/\.local$/i.test(to.trim())) return logOnly({ channel: "EMAIL", to, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: secret ? maskCodes(subject) : subject, body: logBody, error: "Not a deliverable address (department logins use .local): set the department email in Admin → Departments." });
+    if (secret && st?.mode === "TEST") return logOnly({ channel: "EMAIL", to, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: maskCodes(subject), body: logBody, error: "Not sent: Test mode never redirects sign-in codes." });
     if (st?.mode === "TEST" && st.testAddress) { rcpt = st.testAddress; subj = `[TEST for ${to}${cc ? `, cc ${cc}` : ""}] ${subject}`; cc = undefined; }
-    const base = { channel: "EMAIL" as const, to: rcpt === to ? to : `${rcpt}`, cc: cc ?? null, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: subj, body: html };
+    const base = { channel: "EMAIL" as const, to: rcpt === to ? to : `${rcpt}`, cc: cc ?? null, sender: from, templateKey: opts.templateKey ?? null, ref: opts.ref ?? null, subject: secret ? maskCodes(subj) : subj, body: logBody };
     if (st?.mode === "LOG" || (!account && !envMailTransport())) return logOnly(base);
     return await enqueue({ ...base, priority: opts.priority, payload: {
-      html, from, accountId: account?.id ?? null, replyTo: replyTo ?? null,
+      html, from, accountId: account?.id ?? null, replyTo: replyTo ?? null, ...(secret ? { subject: subj } : {}),
       attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64"), contentType: a.contentType, cid: a.cid })),
     } });
   } catch (e) {
@@ -38,6 +43,9 @@ export async function sendEmail(to: string, subject: string, html: string, attac
     return "FAILED";
   }
 }
+
+/** Hides one-time codes (6 digits) in what the sent log keeps. */
+export const maskCodes = (t: string) => t.replace(/\b\d{6}\b/g, "••••••");
 
 /** Normalises a Pakistani mobile number to 92XXXXXXXXXX. */
 export const normalisePhone = (p: string) => {
@@ -68,8 +76,9 @@ export async function sendMessage(key: NotifyMessageKey, phone: string | null | 
     if (cfg.smsEnabled && t.sms && !free) {
       await enqueue({ ...common, channel: "SMS", body: `SMS template ${t.sms}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: t.sms, email: m.email, via: "XNOTIFY" } });
     } else if (m.text) {
-      if (process.env.SMS_API_URL) await enqueue({ ...common, channel: "SMS", body: m.text, payload: { messageKey: key, text: m.text, via: "GATEWAY" } });
-      else await logOnly({ channel: "SMS", to, templateKey: key, ref: m.ref ?? null, body: m.text });
+      const shown = key === "SIGN_IN_CODE" ? maskCodes(m.text) : m.text;
+      if (process.env.SMS_API_URL) await enqueue({ ...common, channel: "SMS", body: shown, payload: { messageKey: key, text: m.text, via: "GATEWAY" } });
+      else await logOnly({ channel: "SMS", to, templateKey: key, ref: m.ref ?? null, body: shown });
     }
   } catch (e) { console.error("[notify] could not queue", key, e); }
 }

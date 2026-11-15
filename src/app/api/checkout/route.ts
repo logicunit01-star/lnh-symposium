@@ -26,7 +26,7 @@ const input = z.object({
 
 /** Converts the visitor's cart into a registration (order) with a SYM-YYYY-NNNNN number. */
 export async function POST(req: Request) {
-  if (!rateLimit("checkout:" + ipOf(req), 20)) return fail("Too many attempts — please wait a minute.", 429);
+  if (!(await rateLimit("checkout:" + ipOf(req), 20))) return fail("Too many attempts — please wait a minute.", 429);
   const a = await currentAccount();
   if (!a) return fail("Please sign in to continue.", 401);
   const p = input.safeParse(await req.json().catch(() => ({})));

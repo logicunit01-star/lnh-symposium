@@ -58,7 +58,7 @@ async function deliver(row: Row): Promise<Result> {
       const t = account ? accountTransport(account) : envMailTransport();
       if (!t) return { ok: false, error: "No mailbox is set up (Admin → Email settings)." };
       const info = await t.sendMail({
-        from: p.from, to: row.to, cc: row.cc || undefined, replyTo: p.replyTo || undefined, subject: row.subject ?? "", html: p.html ?? row.body,
+        from: p.from, to: row.to, cc: row.cc || undefined, replyTo: p.replyTo || undefined, subject: p.subject ?? row.subject ?? "", html: p.html ?? row.body,
         attachments: (p.attachments ?? []).map((a) => ({ filename: a.filename, content: Buffer.from(a.content, "base64"), contentType: a.contentType, ...(a.cid ? { cid: a.cid, contentDisposition: "inline" as const } : {}) })),
       });
       return { ok: true, ref: info?.messageId ?? null };
