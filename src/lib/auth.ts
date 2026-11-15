@@ -1,5 +1,5 @@
 import "server-only";
-import { cache } from "react";
+import * as React from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE, verifyToken, type Claims } from "./auth-edge";
@@ -9,6 +9,8 @@ import { can, deptsWith, homeFor, permsFor, type Membership, type Perm } from ".
  * a role change, a department change or a deactivation takes effect at once, not when the 12-hour sign-in ends. */
 export type Staff = Claims & { perms: Perm[]; depts: Membership[] };
 
+// React.cache: one database read per request (absent outside Next.js, e.g. scripts)
+const cache: <T extends (...a: any[]) => any>(f: T) => T = (React as any).cache ?? ((f: any) => f);
 const load = cache(async (token: string | undefined): Promise<Staff | null> => {
   const c = await verifyToken(token);
   if (!c) return null;

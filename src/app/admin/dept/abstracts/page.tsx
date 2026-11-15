@@ -21,7 +21,10 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
   const activePhase = w.p1 && !dept?.p1SubmittedAt ? 1 : w.p2 && dept?.p2Required && !dept?.p2SubmittedAt ? 2 : null;
   const open = rows.filter((r) => r.status === "SUBMITTED" && r.phase === activePhase);
   const decided = open.filter((r) => r.hodDecision).length;
+  // abstracts not in the open review (e.g. the review window is closed): shown so nothing disappears from the department's view
+  const waiting = rows.filter((r) => (r.status === "SUBMITTED" || r.status === "UNDER_REVIEW") && !open.includes(r));
   const lists = {
+    "Waiting for review": waiting,
     "Accepted as oral": rows.filter((r) => r.status === "ACCEPTED" && r.acceptedAs === "ORAL"),
     "Accepted as poster": rows.filter((r) => r.status === "ACCEPTED" && r.acceptedAs === "POSTER"),
     "Rejected": rows.filter((r) => r.status === "REJECTED"),
@@ -91,11 +94,11 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
       )}
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        {Object.entries(lists).map(([label, list]) => (
+        {Object.entries(lists).filter(([label, list]) => label !== "Waiting for review" || list.length).map(([label, list]) => (
           <div key={label} className="a-card p-5">
             <h2 className="font-display text-base font-bold">{label} <span className="text-slate-400">({list.length})</span></h2>
             <ul className="mt-3 divide-y divide-slate-100 text-sm">
-              {list.map((a) => <li key={a.id} className="py-2"><span className="font-mono text-xs text-lnh-blue">{a.refNo}</span> {a.abstractTitle}<span className="block text-xs text-slate-400">{a.presentingAuthor} · {a.status === "BACK" ? "with the secretariat for reassignment" : a.authorNotifiedAt ? "author notified" : "author notified on the decision date"}</span></li>)}
+              {list.map((a) => <li key={a.id} className="py-2"><span className="font-mono text-xs text-lnh-blue">{a.refNo}</span> {a.abstractTitle}<span className="block text-xs text-slate-400">{a.presentingAuthor} · {a.status === "SUBMITTED" || a.status === "UNDER_REVIEW" ? `Phase ${a.phase}, not decided yet${w.p1 || w.p2 ? "" : " (the review window is closed)"}` : a.status === "BACK" ? "with the secretariat for reassignment" : a.authorNotifiedAt ? "author notified" : "author notified on the decision date"}</span></li>)}
               {!list.length && <li className="py-2 text-slate-400">None</li>}
             </ul>
           </div>

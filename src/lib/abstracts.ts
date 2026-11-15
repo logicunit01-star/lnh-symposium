@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
 import { getEvent, abstractWindow, editionYear } from "./event";
@@ -68,6 +68,10 @@ export async function submitAbstract(input: AbstractInput, accountId: string) {
     sections, body, keywords: input.keywords.join(", "), wordCount: wc,
   }).returning();
   await logAbstract(a.id, a.email, "SUBMITTED", input.specialty);
+  // A department that already sent its Phase 1 decisions gets its portal reopened for the new abstract
+  // (decisions already sent stay as they are; only the new, undecided abstracts can be decided).
+  const reopened = await db.update(s.departments).set({ p1SubmittedAt: null }).where(and(eq(s.departments.name, input.specialty), isNotNull(s.departments.p1SubmittedAt))).returning({ id: s.departments.id });
+  if (reopened.length) await logAbstract(a.id, "System", `Phase 1 reopened for ${input.specialty}: new abstract after the department had sent its decisions`);
   await sendTemplate("ABSTRACT_RECEIVED", a.email, {
     name: `${a.title} ${a.fullName}`, abstract_title: a.abstractTitle, abstract_id: refNo, department: input.specialty, author_name: a.presentingAuthor,
     status: "Under review", link: `${appUrl()}/abstracts#my-abstracts`,
