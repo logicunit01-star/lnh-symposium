@@ -15,6 +15,7 @@ const demoScore = (old: number) => {
   return { total: Object.values(scores).reduce((a, b) => a + b, 0), scores };
 };
 
+import { committeeRows } from "./committee-data";
 export const EVENT_DEFAULTS = {
   edition: "9th",
   name: "9th LNH Symposium 2027",
@@ -97,21 +98,6 @@ const SPEAKERS: { title: string; name: string; degrees: string; designation: str
   { title: "Dr.", name: "Maria Fernandes", degrees: "MD, CPHQ", designation: "Quality & Accreditation Lead", institution: "Healthcare Accreditation Advisors", topic: "Accreditation for digital-first hospitals", featured: false },
   { title: "Dr.", name: "Zain Haider", degrees: "PhD (Data Science)", designation: "Lead Data Scientist", institution: "LNH Research Unit", topic: "Real-world data and responsible AI", featured: false },
   { title: "Prof.", name: "Rukhsana Begum", degrees: "PhD (Nursing)", designation: "Director Nursing", institution: "LNH College of Nursing", topic: "Nursing in a digitized ward", featured: false },
-];
-
-const COMMITTEE = [
-  ["Patron-in-Chief", "Prof. Placeholder Name", "Chief Executive Officer", "Administration", "Patrons"],
-  ["Patron", "Prof. Placeholder Name", "Principal, LNH&MC", "Medical College", "Patrons"],
-  ["Chairperson", "Prof. Placeholder Name", "Chair, Scientific Committee", "Medical Education", "Scientific Committee"],
-  ["Scientific Secretary", "Dr. Placeholder Name", "Associate Professor", "Community Medicine", "Scientific Committee"],
-  ["Member", "Dr. Placeholder Name", "Associate Professor", "Pathology", "Scientific Committee"],
-  ["Member", "Dr. Placeholder Name", "Assistant Professor", "Biostatistics", "Scientific Committee"],
-  ["Chair", "Prof. Placeholder Name", "Head of Department", "Medicine", "Organizing Committee"],
-  ["Co-Chair", "Dr. Placeholder Name", "Head of Department", "Surgery", "Organizing Committee"],
-  ["Member", "Dr. Placeholder Name", "Consultant", "Paediatrics", "Organizing Committee"],
-  ["Member", "Ms. Placeholder Name", "Manager", "Information Technology", "Organizing Committee"],
-  ["Co-Chair", "Dr. Placeholder Name", "Coordinator", "Workshop Programme (WP) Committee", "Workshop Committee"],
-  ["Lead", "Mr. Placeholder Name", "Manager Events", "Corporate Communications", "Logistics"],
 ];
 
 type P = {
@@ -208,7 +194,9 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
   const venueId = (name: string) => venueRows.find((v) => v.name === name)?.id ?? null;
 
   await seedDepartments(db);
-  await db.insert(s.committee).values(COMMITTEE.map(([role, name, designation, department, group], i) => ({ role, name, designation, department, group, order: i })));
+  // the official committee list (lib/committee-data.ts); migration 0025 may already have loaded it
+  const [{ nc }] = await db.select({ nc: sql<number>`count(*)::int` }).from(s.committee);
+  if (!nc) await db.insert(s.committee).values(committeeRows());
 
   for (const x of PROGRAMME) {
     const at = (hm: string) => D(`${x.date}T${hm}:00+05:00`);

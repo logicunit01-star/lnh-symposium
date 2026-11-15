@@ -8,7 +8,8 @@ export const fmtTime = (d: Date | string) =>
 export const fmtDateTime = (d: Date | string) => `${fmtDate(d, { day: "2-digit", month: "short", year: "numeric" })}, ${fmtTime(d)}`;
 export const pkr = (n: number) => `PKR ${n.toLocaleString("en-PK")}`;
 export const initials = (name: string) =>
-  name.replace(/^(Prof\.|Dr\.|Mr\.|Ms\.|Assoc\.|Asst\.)\s*/gi, "").split(/\s+/).map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  // all leading titles ("Prof. Dr.", "Brig.(R) Dr."), and qualifiers in brackets ("(Endo)"), are skipped
+  name.replace(/^(?:(?:Prof|Dr|Mr|Mrs|Ms|Assoc|Asst|Brig|Maj|Col|Engr)\.?(?:\s*\(R\))?\s+)+/i, "").split(/\s+/).filter((p) => p && !p.startsWith("(")).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 export const wordCount = (s: string) => (s.trim().match(/\S+/g) || []).length;
 export const appUrl = () =>
   (process.env.APP_URL ||
