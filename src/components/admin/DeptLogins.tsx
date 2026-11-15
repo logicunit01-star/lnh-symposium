@@ -11,7 +11,7 @@ export function DeptLoginsPanel() {
   return (
     <div className="a-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="font-semibold">Department logins</p><p className="text-sm text-slate-500">One login per speciality, used for abstract review, the scientific session agenda and workshop requests. Passcodes are shown once.</p></div>
+        <div><p className="font-semibold">Department logins</p><p className="text-sm text-slate-500">One shared login per department (its Head role), for abstract review, the session agenda and workshop requests. Passcodes are shown once. Heads, coordinators and focal persons can also have their own logins in Users &amp; roles.</p></div>
         <form action={action}><Btn>Create missing logins</Btn></form>
       </div>
       {state?.error && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{state.error}</p>}

@@ -11,6 +11,8 @@ import { SessionProposalForm } from "@/components/admin/SessionProposalForm";
 import { PEOPLE_ROLES, SESSION_FORMATS, slotLabel } from "@/lib/scientific";
 import { fmtDateTime } from "@/lib/utils";
 
+import { DeptSwitcher } from "@/components/admin/DeptSwitcher";
+import { deptsWith } from "@/lib/permissions";
 export const metadata = { title: "Scientific session agenda" };
 
 export default async function DeptSessions({ searchParams }: { searchParams: { edit?: string; new?: string; saved?: string } }) {
@@ -41,6 +43,7 @@ export default async function DeptSessions({ searchParams }: { searchParams: { e
     <>
       <PageTitle title={`Scientific sessions · ${deptName}`} sub={ev.sciLockAt ? `Departments may edit their agenda until ${fmtDateTime(ev.sciLockAt)}. After the deadline your submission is locked and only the Scientific Committee can edit and finalise it. Your original submission is kept on record.` : "Submit your department's session programme details."}
         actions={!locked && <Link href="/admin/dept/sessions?new=1" className="a-btn-red">+ New session</Link>} />
+      <DeptSwitcher list={deptsWith(u.depts, "dept.sessions")} current={deptName} back="/admin/dept/sessions" />
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved. The Scientific Committee will allot the venue and slot.</p>}
       {!released && <p className="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">Venue and slot allocation stays confidential to the Scientific Committee until the programme is formally released.</p>}
       <div className="space-y-4">

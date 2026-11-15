@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  *  (Event Settings); experts once their page is published and the programme is released. Staff preview: ?preview=1. */
 export default async function Speakers({ searchParams }: { searchParams: { preview?: string } }) {
   const [ev, speakersAll, staff, { page, guests }] = await Promise.all([getEvent(), getSpeakers(), currentUser(), getProgrammePage("EXPERTS")]);
-  const pv = !!searchParams.preview && can(staff?.role, "programme");
+  const pv = !!searchParams.preview && can(staff, "programme");
   const speakers = ev.speakersLive || pv ? speakersAll : [];
   const experts = pv || (page.published && !!ev.programmeReleasedAt) ? guests : [];
   return (

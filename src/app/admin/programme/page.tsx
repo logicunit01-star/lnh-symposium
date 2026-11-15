@@ -38,11 +38,11 @@ export default async function Programme({ searchParams }: { searchParams: { day?
     <>
       <PageTitle title="Scientific programme" sub={`Department session proposals, slot and venue allotment, clash checks. Departments edit until ${ev.sciLockAt ? fmtDateTime(ev.sciLockAt) : "the lock date"}.`}
         actions={<>
-          {can(u.role, "programme.edit") && <Link href="/admin/programme/new" className="a-btn-ghost">+ Session for a department</Link>}
-          {can(u.role, "programme.edit") && <Link href="/admin/programme/new?format=PLENARY" className="a-btn-ghost">+ Plenary / debate</Link>}
-          {can(u.role, "programme.edit") && <Link href="/admin/programme/pages" className="a-btn-ghost">Pre-symposium, Inaugural &amp; Meet the Experts</Link>}
-          {can(u.role, "invitations") && <Link href="/admin/invitations" className="a-btn-ghost"><Megaphone className="h-4 w-4" />Invitations</Link>}
-          {can(u.role, "programme.approve") && <form action={releaseProgramme.bind(null, !ev.programmeReleasedAt)}><button className={ev.programmeReleasedAt ? "a-btn-ghost" : "a-btn-red"}>{ev.programmeReleasedAt ? "Withdraw release" : "Release approved programme"}</button></form>}
+          {can(u, "programme.edit") && <Link href="/admin/programme/new" className="a-btn-ghost">+ Session for a department</Link>}
+          {can(u, "programme.edit") && <Link href="/admin/programme/new?format=PLENARY" className="a-btn-ghost">+ Plenary / debate</Link>}
+          {can(u, "programme.edit") && <Link href="/admin/programme/pages" className="a-btn-ghost">Pre-symposium, Inaugural &amp; Meet the Experts</Link>}
+          {can(u, "invitations") && <Link href="/admin/invitations" className="a-btn-ghost"><Megaphone className="h-4 w-4" />Invitations</Link>}
+          {can(u, "programme.approve") && <form action={releaseProgramme.bind(null, !ev.programmeReleasedAt)}><button className={ev.programmeReleasedAt ? "a-btn-ghost" : "a-btn-red"}>{ev.programmeReleasedAt ? "Withdraw release" : "Release approved programme"}</button></form>}
         </>} />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div className="a-card p-4"><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Proposals</p><p className="font-display text-2xl font-bold">{props.length}</p><p className="text-xs text-slate-500">{counts.DRAFT ? `${counts.DRAFT} awaiting department · ` : ""}{counts.SUBMITTED} new · {counts.UNDER_REVIEW} in review · {counts.APPROVED} approved · {counts.REJECTED} rejected</p></div>

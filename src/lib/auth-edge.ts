@@ -2,7 +2,7 @@
 import { SignJWT, jwtVerify } from "jose";
 
 export const COOKIE = "lnh_admin";
-export type Claims = { sub: string; name: string; email: string; role: string };
+export type Claims = { sub: string; name: string; email: string; role: string; iat?: number };
 
 const key = () => new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me");
 
@@ -14,6 +14,6 @@ export async function verifyToken(token?: string): Promise<Claims | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key());
-    return { sub: String(payload.sub), name: String(payload.name), email: String(payload.email), role: String(payload.role) };
+    return { sub: String(payload.sub), name: String(payload.name), email: String(payload.email), role: String(payload.role), iat: Number(payload.iat) || 0 };
   } catch { return null; }
 }

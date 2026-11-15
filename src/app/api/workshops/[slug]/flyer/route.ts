@@ -15,7 +15,7 @@ export async function GET(_: Request, { params }: { params: { slug: string } }) 
   if (!row) return new Response("Not found", { status: 404 });
   if (row.w.flyerStatus !== "APPROVED") {
     const u = await currentUser();
-    if (!u || !(can(u.role, "flyers") || can(u.role, "workshops"))) return new Response("This flyer is awaiting review by the Marketing department.", { status: 404 });
+    if (!u || !(can(u, "flyers") || can(u, "workshops"))) return new Response("This flyer is awaiting review by the Marketing department.", { status: 404 });
   }
   const ev = await getEvent();
   const taken = (await seatsTaken())[row.w.id] ?? 0;

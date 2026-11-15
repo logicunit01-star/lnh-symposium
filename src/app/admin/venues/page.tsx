@@ -27,7 +27,7 @@ export default async function Venues({ searchParams }: { searchParams: { v?: str
   return (
     <>
       <PageTitle title="Workshop Programme" sub="Venues: rooms, seating capacity, online facility and location on the campus map. Form A reads these, and the seat cap can't exceed the room." />
-      <WpTabs active="venues" pending={0} canSubmit={can(u.role, "workshops.submit")} canVenues canCheckin={can(u.role, "checkin")} />
+      <WpTabs active="venues" pending={0} canSubmit={can(u, "workshops.submit")} canVenues canCheckin={can(u, "checkin")} />
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <div className="a-card p-3">

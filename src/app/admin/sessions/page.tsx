@@ -19,7 +19,7 @@ export default async function Sessions() {
   return (
     <>
       <PageTitle title="Sessions & workshops" sub="Each session has its own dashboard with participants, attendance and live feedback."
-        actions={can(u.role, "sessions.edit") && <Link href="/admin/sessions/new" className="a-btn-primary">+ New session</Link>} />
+        actions={can(u, "sessions.edit") && <Link href="/admin/sessions/new" className="a-btn-primary">+ New session</Link>} />
       <div className="a-card overflow-x-auto">
         <table className="a-table">
           <thead><tr><th>Day / time</th><th>Session</th><th>Fee</th><th>Registered</th><th>Paid</th><th>Attended</th><th>Feedback</th></tr></thead>

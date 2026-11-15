@@ -14,7 +14,7 @@ export default async function NewWorkshop() {
     <>
       <p className="mb-2 text-sm"><Link href="/admin/workshops" className="text-lnh-blue hover:underline">← Workshop Programme</Link></p>
       <PageTitle title="Workshop request · Form A" sub="Workshop Directors submit each request once. The committee reviews it; after approval the same record makes the catalogue card, the flyer and the daily requirements sheet." />
-      <WorkshopForm venues={c.venues} weeks={c.weeks} window={c.window} departments={c.depts} fixedDepartment={sc.all ? null : sc.department} />
+      <WorkshopForm venues={c.venues} weeks={c.weeks} window={c.window} departments={c.depts} fixedDepartment={sc.all ? null : sc.departments.length === 1 ? sc.departments[0] : null} ownDepartments={sc.all ? undefined : sc.departments} />
     </>
   );
 }

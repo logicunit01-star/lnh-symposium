@@ -154,14 +154,14 @@ const PROGRAMME: P[] = [
 
 // Extra Form A detail for demo workshops (by title prefix).
 const WS_EXTRA: Record<string, { cat: "A" | "B"; contrib?: string; fac: number; vol: number; tech: number; eq: [string, number, string][] }> = {
-  "Critical Care Day": { cat: "A", contrib: "Anaesthesia, Emergency Medicine", fac: 6, vol: 4, tech: 2, eq: [["Ventilator (demo)", 4, "ICU loan"], ["Ultrasound machine", 3, "Radiology"], ["Lung phantom", 4, "Skill Lab"]] },
-  "Trauma Team": { cat: "A", contrib: "Emergency Medicine, Anaesthesia", fac: 4, vol: 2, tech: 1, eq: [["High-fidelity mannequin", 2, "Sim Center"], ["Rapid infuser", 1, "ED loan"]] },
+  "Critical Care Day": { cat: "A", contrib: "Anesthesia, Accident & Emergency", fac: 6, vol: 4, tech: 2, eq: [["Ventilator (demo)", 4, "ICU loan"], ["Ultrasound machine", 3, "Radiology"], ["Lung phantom", 4, "Skill Lab"]] },
+  "Trauma Team": { cat: "A", contrib: "Accident & Emergency, Anesthesia", fac: 4, vol: 2, tech: 1, eq: [["High-fidelity mannequin", 2, "Sim Center"], ["Rapid infuser", 1, "ED loan"]] },
   "Obstetric Emergencies": { cat: "B", fac: 4, vol: 2, tech: 1, eq: [["Birthing simulator", 2, "Sim Center"], ["PPH kit", 6, "Purchase"]] },
-  "ECG Across Ages": { cat: "A", contrib: "Paediatrics, Anaesthesia", fac: 3, vol: 2, tech: 0, eq: [["ECG printouts (sets)", 50, "Cardiology"]] },
-  "AI Tools": { cat: "A", contrib: "Research & Biostatistics", fac: 2, vol: 2, tech: 1, eq: [["Wi-Fi access codes", 40, "IT"]] },
+  "ECG Across Ages": { cat: "A", contrib: "Pediatric medicine, Anesthesia", fac: 3, vol: 2, tech: 0, eq: [["ECG printouts (sets)", 50, "Cardiology"]] },
+  "AI Tools": { cat: "A", contrib: "Community Medicine", fac: 2, vol: 2, tech: 1, eq: [["Wi-Fi access codes", 40, "IT"]] },
   "Data Analysis with SPSS": { cat: "B", fac: 2, vol: 1, tech: 1, eq: [["SPSS licences", 30, "IT"], ["Sample datasets (USB)", 30, "Research Unit"]] },
   "Robotic Surgery": { cat: "B", fac: 2, vol: 1, tech: 2, eq: [["Robotic console simulator", 1, "Sponsor loan"], ["Dry-lab task boxes", 6, "Skill Lab"]] },
-  "Mass Casualty": { cat: "A", contrib: "Nursing, Security, Administration", fac: 8, vol: 20, tech: 3, eq: [["Triage tags", 300, "Purchase"], ["Stretchers", 20, "Hospital stores"], ["Moulage kits", 30, "Sim Center"]] },
+  "Mass Casualty": { cat: "A", contrib: "Nursing, Admin/ Management", fac: 8, vol: 20, tech: 3, eq: [["Triage tags", 300, "Purchase"], ["Stretchers", 20, "Hospital stores"], ["Moulage kits", 30, "Sim Center"]] },
   "Point-of-Care Ultrasound": { cat: "B", fac: 3, vol: 1, tech: 1, eq: [["Ultrasound machine", 3, "Radiology"]] },
   "Telemedicine": { cat: "B", fac: 2, vol: 1, tech: 1, eq: [["Headsets", 30, "IT"]] },
 };
@@ -220,6 +220,8 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
       ...(x.type === "WORKSHOP" && (x.status ?? "APPROVED") === "APPROVED" ? { flyerStatus: "APPROVED", flyerReviewedBy: "Marketing Department (demo)" } : {}),
       ...(x.type === "WORKSHOP" ? workshopExtra(x, x.sp?.[0] != null ? SPEAKERS[x.sp[0]] : undefined) : {}),
     }).returning({ id: s.sessions.id });
+    const contrib = x.type === "WORKSHOP" ? (Object.entries(WS_EXTRA).find(([k]) => x.title.startsWith(k))?.[1].contrib ?? "").split(",").map((d) => d.trim()).filter(Boolean) : [];
+    if (contrib.length) await db.insert(s.sessionDepartments).values(contrib.map((department) => ({ sessionId: row.id, department }))).onConflictDoNothing();
     if (x.sp?.length) {
       await db.insert(s.sessionSpeakers).values(x.sp.map((i, k) => ({
         sessionId: row.id, speakerId: speakerRows[i].id,
@@ -235,6 +237,8 @@ export async function seedDemoContent(db: DB = defaultDb, opts: { reset?: boolea
 
 export async function seedDepartments(db: DB = defaultDb) {
   await db.insert(s.departments).values(DEPARTMENTS.map((name, i) => ({ name, order: i }))).onConflictDoNothing();
+  // owner of the plenary and debate sessions (not shown in public department lists)
+  await db.insert(s.departments).values({ name: "Scientific Committee", kind: "COMMITTEE", order: 1000 }).onConflictDoNothing();
 }
 
 /** A few fictional abstracts and two department session proposals so the review and programme screens have data. */
@@ -300,7 +304,7 @@ function workshopExtra(x: P, lead?: (typeof SPEAKERS)[number]) {
   const status = x.status ?? "APPROVED";
   const submitted = new Date(Date.parse(`${x.date}T09:00:00+05:00`) - 40 * 864e5);
   return {
-    category: e?.cat ?? "B", contributors: e?.contrib ?? null,
+    category: e?.cat ?? "B",
     themeWeek: themeWeekOf(x.date, EVENT_DEFAULTS.themeWeeks),
     leadFaculty: lead ? `${lead.title} ${lead.name}` : null, facultyDegrees: lead?.degrees ?? null,
     facultyContact: "0300-0000000", facultyProfile: lead ? `${lead.designation}, ${lead.institution}. (Placeholder — replace in Form A.)` : null,
@@ -312,11 +316,12 @@ function workshopExtra(x: P, lead?: (typeof SPEAKERS)[number]) {
   };
 }
 
-/** Demo staff for the workshop workflow (HOD, WP Committee chair and member). Password = SEED_ADMIN_PASSWORD. */
-export const DEMO_STAFF = [
-  { name: "HOD Anesthesia (demo)", email: "hod.anesthesia@lnh.edu.pk", role: "HOD", department: "Anesthesia" },
-  { name: "HOD Cardiology (demo)", email: "hod.cardiology@lnh.edu.pk", role: "HOD", department: "Cardiology" },
-  { name: "HOD Nursing (demo)", email: "hod.nursing@lnh.edu.pk", role: "HOD", department: "Nursing" },
+/** Demo staff for the workshop workflow (Heads, WP Committee chair and member). Password = SEED_ADMIN_PASSWORD.
+ *  department + deptRole: their role in that department (user_departments). */
+export const DEMO_STAFF: readonly { name: string; email: string; role: string; department: string | null; deptRole?: "HEAD" | "COORDINATOR" | "FOCAL_PERSON" }[] = [
+  { name: "HOD Anesthesia (demo)", email: "hod.anesthesia@lnh.edu.pk", role: "DEPARTMENT", department: "Anesthesia", deptRole: "HEAD" },
+  { name: "HOD Cardiology (demo)", email: "hod.cardiology@lnh.edu.pk", role: "DEPARTMENT", department: "Cardiology", deptRole: "HEAD" },
+  { name: "HOD Nursing (demo)", email: "hod.nursing@lnh.edu.pk", role: "DEPARTMENT", department: "Nursing", deptRole: "HEAD" },
   { name: "Scientific Committee Chair (demo)", email: "sc.chair@lnh.edu.pk", role: "SC_CHAIR", department: null },
   { name: "Scientific Committee Member (demo)", email: "sc.member@lnh.edu.pk", role: "SCIENTIFIC_COMMITTEE", department: null },
   { name: "Symposium Secretariat (demo)", email: "secretariat@lnh.edu.pk", role: "SECRETARIAT", department: null },
@@ -325,4 +330,4 @@ export const DEMO_STAFF = [
   { name: "Marketing Department (demo)", email: "marketing@lnh.edu.pk", role: "MARKETING", department: null },
   { name: "Food Department (demo)", email: "food@lnh.edu.pk", role: "CATERING", department: null },
   { name: "Chairperson, Facilitation Committee (demo)", email: "facilitation@lnh.edu.pk", role: "FACILITATION_CHAIR", department: null },
-] as const;
+]

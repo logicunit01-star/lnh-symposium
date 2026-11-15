@@ -7,6 +7,8 @@ import { PageTitle } from "@/components/admin/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime24 } from "@/lib/utils";
 import { hodFlyerDecision } from "../actions";
 
+import { DeptSwitcher } from "@/components/admin/DeptSwitcher";
+import { deptsWith } from "@/lib/permissions";
 export const metadata = { title: "Session flyers" };
 const LABEL: Record<string, [string, string]> = {
   PENDING: ["Awaiting your approval", "bg-amber-100 text-amber-800"],
@@ -16,12 +18,13 @@ const LABEL: Record<string, [string, string]> = {
 
 /** SC feedback (29 Oct 2026): final flyer approval by the department HOD, separate from the Scientific Committee's content approval. */
 export default async function DeptFlyers({ searchParams }: { searchParams: { s?: string; saved?: string; err?: string } }) {
-  const { deptName } = await requireDept("dept.flyers");
+  const { u, deptName } = await requireDept("dept.flyers");
   const rows = await db.select().from(s.sessions).where(and(eq(s.sessions.department, deptName), eq(s.sessions.proposal, true), eq(s.sessions.status, "APPROVED"))).orderBy(asc(s.sessions.startsAt));
   const sel = rows.find((r) => r.id === searchParams.s) ?? rows.find((r) => r.flyerStatus === "PENDING") ?? rows[0];
   return (
     <>
       <PageTitle title={`Session flyers · ${deptName}`} sub="After the Scientific Committee approves your session content, its flyer is generated here for your final approval. Once you approve, the flyer is locked; later changes can be made only through the Scientific Sessions Chairperson." />
+      <DeptSwitcher list={deptsWith(u.depts, "dept.flyers")} current={deptName} back="/admin/dept/flyers" />
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{searchParams.saved === "APPROVED" ? "Flyer approved and locked." : "Sent back to the Scientific Committee with your note."}</p>}
       {searchParams.err === "note" && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">Say what needs to change before sending the flyer back.</p>}
       {!rows.length ? <div className="a-card p-10 text-center text-sm text-slate-500">No approved sessions yet. The flyer appears here as soon as the Scientific Committee approves your session.</div> : (

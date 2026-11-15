@@ -8,7 +8,8 @@ import { nextNumber, pad } from "./counters";
 import { appUrl, randomToken } from "./utils";
 import { basicInfo, sendRegistrationNotice } from "./registration";
 import { GUEST_ROLES, normaliseCnic } from "./reg-fields";
-import { DEPARTMENTS } from "./scientific";
+import { deptPeople } from "./dept-notify";
+import { isListedDepartment } from "./departments";
 
 /** Guests Registration Form 2027 (speaker, chairperson, moderator, panelist; HOD sign-off) and Volunteers Registration Form 2027
  *  (Chairperson Facilitation Committee sign-off). Both are free and need approval before the pass is valid. */
@@ -16,7 +17,7 @@ export const guestInput = z.intersection(basicInfo, z.object({
   regType: z.literal("GUEST"),
   guestRole: z.enum(["INVITED_SPEAKER", "CHAIRPERSON", "MODERATOR", "PANELIST"], { errorMap: () => ({ message: "Choose a category" }) }),
   guestSession: z.string().trim().min(3, "Required").max(200),
-  department: z.string().refine((v) => DEPARTMENTS.includes(v), "Choose the department"),
+  department: z.string().trim().min(2, "Choose the department").max(120), // checked against the department list in createGuest
 }));
 export const volunteerInput = z.intersection(basicInfo, z.object({
   regType: z.literal("VOLUNTEER"),
@@ -31,6 +32,7 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
   if (!cat) throw new Error("Guest and volunteer registration is not set up. Run the database update.");
   const [dup] = await db.select({ regNo: s.registrations.regNo }).from(s.registrations).where(and(eq(s.registrations.email, input.email), eq(s.registrations.regType, input.regType)));
   if (dup) throw new Error(`This email is already registered as a ${input.regType === "GUEST" ? "guest" : "volunteer"} (${dup.regNo}).`);
+  if (input.regType === "GUEST" && !(await isListedDepartment(input.department))) throw new Error("Choose the department from the list.");
   const year = String(editionYear(ev)), prefix = (ev.regPrefix || "SYM").toUpperCase();
   const regNo = `${prefix}-${year}-${pad(await nextNumber(`reg-${prefix}-${year}`), 5)}`;
   const [r] = await db.insert(s.registrations).values({
@@ -38,7 +40,7 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
     email: input.email, phone: input.phone, whatsapp: input.whatsapp || null, address: input.address, country: input.country || "Pakistan", province: input.province || null, city: input.city,
     cnic: normaliseCnic(input.cnic, input.country), pmdcNo: input.pmdcNo || null, qualification: input.qualification || null, institution: input.institution,
     categoryId: cat.id, hasPass: true, conferenceFee: 0, totalFee: 0, paymentStatus: "WAIVED", paymentMethod: "Complimentary", approvalStatus: "PENDING",
-    department: input.department, guestRole: input.regType === "GUEST" ? input.guestRole : null, guestSession: input.regType === "GUEST" ? input.guestSession : null,
+    department: input.regType === "GUEST" ? input.department : null, volunteerDepartment: input.regType === "VOLUNTEER" ? input.department : null, guestRole: input.regType === "GUEST" ? input.guestRole : null, guestSession: input.regType === "GUEST" ? input.guestSession : null,
     academicYear: input.regType === "VOLUNTEER" ? input.academicYear : null,
   }).returning();
   const what = input.regType === "GUEST" ? `as ${GUEST_ROLES[input.guestRole]} (${input.guestSession})` : "as a volunteer";
@@ -46,7 +48,7 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
   await sendTemplate("GUEST_RECEIVED", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, role: what, reg_no: regNo, approver, link: `${appUrl()}/register/success/${r.accessToken}` }, { ref: regNo }).catch(() => {});
   // tell the approvers
   const approvers = input.regType === "GUEST"
-    ? await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "HOD"), eq(s.users.department, input.department), eq(s.users.active, true)))
+    ? await deptPeople(input.department, "dept.guests")
     : await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "FACILITATION_CHAIR"), eq(s.users.active, true)));
   for (const a of approvers) await sendTemplate("GUEST_TO_APPROVE", a.email, {
     name: a.name, author_name: `${r.title} ${r.firstName} ${r.lastName}`, institution: r.institution, role: what, reg_no: regNo,

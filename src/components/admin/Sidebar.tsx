@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AtSign, MessageSquareText, CreditCard, UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
-import { can, ROLE_LABEL, type Perm } from "@/lib/permissions";
+import { can, DEPT_ROLE_LABEL, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
@@ -39,7 +39,7 @@ const ITEMS: { href: string; label: string; I: any; p: Perm }[] = [
   { href: "/admin/users", label: "Users & Roles", I: UserCog, p: "users" },
 ];
 
-export function Sidebar({ user }: { user: { name: string; email: string; role: string } }) {
+export function Sidebar({ user }: { user: { name: string; email: string; role: string; perms: string[]; depts: { department: string; role: string }[] } }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const nav = (
@@ -50,7 +50,7 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
         <div className="leading-tight"><p className="font-display text-sm font-bold text-white">9th LNH Symposium</p><p className="text-[10px] uppercase tracking-[0.2em] text-lnh-sky">Admin console</p></div>
       </div>
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
-        {ITEMS.filter((i) => can(user.role, i.p)).map(({ href, label, I }) => {
+        {ITEMS.filter((i) => can(user, i.p)).map(({ href, label, I }) => {
           const on = href === "/admin" || href === "/admin/dept" ? path === href : path.startsWith(href);
           return (
             <li key={href}>
@@ -64,7 +64,9 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
       <div className="border-t border-white/10 p-4">
         <Link href="/" target="_blank" className="mb-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white"><ExternalLink className="h-3.5 w-3.5" />View website</Link>
         <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-        <p className="truncate text-xs text-slate-400">{ROLE_LABEL[user.role] ?? user.role}</p>
+        <p className="truncate text-xs text-slate-400">{user.role === "DEPARTMENT" && user.depts.length ? "Department staff" : ROLE_LABEL[user.role] ?? user.role}</p>
+        {user.depts.slice(0, 3).map((d) => <p key={d.department} className="truncate text-[11px] text-slate-500">{d.department} · {DEPT_ROLE_LABEL[d.role as keyof typeof DEPT_ROLE_LABEL] ?? d.role}</p>)}
+        {user.depts.length > 3 && <p className="text-[11px] text-slate-500">+{user.depts.length - 3} more departments</p>}
         <form action="/api/admin/logout" method="POST"><button className="mt-3 flex items-center gap-2 text-xs text-slate-400 hover:text-lnh-rose"><LogOut className="h-3.5 w-3.5" />Sign out</button></form>
       </div>
     </nav>

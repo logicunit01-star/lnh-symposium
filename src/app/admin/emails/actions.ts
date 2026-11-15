@@ -16,7 +16,7 @@ export async function saveTemplate(key: string, f: FormData) {
   const def = DEFAULT_TEMPLATES[key as TemplateKey];
   const [old] = await db.select().from(s.emailTemplates).where(eq(s.emailTemplates.key, key));
   // sender settings (mailbox, sender name, CC, reply-to): only Super Admin / Admin ("mail"); others keep what is saved
-  const mail = can(u.role, "mail");
+  const mail = can(u, "mail");
   const EMAILS = /^([^@\s,;]+@[^@\s,;]+\.[^@\s,;]+)(\s*,\s*[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+)*$/;
   const cc = str(f, "cc"), replyTo = str(f, "replyTo");
   if (mail && cc && !EMAILS.test(cc)) redirect(`/admin/emails?t=${key}&err=cc`);

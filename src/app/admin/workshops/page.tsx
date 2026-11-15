@@ -30,8 +30,8 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
   const alerts = lowFillAlerts(all, asOf);
   const watch = lowFillWatch(all, asOf);
   const tierTotal = tiers.reduce((a, t) => a + t.amount, 0);
-  const canReview = can(u.role, "workshops.review");
-  const canEdit = (r: (typeof rows)[number]) => !r.w.locked && (can(u.role, "workshops.edit") || (!sc.all && can(u.role, "workshops.submit")));
+  const canReview = can(u, "workshops.review");
+  const canEdit = (r: (typeof rows)[number]) => !r.w.locked && (can(u, "workshops.edit") || (!sc.all && can(u, "workshops.submit")));
   const q = (o: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
     const m = { status, week, dept, day, asOf: searchParams.asOf, ...o };
@@ -43,8 +43,8 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
     <>
       <PageTitle title="Workshop Programme"
         sub={sc.all ? "Committee console: registrations, capacity, income and the approval queue for the pre-symposium workshops. Updates live as people register."
-          : `Department view: ${sc.department === "__none__" ? "no department set on your user — ask the Super Admin" : sc.department}. You see only your department's workshops.`} />
-      <WpTabs active="dash" pending={k.pendingNew + k.pendingRevision} canSubmit={can(u.role, "workshops.submit")} canVenues={can(u.role, "venues")} canCheckin={can(u.role, "checkin")} />
+          : sc.departments.length ? `Department view: ${sc.departments.join(", ")}. You see only your department's workshops.` : "Department view: you are not linked to a department yet. Ask the Super Admin (Users & roles)."} />
+      <WpTabs active="dash" pending={k.pendingNew + k.pendingRevision} canSubmit={can(u, "workshops.submit")} canVenues={can(u, "venues")} canCheckin={can(u, "checkin")} />
       {searchParams.denied && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">You don’t have access to that section.</p>}
       {searchParams.deleted && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Request withdrawn.</p>}
 
@@ -158,11 +158,11 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
                 <td className="whitespace-nowrap text-right text-xs font-semibold">
                   <Link href={`/admin/workshops/${r.w.id}`} className="text-lnh-blue hover:underline">View</Link>
                   {canEdit(r) && <> · <Link href={`/admin/workshops/${r.w.id}/edit`} className="text-lnh-blue hover:underline">Edit</Link></>}
-                  {(canReview || can(u.role, "workshops.edit")) && !r.w.locked && <> · <Link href={`/admin/workshops/${r.w.id}#review`} className="text-lnh-red hover:underline">Action</Link></>}
+                  {(canReview || can(u, "workshops.edit")) && !r.w.locked && <> · <Link href={`/admin/workshops/${r.w.id}#review`} className="text-lnh-red hover:underline">Action</Link></>}
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={8} className="py-10 text-center text-sm text-slate-400">No workshops match. {can(u.role, "workshops.submit") && <Link href="/admin/workshops/new" className="text-lnh-blue underline">Submit a request</Link>}</td></tr>}
+            {!rows.length && <tr><td colSpan={8} className="py-10 text-center text-sm text-slate-400">No workshops match. {can(u, "workshops.submit") && <Link href="/admin/workshops/new" className="text-lnh-blue underline">Submit a request</Link>}</td></tr>}
           </tbody>
         </table>
       </div>

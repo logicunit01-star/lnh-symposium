@@ -151,22 +151,7 @@ export async function saveFee(id: number | null, f: FormData) {
 }
 
 // ---------------- users ----------------
-export async function saveUser(id: string | null, f: FormData) {
-  await requirePerm("users");
-  const pw = str(f, "password");
-  const data: any = { name: str(f, "name")!, email: str(f, "email")!.toLowerCase(), role: str(f, "role") as any, department: str(f, "department"), active: bool(f, "active") };
-  if (pw) { if (pw.length < 8) throw new Error("Password must be at least 8 characters"); data.passwordHash = await bcrypt.hash(pw, 10); }
-  // N5 (13 Nov): one department focal person per department
-  if (data.role === "FOCAL_PERSON") {
-    if (!data.department) redirect(`/admin/users?err=${encodeURIComponent("Set the department for the focal person.")}`);
-    const others = await db.select({ id: s.users.id, name: s.users.name }).from(s.users).where(and(eq(s.users.role, "FOCAL_PERSON"), eq(s.users.department, data.department), eq(s.users.active, true)));
-    const other = others.find((o) => o.id !== id);
-    if (other && data.active) redirect(`/admin/users?err=${encodeURIComponent(`${data.department} already has a focal person (${other.name}). Deactivate that login first.`)}`);
-  }
-  if (id) await db.update(s.users).set(data).where(eq(s.users.id, id));
-  else { if (!pw) throw new Error("Password required for new users"); await db.insert(s.users).values(data); }
-  revalidatePath("/admin/users");
-}
+// Users & roles: see users/actions.ts (15 Nov 2026)
 
 // ---------------- messages ----------------
 export async function toggleMessage(id: string, handled: boolean) {

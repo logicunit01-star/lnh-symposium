@@ -3,7 +3,7 @@ import { db, schema as s } from "@/lib/db";
 import { getEvent } from "@/lib/event";
 import { sessionFlyerPdf } from "@/lib/pdf";
 import { currentUser } from "@/lib/auth";
-import { can } from "@/lib/permissions";
+import { can, deptsWith } from "@/lib/permissions";
 import { SESSION_FORMATS } from "@/lib/scientific";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +16,8 @@ export async function GET(_: Request, { params }: { params: { slug: string } }) 
   const ev = await getEvent();
   if (ses.flyerStatus !== "APPROVED" || !ev.programmeReleasedAt) {
     const u = await currentUser();
-    let ok = !!u && can(u.role, "programme");
-    if (u && !ok && can(u.role, "dept.flyers")) {
-      const [me] = await db.select({ d: s.users.department }).from(s.users).where(eq(s.users.id, u.sub));
-      ok = !!me?.d && me.d === ses.department;
-    }
+    let ok = !!u && can(u, "programme");
+    if (u && !ok) ok = !!ses.department && deptsWith(u.depts, "dept.flyers").includes(ses.department);
     if (!ok) return new Response("This flyer is not published yet.", { status: 404 });
   }
   const pdf = await sessionFlyerPdf({

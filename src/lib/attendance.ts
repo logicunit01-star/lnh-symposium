@@ -1,11 +1,12 @@
 import "server-only";
-import { eq } from "drizzle-orm";
-import { db, schema as s } from "./db";
-import type { Claims } from "./auth-edge";
+import type { Staff } from "./auth";
+import { can, deptsWith } from "./permissions";
 
-/** The focal person sees only their own department; committee and admins see every department. */
-export async function attendanceScope(u: Claims) {
-  if (u.role !== "FOCAL_PERSON") return { department: null as string | null };
-  const [me] = await db.select({ department: s.users.department }).from(s.users).where(eq(s.users.id, u.sub));
-  return { department: me?.department || "__none__" };
+/**
+ * Committee and admins (global "attendance" permission) see every department; a focal person sees only the
+ * departments where they are the focal person. departments = null means all.
+ */
+export async function attendanceScope(u: Staff) {
+  if (can(u, "attendance")) return { departments: null as string[] | null };
+  return { departments: deptsWith(u.depts, "attendance") };
 }

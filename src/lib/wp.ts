@@ -12,8 +12,8 @@ export const DECISION_LABEL: Record<string, string> = { RUN: "Run as planned", M
 export const LOW_FILL = 0.4;
 export const DECISION_DAYS = 7;
 
-export type Scope = { all: boolean; department: string | null };
-const scopeWhere = (sc: Scope): SQL | undefined => (sc.all ? undefined : eq(s.sessions.department, sc.department ?? "__none__"));
+export type Scope = { all: boolean; departments: string[] };
+const scopeWhere = (sc: Scope): SQL | undefined => (sc.all ? undefined : sc.departments.length ? inArray(s.sessions.department, sc.departments) : sql`false`);
 
 const ACTIVE = sql`r.payment_status in ('PENDING','PAID','WAIVED')`;
 
@@ -80,7 +80,7 @@ export function wpKpis(rows: WpRow[], seatTarget: number) {
 
 /** Paid income split by registrant tier (Student / Employee / General / Foreign). */
 export async function revenueByTier(sc: Scope) {
-  const deptFilter = sc.all ? sql`true` : sql`exists (select 1 from registration_items ri join sessions se on se.id = ri.session_id where ri.registration_id = r.id and se.department = ${sc.department})`;
+  const deptFilter = sc.all ? sql`true` : sql`exists (select 1 from registration_items ri join sessions se on se.id = ri.session_id where ri.registration_id = r.id and se.department in ${sc.departments.length ? sql`(${sql.join(sc.departments.map((d) => sql`${d}`), sql`, `)})` : sql`(null)`})`;
   // Registration Forms 2027: fee tiers follow designation, so the registrant type is derived from the registration itself
   const res = await db.execute(sql`
     select t.tier, count(*)::int as n, coalesce(sum(t.total_fee),0)::int as amount from (

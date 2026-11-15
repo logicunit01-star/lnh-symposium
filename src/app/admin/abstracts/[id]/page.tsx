@@ -15,7 +15,7 @@ export default async function AbstractDetail({ params, searchParams }: { params:
   if (!a) notFound();
   const depts = await db.select({ name: s.departments.name }).from(s.departments).orderBy(asc(s.departments.name));
   const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building, active: s.venues.active }).from(s.venues).orderBy(asc(s.venues.building), asc(s.venues.name));
-  const review = can(u.role, "abstracts.review");
+  const review = can(u, "abstracts.review");
   return (
     <>
       <p className="mb-2 text-sm"><Link href="/admin/abstracts" className="text-lnh-blue hover:underline">← Abstracts</Link></p>
@@ -63,7 +63,7 @@ export default async function AbstractDetail({ params, searchParams }: { params:
               <select name="venueId" defaultValue={a.venueId ?? ""} className="a-input"><option value="">No venue yet</option>{venues.filter((v) => v.active || v.id === a.venueId).map((v) => <option key={v.id} value={v.id}>{v.name} · {v.building}</option>)}</select>
               <input name="placement" defaultValue={a.placement ?? ""} maxLength={200} placeholder={a.acceptedAs === "POSTER" ? "Poster board no., display day / time" : "Slot, order, remarks"} className="a-input" />
               <button className="a-btn-ghost w-full">Save venue</button>
-              {can(u.role, "venues") && <Link href="/admin/venues" className="block text-center text-xs text-lnh-blue hover:underline">Add or update venues</Link>}
+              {can(u, "venues") && <Link href="/admin/venues" className="block text-center text-xs text-lnh-blue hover:underline">Add or update venues</Link>}
             </form>
           )}
           {review && (

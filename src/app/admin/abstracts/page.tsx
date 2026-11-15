@@ -28,7 +28,7 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
     db.select({ unnotified: sql<number>`count(*)::int` }).from(s.abstracts).where(and(sql`status in ('ACCEPTED','REJECTED')`, isNull(s.abstracts.authorNotifiedAt))),
   ]);
   const venues = await db.select({ id: s.venues.id, name: s.venues.name, building: s.venues.building }).from(s.venues).where(and(eq(s.venues.active, true), ne(s.venues.usage, "WORKSHOP"))).orderBy(asc(s.venues.building), asc(s.venues.name));
-  const canAssign = can(u.role, "abstracts.review");
+  const canAssign = can(u, "abstracts.review");
   const here = `/admin/abstracts${Object.keys(searchParams).length ? "?" + new URLSearchParams(searchParams as any).toString() : ""}`;
   const cnt = (k: string) => counts.find((x) => x.k === k)?.n ?? 0;
   const qs = new URLSearchParams(Object.entries(searchParams).filter(([k, v]) => v && k !== "page" && k !== "notified") as any).toString();
@@ -38,13 +38,13 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
     <>
       <PageTitle title="Abstracts" sub="Each speciality's HOD reviews and decides in the department portal (Accept, Reject or Return to the Symposium Secretariat). Returned abstracts are reassigned here (Phase 2). Decisions are emailed on the scheduled date."
         actions={<>
-          {can(u.role, "venues") && <Link href="/admin/venues" className="a-btn-ghost">Venue master</Link>}
+          {can(u, "venues") && <Link href="/admin/venues" className="a-btn-ghost">Venue master</Link>}
           <a href="/api/admin/export/abstracts" className="a-btn-ghost">Export CSV</a>
           <Link href="/abstracts/book?preview=1" className="a-btn-ghost">e-Abstract book</Link>
-          {can(u.role, "abstracts.review") && unnotified > 0 && <form action={notifyDecisions}><button className="a-btn-ghost" title={job ? `Scheduled for ${fmtDateTime(job.runAt)}` : undefined}>Email {unnotified} decision{unnotified > 1 ? "s" : ""} now</button></form>}
+          {can(u, "abstracts.review") && unnotified > 0 && <form action={notifyDecisions}><button className="a-btn-ghost" title={job ? `Scheduled for ${fmtDateTime(job.runAt)}` : undefined}>Email {unnotified} decision{unnotified > 1 ? "s" : ""} now</button></form>}
         </>} />
       {searchParams.notified && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{searchParams.notified} decision email(s) sent.</p>}
-      {unnotified > 0 && <p className="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">{unnotified} decided abstract(s) not yet emailed. {job ? <>Decision emails are scheduled for <b>{fmtDateTime(job.runAt)}</b> (after the agenda is finalised). </> : "No decision dispatch is scheduled. "}{can(u.role, "emails") && <Link href="/admin/emails?tab=schedule" className="text-lnh-blue underline">Manage the email schedule</Link>}</p>}
+      {unnotified > 0 && <p className="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">{unnotified} decided abstract(s) not yet emailed. {job ? <>Decision emails are scheduled for <b>{fmtDateTime(job.runAt)}</b> (after the agenda is finalised). </> : "No decision dispatch is scheduled. "}{can(u, "emails") && <Link href="/admin/emails?tab=schedule" className="text-lnh-blue underline">Manage the email schedule</Link>}</p>}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stage.map(([k, l]) => (
           <Link key={k} href={`/admin/abstracts?status=${k}`} className={`a-card p-3 ${searchParams.status === k ? "border-lnh-blue" : ""}`}><p className="font-display text-2xl font-bold text-slate-900">{cnt(k)}</p><p className="text-xs text-slate-500">{l}</p></Link>

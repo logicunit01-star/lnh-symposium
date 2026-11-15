@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function AbstractBook({ searchParams }: { searchParams: { q?: string; dept?: string; preview?: string } }) {
   const ev = await getEvent();
   const staff = await currentUser();
-  const preview = !!searchParams.preview && can(staff?.role, "abstracts");
+  const preview = !!searchParams.preview && can(staff, "abstracts");
   const open = !!ev.programmeReleasedAt || preview;
   const q = (searchParams.q ?? "").trim();
   const rows = open ? await db.query.abstracts.findMany({

@@ -1,6 +1,6 @@
 // LNH Symposium — database schema (PostgreSQL, Drizzle ORM)
 import {
-  pgTable, pgEnum, text, integer, boolean, timestamp, serial, real, jsonb, primaryKey, uniqueIndex, index,
+  pgTable, pgEnum, type AnyPgColumn, text, integer, boolean, timestamp, serial, real, jsonb, primaryKey, uniqueIndex, index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -104,11 +104,11 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: roleEnum("role").notNull().default("VIEWER"),
-  department: text("department"), // HOD scoping
+  role: text("role").$type<Role>().notNull().default("VIEWER"), // global role (lib/permissions ROLE_PERMS); department roles are in user_departments
   phone: text("phone"),
   active: boolean("active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  signedOutAt: timestamp("signed_out_at", { withTimezone: true }), // sign-ins issued before this are no longer accepted (password reset, deactivation)
   createdAt: created(),
 });
 
@@ -142,13 +142,43 @@ export const committee = pgTable("committee_members", {
 /** Departments / specialities (master list). Abstract review state per department lives here. */
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
+  // every department field in the database must hold a name from this table (foreign keys, ON UPDATE CASCADE: a rename here updates them all)
   name: text("name").notNull().unique(),
+  code: text("code"), // short code, e.g. CARD
+  kind: text("kind").notNull().default("CLINICAL"), // CLINICAL | NON_CLINICAL | ALLIED
+  email: text("email"), // official department email
+  needsReview: boolean("needs_review").notNull().default(false), // added by the migration from an unrecognised spelling: rename or merge it
   order: integer("order").notNull().default(0),
   active: boolean("active").notNull().default(true),
   p1SubmittedAt: timestamp("p1_submitted_at", { withTimezone: true }), // HOD sent Phase 1 decisions back
   p2Required: boolean("p2_required").notNull().default(false), // new abstracts assigned in Phase 2
   p2SubmittedAt: timestamp("p2_submitted_at", { withTimezone: true }),
 });
+
+/** People of a department and their role in it (15 Nov 2026). One role per person per department; a person may belong to several departments. */
+export const userDepartments = pgTable("user_departments", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  department: text("department").notNull().references(() => departments.name, { onUpdate: "cascade" }),
+  role: text("role").$type<"HEAD" | "COORDINATOR" | "FOCAL_PERSON">().notNull(),
+  createdAt: created(),
+}, (t) => ({ pk: primaryKey({ columns: [t.userId, t.department] }), dIdx: index("ud_dept_idx").on(t.department) }));
+
+/** Contributing departments of a workshop (replaces the comma-separated "contributors" text). */
+export const sessionDepartments = pgTable("session_departments", {
+  sessionId: text("session_id").notNull().references(() => sessions.id, { onDelete: "cascade" }),
+  department: text("department").notNull().references(() => departments.name, { onUpdate: "cascade" }),
+}, (t) => ({ pk: primaryKey({ columns: [t.sessionId, t.department] }) }));
+
+/** Who changed which staff login (role, departments, status, password) and when. */
+export const staffAudit = pgTable("staff_audit", {
+  id: id(),
+  actor: text("actor").notNull(),
+  targetId: text("target_id"),
+  target: text("target").notNull(),
+  action: text("action").notNull(),
+  detail: text("detail"),
+  createdAt: created(),
+}, (t) => ({ tIdx: index("sa_target_idx").on(t.targetId) }));
 
 /** Uploaded agenda template document per session format (SC V1.0: "Agenda template for each format must be uploaded"). Stored base64, max 5 MB. */
 export const agendaTemplateFiles = pgTable("agenda_template_files", {
@@ -187,7 +217,7 @@ export const sessions = pgTable("sessions", {
   title: text("title").notNull(),
   description: text("description"),
   track: text("track"),
-  department: text("department"),
+  department: text("department").references((): AnyPgColumn => departments.name, { onUpdate: "cascade" }),
   format: text("format"), // Simulation, Hands-on, Lecture, Panel, Drill
   status: text("status").notNull().default("APPROVED"), // DRAFT | SUBMITTED | UNDER_REVIEW | APPROVED | REJECTED
   day: integer("day").notNull().default(1), // 0 = pre-conference workshop
@@ -203,7 +233,6 @@ export const sessions = pgTable("sessions", {
   // Workshop request (Form A) + committee workflow
   category: text("category"), // A = Multidisciplinary, B = Departmental
   themeWeek: integer("theme_week"),
-  contributors: text("contributors"), // contributing departments
   venueId: text("venue_id").references(() => venues.id, { onDelete: "set null" }),
   leadFaculty: text("lead_faculty"),
   facultyDegrees: text("faculty_degrees"),
@@ -360,7 +389,8 @@ export const registrations = pgTable("registrations", {
   regType: text("reg_type").notNull().default("PARTICIPANT"),
   guestRole: text("guest_role"), // INVITED_SPEAKER | CHAIRPERSON | MODERATOR | PANELIST
   guestSession: text("guest_session"),
-  department: text("department"),
+  department: text("department").references((): AnyPgColumn => departments.name, { onUpdate: "cascade" }), // guests: the department that invited them (department list)
+  volunteerDepartment: text("volunteer_department"), // volunteers: their own department / programme, free text
   academicYear: text("academic_year"),
   approvalStatus: text("approval_status"), // guests and volunteers: PENDING | APPROVED | REJECTED
   approvedBy: text("approved_by"),
@@ -434,7 +464,7 @@ export const abstracts = pgTable("abstracts", {
   email: text("email").notNull(),
   qualification: text("qualification"),
   qualificationYear: integer("qualification_year"),
-  specialty: text("specialty").notNull(),
+  specialty: text("specialty").notNull().references((): AnyPgColumn => departments.name, { onUpdate: "cascade" }),
   authors: text("authors").notNull(),
   presentingAuthor: text("presenting_author").notNull(),
   abstractTitle: text("abstract_title").notNull(),
@@ -454,7 +484,7 @@ export const abstracts = pgTable("abstracts", {
   sections: jsonb("sections").$type<Record<string, string>>(),
   coAuthors: jsonb("co_authors").$type<{ name: string; affiliation: string }[]>().notNull().default([]),
   titleKey: text("title_key"), // normalised title for duplicate checks
-  assignedDept: text("assigned_dept"), // department currently reviewing
+  assignedDept: text("assigned_dept").references((): AnyPgColumn => departments.name, { onUpdate: "cascade" }), // department currently reviewing
   phase: integer("phase").notNull().default(1),
   hodDecision: text("hod_decision"), // ACCEPT_ORAL | ACCEPT_POSTER | REJECT | BACK
   hodScores: jsonb("hod_scores").$type<Record<string, number>>(),
@@ -680,7 +710,7 @@ export type Session = typeof sessions.$inferSelect;
 export type Speaker = typeof speakers.$inferSelect;
 export type Registration = typeof registrations.$inferSelect;
 export type EventSettings = typeof event.$inferSelect;
-export type Role = (typeof roleEnum.enumValues)[number];
+export type Role = Exclude<(typeof roleEnum.enumValues)[number], "HOD" | "FOCAL_PERSON"> | "DEPARTMENT"; // users.role is text since 0022
 
 export type Account = typeof accounts.$inferSelect;
 export type Abstract = typeof abstracts.$inferSelect;

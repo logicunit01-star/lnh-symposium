@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const regs = await db.query.registrations.findMany({ orderBy: asc(s.registrations.createdAt), with: { category: true, items: { with: { session: true } } } });
   const rows = regs.filter((r) => !sessionId || r.items.some((i) => i.sessionId === sessionId)).map((r) => ({
     RegNo: r.regNo, Title: r.title, FirstName: r.firstName, LastName: r.lastName, Gender: r.gender, Email: r.email, Phone: r.phone,
-    Type: r.regType, Approval: r.approvalStatus ?? "", GuestRole: r.guestRole ?? "", GuestSession: r.guestSession ?? "", Department: r.department ?? "", AcademicYear: r.academicYear ?? "",
+    Type: r.regType, Approval: r.approvalStatus ?? "", GuestRole: r.guestRole ?? "", GuestSession: r.guestSession ?? "", Department: r.department ?? r.volunteerDepartment ?? "", AcademicYear: r.academicYear ?? "",
     WhatsApp: r.whatsapp ?? "", CNIC: r.cnic ?? "", Qualification: r.qualification ?? "", Province: r.province ?? "", Country: r.country ?? "", EmployeeNo: r.employeeId ?? "", SymposiumPass: r.hasPass ? "Yes" : "No", BanquetIncluded: r.hasPass && r.regType === "PARTICIPANT" ? 1 : 0, ExtraBanquetPasses: r.banquetQty, BanquetFee: r.banquetFee,
     PMDC: r.pmdcNo, Specialty: r.specialty, Designation: r.designation, Institution: r.institution, City: r.city, Address: r.address,
     Category: r.category.label, ConferenceFee: r.conferenceFee, TotalFee: r.totalFee, EarlyBird: r.earlyBird ? "Yes" : "No",

@@ -34,7 +34,7 @@ async function log(sessionId: string, u: { sub: string; name: string }, from: st
 export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormResult> {
   const u = await requirePerm("workshops");
   const id = str(f, "id");
-  if (!id && !can(u.role, "workshops.submit")) return { error: "Your role cannot submit workshop requests." };
+  if (!id && !can(u, "workshops.submit")) return { error: "Your role cannot submit workshop requests." };
   const sc = await staffScope(u);
   const ev = await getEvent();
 
@@ -42,10 +42,10 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   if (id) {
     [existing] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
     if (!existing || existing.type !== "WORKSHOP") return { error: "Workshop not found." };
-    const own = !sc.all && existing.department === sc.department;
-    if (!(can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")))) return { error: "You cannot edit this request." };
+    const own = !sc.all && sc.departments.includes(existing.department ?? "");
+    if (!(can(u, "workshops.edit") || (own && can(u, "workshops.submit")))) return { error: "You cannot edit this request." };
     // D3 (13 Nov): editable until the committee decides; after that only the committee (Co-Chairs) or Super Admin can edit
-    if (existing.locked && !can(u.role, "workshops.review")) return { error: "This request is locked after the committee decision. The committee or Super Admin can still edit it." };
+    if (existing.locked && !can(u, "workshops.review")) return { error: "This request is locked after the committee decision. The committee or Super Admin can still edit it." };
   }
 
   const title = str(f, "title") ?? "";
@@ -54,7 +54,17 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   // End time follows the chosen duration (Dashboard Findings, 9 Nov: hours restricted by the workshop duration)
   const dur = int(f, "duration"), sm = Number(str(f, "startH")) * 60 + Number(str(f, "startM"));
   const end = dur >= 30 && sm + dur <= 24 * 60 ? `${String(Math.floor((sm + dur) / 60)).padStart(2, "0")}:${String((sm + dur) % 60).padStart(2, "0")}` : `${str(f, "endH")}:${str(f, "endM")}`;
-  const department = sc.all ? str(f, "department") : sc.department;
+  // department staff choose among their own departments; the database refuses a name that is not on the department list
+  const picked = str(f, "department");
+  const department = sc.all ? picked : sc.departments.length === 1 ? sc.departments[0] : sc.departments.includes(picked ?? "") ? picked : null;
+  if (!department) return { error: "Choose the owning department." };
+  const [deptRow] = await db.select({ active: s.departments.active }).from(s.departments).where(eq(s.departments.name, department));
+  if (!deptRow) return { error: "Choose the owning department from the list." };
+  const contributors = [...new Set(f.getAll("contributors").map(String).filter((d) => d && d !== department))];
+  if (contributors.length) {
+    const known = await db.select({ n: s.departments.name }).from(s.departments).where(inArray(s.departments.name, contributors));
+    if (known.length !== contributors.length) return { error: "Choose contributing departments from the list." };
+  }
   const mode = ["ONSITE", "ONLINE", "HYBRID"].includes(str(f, "mode") ?? "") ? str(f, "mode")! : "ONSITE";
   const days = Math.min(3, Math.max(1, int(f, "days", 1)));
   const venueId = mode === "ONLINE" ? null : str(f, "venueId");
@@ -95,7 +105,7 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
 
   const fee = int(f, "fee"), earlyFee = str(f, "earlyFee") ? int(f, "earlyFee") : null;
   const data = {
-    title, description: str(f, "description"), department, contributors: str(f, "contributors"), format: str(f, "format"),
+    title, description: str(f, "description"), department, format: str(f, "format"),
     category: str(f, "category") === "A" ? "A" : "B", themeWeek: themeWeekOf(date, ev.themeWeeks),
     startsAt, endsAt, venueId, hall: venue ? venue.name : "Online", capacity, days, mode, onlineLink,
     organiser, objectives, targetAudience, prelimProgramme: str(f, "prelimProgramme"), facilitatorNames, fee, earlyFee, cmeHours: str(f, "cmeHours") ? Number(str(f, "cmeHours")) : null,
@@ -116,6 +126,8 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
     sid = row.id;
     await log(sid, u, null, "SUBMITTED", "Form A submitted");
   }
+  await db.delete(s.sessionDepartments).where(eq(s.sessionDepartments.sessionId, sid!));
+  if (contributors.length) await db.insert(s.sessionDepartments).values(contributors.map((department) => ({ sessionId: sid!, department })));
   revalidatePath("/admin/workshops", "layout");
   redirect(`/admin/workshops/${sid}?saved=1`);
 }
@@ -172,8 +184,8 @@ export async function deleteWorkshop(id: string) {
   const sc = await staffScope(u);
   const [w] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
   if (!w) redirect("/admin/workshops");
-  const own = !sc.all && w.department === sc.department;
-  if (!(can(u.role, "workshops.review") || (own && can(u.role, "workshops.submit") && !w.locked))) throw new Error("You cannot withdraw this request.");
+  const own = !sc.all && sc.departments.includes(w.department ?? "");
+  if (!(can(u, "workshops.review") || (own && can(u, "workshops.submit") && !w.locked))) throw new Error("You cannot withdraw this request.");
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems).where(eq(s.registrationItems.sessionId, id));
   if (n > 0) throw new Error("This workshop has registrations. Use the Cancel decision instead.");
   await db.delete(s.sessions).where(eq(s.sessions.id, id));

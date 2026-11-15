@@ -9,7 +9,8 @@ import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { logAbstract } from "@/lib/abstracts";
 import { dayNumber, editRule, flyerLocked, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes, snapshotOriginal } from "@/lib/programme";
-import { notifyDept } from "@/lib/dept-notify";
+import { deptPeople, notifyDept } from "@/lib/dept-notify";
+import { currentDept } from "@/lib/dept";
 import { sendEmail, emailLayout } from "@/lib/notify";
 import { appUrl } from "@/lib/utils";
 import { formatToType, isSpecialFormat, SPECIAL_DEPT, slotLabel } from "@/lib/scientific";
@@ -19,8 +20,9 @@ export type ProposalResult = { error?: string; fields?: Record<string, string> }
 async function who() {
   const u = await currentUser();
   if (!u) redirect("/admin/login");
-  const [me] = await db.select({ department: s.users.department }).from(s.users).where(eq(s.users.id, u.sub));
-  return { u, dept: me?.department ?? null, isDept: u.role === "HOD" };
+  // department staff (Heads, coordinators) work on the department chosen in the department switcher
+  const isDept = !can(u, "programme.edit") && can(u, "dept.sessions");
+  return { u, dept: isDept ? currentDept(u, "dept.sessions") : null, isDept };
 }
 async function log(sessionId: string, user: { sub: string; name: string }, from: string | null, to: string, note?: string | null) {
   await db.insert(s.sessionReviews).values({ sessionId, userId: user.sub, userName: user.name, fromStatus: from, toStatus: to, note: note ?? null });
@@ -29,7 +31,7 @@ async function log(sessionId: string, user: { sub: string; name: string }, from:
 /** Department (or committee) saves the Scientific Sessions' Program Details form. */
 export async function saveProposal(_: ProposalResult, f: FormData): Promise<ProposalResult> {
   const { u, dept, isDept } = await who();
-  if (!(can(u.role, "dept.sessions") || can(u.role, "programme.edit"))) return { error: "Not allowed." };
+  if (!(can(u, "dept.sessions") || can(u, "programme.edit"))) return { error: "Not allowed." };
   let raw: any; try { raw = JSON.parse(String(f.get("data") || "{}")); } catch { return { error: "Invalid form." }; }
   if (isDept) raw.department = dept;
   else if (isSpecialFormat(raw?.sessionFormat)) raw.department = SPECIAL_DEPT;
@@ -239,7 +241,7 @@ async function savePrefill(u: { sub: string; name: string; role: string }, raw: 
     const [row] = await db.insert(s.sessions).values({ ...base, ...slotTimes(first), day: dayNumber(ev.eventDays, first.day), slug, proposal: true, status: "DRAFT", registrable: false, proposedById: u.sub } as any).returning({ id: s.sessions.id });
     sid = row.id;
     await log(sid, u, null, "DRAFT", "Pre-filled by secretariat: day/time and expected participants; department to complete");
-    const logins = await db.select({ email: s.users.email, name: s.users.name }).from(s.users).where(and(eq(s.users.department, d.department), eq(s.users.active, true)));
+    const logins = await deptPeople(d.department, "dept.sessions");
     for (const l of logins) await sendTemplate("SESSION_DETAILS_REQUEST", l.email, {
       name: l.name, department: d.department, session_time: slotOf(ev.sessionSlots, first.key) ? `${first.day} ${first.start}–${first.end}` : null,
       participants: String(d.expectedAudience ?? ""), link: `${appUrl()}/admin/dept/sessions?edit=${sid}`,

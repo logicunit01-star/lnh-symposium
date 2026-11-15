@@ -35,8 +35,13 @@ async function main() {
   const demo = process.env.SEED_DEMO !== "0";
   if (demo) {
     if (!pw) throw new Error("SEED_ADMIN_PASSWORD is required when SEED_DEMO is enabled.");
-    for (const u of DEMO_STAFF) {
+    await seedDepartments(db); // before the demo staff: their department roles need the department list
+    for (const { department, deptRole, ...u } of DEMO_STAFF) {
       await db.insert(s.users).values({ ...u, role: u.role as any, passwordHash: await bcrypt.hash(pw, 10) }).onConflictDoNothing();
+      if (department && deptRole) {
+        const [row] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, u.email));
+        if (row) await db.insert(s.userDepartments).values({ userId: row.id, department, role: deptRole }).onConflictDoNothing();
+      }
     }
   }
 

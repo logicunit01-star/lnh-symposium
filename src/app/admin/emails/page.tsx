@@ -37,8 +37,8 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   );
   const head = (
     <>
-      <PageTitle title="Automated emails" sub={`Every email the site sends has a template here, grouped by type. Each one can use its own mailbox, sender name, CC and reply-to${can(u.role, "mail") ? "" : " (set by the Super Admin / Admin)"}. Mailboxes and the delivery mode: Email settings.`}
-        actions={can(u.role, "mail") ? <Link href="/admin/email-settings" className="a-btn-ghost">Email settings</Link> : undefined} />
+      <PageTitle title="Automated emails" sub={`Every email the site sends has a template here, grouped by type. Each one can use its own mailbox, sender name, CC and reply-to${can(u, "mail") ? "" : " (set by the Super Admin / Admin)"}. Mailboxes and the delivery mode: Email settings.`}
+        actions={can(u, "mail") ? <Link href="/admin/email-settings" className="a-btn-ghost">Email settings</Link> : undefined} />
       {autoRan.length > 0 && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Due dispatches ran now: {autoRan.join("; ")}</p>}
       {Tabs}
     </>
@@ -130,7 +130,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   const preview = renderTemplate(sel, { ...SAMPLE_VARS, event_name: ev.name, contact_email: ev.contactEmail });
   const mailboxes = await db.select({ id: s.mailAccounts.id, label: s.mailAccounts.label, fromName: s.mailAccounts.fromName, fromAddress: s.mailAccounts.fromAddress, isDefault: s.mailAccounts.isDefault, active: s.mailAccounts.active }).from(s.mailAccounts);
   const dflt = mailboxes.find((m) => m.isDefault && m.active) ?? mailboxes.find((m) => m.active);
-  const editSender = can(u.role, "mail");
+  const editSender = can(u, "mail");
   const SC = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"].includes(sel.key);
   return (
     <>

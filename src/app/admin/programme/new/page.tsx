@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listDepartments } from "@/lib/departments";
 import { asc, eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
@@ -11,7 +12,7 @@ export default async function NewProposal({ searchParams }: { searchParams: { fo
   await requirePerm("programme.edit");
   const ev = await getEvent();
   const special = searchParams.format === "PLENARY" || searchParams.format === "DEBATE" ? searchParams.format : null;
-  const depts = await db.select({ name: s.departments.name }).from(s.departments).where(eq(s.departments.active, true)).orderBy(asc(s.departments.name));
+  const depts = (await listDepartments()).map((name) => ({ name }));
   return (
     <>
       <p className="mb-2 text-sm"><Link href="/admin/programme" className="text-lnh-blue hover:underline">← Scientific programme</Link></p>

@@ -9,10 +9,12 @@ import { SCORE_CRITERIA, SCORE_OPTIONS, SCORE_KEY, SECTIONS, PREF_LABEL, KIND_LA
 import { cn, fmtDateTime } from "@/lib/utils";
 import { deptDecide, deptSubmit } from "../actions";
 
+import { DeptSwitcher } from "@/components/admin/DeptSwitcher";
+import { deptsWith } from "@/lib/permissions";
 export const metadata = { title: "Abstract review" };
 
 export default async function DeptAbstracts({ searchParams }: { searchParams: { saved?: string; err?: string; sent?: string } }) {
-  const { dept, deptName } = await requireDept("dept.abstracts");
+  const { u, dept, deptName } = await requireDept("dept.abstracts");
   const ev = await getEvent();
   const w = reviewWindow(ev);
   const rows = await db.select().from(s.abstracts).where(eq(s.abstracts.assignedDept, deptName)).orderBy(asc(s.abstracts.phase), asc(s.abstracts.refNo));
@@ -31,6 +33,7 @@ export default async function DeptAbstracts({ searchParams }: { searchParams: { 
   return (
     <>
       <PageTitle title={`Abstract review · ${deptName}`} sub={`Phase 1: ${ev.abstractP1Open ? fmtDateTime(ev.abstractP1Open) : "—"} to ${ev.abstractP1Close ? fmtDateTime(ev.abstractP1Close) : "—"} · Phase 2 (reassigned abstracts): ${ev.abstractP2Open ? fmtDateTime(ev.abstractP2Open) : "—"} to ${ev.abstractP2Close ? fmtDateTime(ev.abstractP2Close) : "—"}`} />
+      <DeptSwitcher list={deptsWith(u.depts, "dept.abstracts")} current={deptName} back="/admin/dept/abstracts" />
       {msg && <p className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">{msg}</p>}
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved {searchParams.saved}.</p>}
       {searchParams.sent && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Decisions sent to the symposium secretariat. You can still see the accepted and rejected lists below.</p>}

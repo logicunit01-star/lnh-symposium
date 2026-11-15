@@ -15,14 +15,16 @@ export const dynamic = "force-dynamic";
 export default async function Attendance({ searchParams }: { searchParams: { w?: string; saved?: string; certs?: string; err?: string; d?: string } }) {
   const u = await requirePerm("attendance");
   const scope = await attendanceScope(u);
-  const dept = scope.department ?? (searchParams.d || null);
-  const depts = scope.department ? [] : await db.selectDistinct({ d: s.sessions.department }).from(s.sessions)
+  // a focal person of several departments picks among them; committee and admins among all departments with workshops
+  const depts: string[] = scope.departments ?? await db.selectDistinct({ d: s.sessions.department }).from(s.sessions)
     .where(and(eq(s.sessions.type, "WORKSHOP"), eq(s.sessions.status, "APPROVED"))).orderBy(asc(s.sessions.department)).then((r) => r.map((x) => x.d).filter(Boolean) as string[]);
+  const dept = scope.departments ? (scope.departments.includes(searchParams.d ?? "") ? searchParams.d! : scope.departments.length === 1 ? scope.departments[0] : null) : (searchParams.d || null);
+  const deptFilter = dept ? eq(s.sessions.department, dept) : scope.departments ? (scope.departments.length ? inArray(s.sessions.department, scope.departments) : sql`false`) : undefined;
   const workshops = await db.select({
     w: s.sessions,
     paid: sql<number>`(select count(*) from registration_items ri join registrations r on r.id = ri.registration_id where ri.session_id = sessions.id and r.payment_status in ('PAID','WAIVED'))::int`,
     verified: sql<number>`(select count(*) from registration_items ri where ri.session_id = sessions.id and ri.verified_at is not null)::int`,
-  }).from(s.sessions).where(and(eq(s.sessions.type, "WORKSHOP"), eq(s.sessions.status, "APPROVED"), dept ? eq(s.sessions.department, dept) : undefined))
+  }).from(s.sessions).where(and(eq(s.sessions.type, "WORKSHOP"), eq(s.sessions.status, "APPROVED"), deptFilter))
     .orderBy(asc(s.sessions.startsAt));
   const sel = workshops.find((x) => x.w.id === searchParams.w)?.w ?? null;
   const people = sel ? await db.select({ i: s.registrationItems, r: s.registrations }).from(s.registrationItems)
@@ -35,11 +37,11 @@ export default async function Attendance({ searchParams }: { searchParams: { w?:
 
   return (
     <>
-      <PageTitle title="Workshop attendance" sub={`${scope.department ? `${scope.department}: confirm` : "Department focal persons confirm"} who attended each workshop. The workshop e-certificate is emailed automatically once attendance is confirmed and the participant has submitted the feedback form.`} />
-      {scope.department === "__none__" && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">Your login has no department. Ask the Super Admin to set it in Users &amp; Roles.</p>}
-      {!scope.department && (
+      <PageTitle title="Workshop attendance" sub={`${scope.departments?.length === 1 ? `${scope.departments[0]}: confirm` : "Department focal persons confirm"} who attended each workshop. The workshop e-certificate is emailed automatically once attendance is confirmed and the participant has submitted the feedback form.`} />
+      {scope.departments?.length === 0 && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">Your login is not the focal person of any department. Ask the Super Admin (Users &amp; roles).</p>}
+      {(!scope.departments || scope.departments.length > 1) && (
         <form className="mb-4 flex flex-wrap items-end gap-2"><div><label className="a-label">Department</label>
-          <select name="d" defaultValue={dept ?? ""} className="a-input"><option value="">All departments</option>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>
+          <select name="d" defaultValue={dept ?? ""} className="a-input"><option value="">{scope.departments ? "All my departments" : "All departments"}</option>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>
           <button className="a-btn-ghost">Show</button></form>
       )}
       <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -47,7 +49,7 @@ export default async function Attendance({ searchParams }: { searchParams: { w?:
           {workshops.length ? workshops.map(({ w, paid, verified }) => (
             <Link key={w.id} href={`/admin/attendance?w=${w.id}${searchParams.d ? `&d=${encodeURIComponent(searchParams.d)}` : ""}`} className={cn("block px-4 py-3 hover:bg-slate-50", sel?.id === w.id && "bg-lnh-blue/5")}>
               <p className="text-sm font-semibold text-slate-900">{w.title}</p>
-              <p className="text-xs text-slate-500">{when(w)}{!scope.department && w.department ? ` · ${w.department}` : ""}</p>
+              <p className="text-xs text-slate-500">{when(w)}{scope.departments?.length !== 1 && w.department ? ` · ${w.department}` : ""}</p>
               <p className="mt-1 text-xs"><b>{verified}</b> of {paid} confirmed</p>
             </Link>
           )) : <p className="p-4 text-sm text-slate-500">No approved workshops{dept ? ` for ${dept}` : ""} yet.</p>}

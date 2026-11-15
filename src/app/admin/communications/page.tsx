@@ -34,7 +34,7 @@ export default async function Comms({ searchParams }: { searchParams: { sent?: s
           <button className="a-btn-red">Send now</button>
           <p className="text-xs text-slate-400">Automatic reminders: schedule <code>GET /api/cron/reminders</code> (e.g. daily) — see README.</p>
         </form>
-        {can(u.role, "certificates") && (
+        {can(u, "certificates") && (
           <form action={issueCerts} className="a-card space-y-3 p-6">
             <h2 className="font-display text-lg font-bold">E-certificates</h2>
             <p className="text-sm text-slate-600">{issued} certificate(s) issued so far. Issuing assigns a unique, verifiable certificate number to each eligible participant (paid or waived) who doesn’t have one yet.</p>

@@ -4,8 +4,9 @@ import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { nextNumber, pad } from "./counters";
 import { getEvent, abstractWindow, editionYear } from "./event";
+import { isListedDepartment } from "./departments";
 import { appUrl, fmtDate, randomToken } from "./utils";
-import { DEPARTMENTS, SECTIONS, SECTION_LIMITS, ABSTRACT_TOTAL_WORDS, charLimit, titleKey, words, slotLabel } from "./scientific";
+import { SECTIONS, SECTION_LIMITS, ABSTRACT_TOTAL_WORDS, charLimit, titleKey, words, slotLabel } from "./scientific";
 import { sendTemplate } from "./email";
 
 const req = (max: number) => z.string().trim().min(1, "Required").max(max);
@@ -13,7 +14,7 @@ const req = (max: number) => z.string().trim().min(1, "Required").max(max);
 /** Abstract Submission Form (LNH, Oct 2026). */
 export const abstractInput = z.object({
   presentationPref: z.enum(["ORAL", "POSTER", "EITHER"], { errorMap: () => ({ message: "Choose a presentation format" }) }),
-  specialty: z.string().refine((v) => DEPARTMENTS.includes(v), "Choose a speciality / department"),
+  specialty: z.string().trim().min(2, "Choose a speciality / department").max(120), // checked against the department list in submitAbstract
   title: z.enum(["Prof.", "Dr.", "Mr.", "Ms."]),
   fullName: req(120), designation: req(120), organization: req(160), department: req(120),
   city: req(60), country: req(60),
@@ -38,6 +39,7 @@ export async function submitAbstract(input: AbstractInput, accountId: string) {
   const ev = await getEvent();
   const w = abstractWindow(ev);
   if (w !== "OPEN") throw new Error(w === "CLOSED" ? "Abstract submission is closed." : "Abstract submission has not opened yet.");
+  if (!(await isListedDepartment(input.specialty))) throw new FieldError("Choose a speciality / department from the list", "specialty");
   const fields = SECTIONS[input.kind];
   for (const [k, label] of fields) if (!input.sections[k]?.trim()) throw new FieldError(`${label} is required`, `s_${k}`);
   const sections = Object.fromEntries(fields.map(([k]) => [k, input.sections[k].trim()]));

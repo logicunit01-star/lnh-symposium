@@ -13,7 +13,7 @@ import { Avatar } from "@/components/ui/Avatar";
  *  appear after the agenda is finalised (programme released); staff can preview with ?preview=1. */
 export async function GuestProgrammePage({ k, preview }: { k: PageKey; preview?: boolean }) {
   const [ev, { page, guests }, staff] = await Promise.all([getEvent(), getProgrammePage(k), currentUser()]);
-  const pv = !!preview && can(staff?.role, "programme");
+  const pv = !!preview && can(staff, "programme");
   const visible = pv || (page.published && (k !== "EXPERTS" || !!ev.programmeReleasedAt));
   const [first, ...rest] = page.title.split(" ");
   return (

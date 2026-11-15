@@ -15,12 +15,12 @@ export default async function Approvals() {
   const all = await wpWorkshops(sc);
   const queue = all.filter((r) => r.w.status === "SUBMITTED" || r.w.status === "UNDER_REVIEW").sort((a, b) => +(a.w.submittedAt ?? a.w.createdAt) - +(b.w.submittedAt ?? b.w.createdAt));
   const decided = all.filter((r) => r.w.reviewedAt).sort((a, b) => +b.w.reviewedAt! - +a.w.reviewedAt!).slice(0, 10);
-  const canReview = can(u.role, "workshops.review"), canMark = can(u.role, "workshops.edit");
+  const canReview = can(u, "workshops.review"), canMark = can(u, "workshops.edit");
 
   return (
     <>
       <PageTitle title="Workshop Programme" sub="Approvals queue, oldest first. Approving publishes the workshop to the catalogue and locks its core fields." />
-      <WpTabs active="approvals" pending={queue.length} canSubmit={can(u.role, "workshops.submit")} canVenues={can(u.role, "venues")} canCheckin={can(u.role, "checkin")} />
+      <WpTabs active="approvals" pending={queue.length} canSubmit={can(u, "workshops.submit")} canVenues={can(u, "venues")} canCheckin={can(u, "checkin")} />
       <div className="space-y-4">
         {queue.map((r) => (
           <article key={r.w.id} className="a-card grid gap-4 p-5 lg:grid-cols-[1fr_320px]">
@@ -45,7 +45,7 @@ export default async function Approvals() {
             ) : <p className="text-sm text-slate-500">Awaiting committee review.</p>}
           </article>
         ))}
-        {!queue.length && <div className="a-card px-4 py-12 text-center text-sm text-slate-400">No requests waiting. {can(u.role, "workshops.submit") && <Link className="text-lnh-blue underline" href="/admin/workshops/new">Submit one</Link>}</div>}
+        {!queue.length && <div className="a-card px-4 py-12 text-center text-sm text-slate-400">No requests waiting. {can(u, "workshops.submit") && <Link className="text-lnh-blue underline" href="/admin/workshops/new">Submit one</Link>}</div>}
       </div>
 
       {decided.length > 0 && (

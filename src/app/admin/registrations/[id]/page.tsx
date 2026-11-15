@@ -12,7 +12,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
   const u = await requirePerm("registrations");
   const r = await loadRegistration({ id: params.id });
   if (!r) notFound();
-  const edit = can(u.role, "registrations.edit");
+  const edit = can(u, "registrations.edit");
   const logs = await db.select().from(s.notificationLog).where(eq(s.notificationLog.to, r.email)).orderBy(desc(s.notificationLog.createdAt)).limit(10);
   const paid = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
   return (
@@ -27,7 +27,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
         <div className="space-y-6 lg:col-span-2">
           <div className="a-card p-5">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              {[["Type", r.regType === "GUEST" ? `Guest · ${r.guestRole ?? ""} · ${r.guestSession ?? ""} (${r.department ?? ""})` : r.regType === "VOLUNTEER" ? `Volunteer · ${r.department ?? ""} · ${r.academicYear ?? ""}` : "Participant"], ...(r.regType !== "PARTICIPANT" ? [["Approval", `${r.approvalStatus ?? "PENDING"}${r.approvedBy ? ` · ${r.approvedBy}` : ""}`]] : []),
+              {[["Type", r.regType === "GUEST" ? `Guest · ${r.guestRole ?? ""} · ${r.guestSession ?? ""} (${r.department ?? ""})` : r.regType === "VOLUNTEER" ? `Volunteer · ${r.volunteerDepartment ?? ""} · ${r.academicYear ?? ""}` : "Participant"], ...(r.regType !== "PARTICIPANT" ? [["Approval", `${r.approvalStatus ?? "PENDING"}${r.approvedBy ? ` · ${r.approvedBy}` : ""}`]] : []),
                 ["Email", r.email], ["Contact", r.phone], ["WhatsApp", r.whatsapp], ["CNIC / passport", r.cnic], ["Gender", r.gender], ["PMDC no.", r.pmdcNo], ["Qualification", r.qualification], ["Specialty", r.specialty], ["Designation", r.designation], ["Institution", r.institution],
                 ["Address", [r.address, r.city, r.province, r.country].filter(Boolean).join(", ")], ["Category", r.category.label], ["Symposium Pass", r.hasPass ? "Yes (all symposium sessions)" : "No (workshop tickets only)"], ["Banquet passes", r.hasPass || r.banquetQty ? `${(r.hasPass && r.regType === "PARTICIPANT" ? 1 : 0) + r.banquetQty} (${r.hasPass && r.regType === "PARTICIPANT" ? "1 included" : "none included"}${r.banquetQty ? ` + ${r.banquetQty} extra, ${r.banquetFee.toLocaleString()} PKR` : ""})` : "None"], ["Early-bird", r.earlyBird ? "Yes" : "No"], ["Registered", r.source === "ONSITE" ? "At the onsite desk" : "Online"], ["LNH employee #", r.employeeId]].map(([k, v]) => (
                 <div key={k as string}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{v || "—"}</dd></div>
@@ -44,7 +44,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
                   <tr key={i.id}>
                     <td>{i.session.title}<p className="text-xs text-slate-400">{fmtDateTime(i.session.startsAt)} · {i.session.hall}</p></td>
                     <td>{i.fee ? pkr(i.fee) : "Included"}</td>
-                    <td>{can(u.role, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt)}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? `✓ ${fmtDateTime(i.attendedAt)}` : "Mark attended"}</button></form> : i.attendedAt ? "Yes" : "—"}</td>
+                    <td>{can(u, "checkin") ? <form action={itemAttend.bind(null, i.id, !!i.attendedAt)}><button className={i.attendedAt ? "badge bg-emerald-100 text-emerald-700" : "a-btn-ghost py-1 text-xs"}>{i.attendedAt ? `✓ ${fmtDateTime(i.attendedAt)}` : "Mark attended"}</button></form> : i.attendedAt ? "Yes" : "—"}</td>
                   </tr>
                 ))}
                 <tr><td className="font-semibold">Total</td><td className="font-bold">{pkr(r.totalFee)}</td><td /></tr>
@@ -87,7 +87,7 @@ export default async function RegDetail({ params }: { params: { id: string } }) 
           <div className="a-card p-5">
             <p className="text-xs text-slate-500">Event check-in</p>
             <p className="mt-1 font-semibold">{r.checkedInAt ? `Checked in ${fmtDateTime(r.checkedInAt)}` : "Not checked in"}</p>
-            {can(u.role, "checkin") && <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)} className="mt-3"><button className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red"}>{r.checkedInAt ? "Undo check-in" : "Check in now"}</button></form>}
+            {can(u, "checkin") && <form action={regCheckIn.bind(null, r.id, !!r.checkedInAt)} className="mt-3"><button className={r.checkedInAt ? "a-btn-ghost" : "a-btn-red"}>{r.checkedInAt ? "Undo check-in" : "Check in now"}</button></form>}
             {r.certificateNo && <p className="mt-4 text-xs text-slate-500">Certificate <b className="text-slate-800">{r.certificateNo}</b></p>}
           </div>
           {edit && (

@@ -33,7 +33,7 @@ async function main() {
     await db.insert(s.abstracts).values({
       refNo: `ABS27-${type === "ORAL" ? "O" : "P"}${pad(await nextNumber("abs-27"), 3)}`, type: type as any, title: "Dr.", gender: pick(["Male", "Female"]), firstName: pick(first), lastName: pick(last),
       organization: pick(inst), department: pick(["Medicine", "Surgery", "Community Medicine", "Radiology", "Nursing"]), city: "Karachi", country: "Pakistan", mobile: "0300-1234567", email: `author${i}@example.com`,
-      specialty: pick(["Health Economics", "Internal Medicine", "Radiology", "Nursing", "Health Informatics / IT"]), authors: "A. Author; B. Author; C. Author", presentingAuthor: "A. Author",
+      specialty: pick(["Community Medicine", "Internal Medicine", "Radiology", "Nursing", "Health Profession Education"]), authors: "A. Author; B. Author; C. Author", presentingAuthor: "A. Author",
       abstractTitle: pick(titles), body: "Introduction: Placeholder text for demo purposes.\n\nMethods: A cross-sectional study.\n\nResults: Demo results.\n\nConclusions: Demo conclusion.", wordCount: 22,
       status: pick(["SUBMITTED", "SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED"]) as any,
     });

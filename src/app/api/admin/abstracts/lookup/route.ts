@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Agenda form (SC feedback): entering an abstract ID fills in its title, presenting author and co-authors. Staff only. */
 export async function GET(req: Request) {
   const u = await currentUser();
-  if (!u || !(can(u.role, "dept.sessions") || can(u.role, "programme.edit"))) return Response.json({ error: "Not allowed" }, { status: 401 });
+  if (!u || !(can(u, "dept.sessions") || can(u, "programme.edit"))) return Response.json({ error: "Not allowed" }, { status: 401 });
   const ref = (new URL(req.url).searchParams.get("ref") || "").trim().toUpperCase();
   if (!/^ABS-\d{4}-\d{3,}$/.test(ref)) return Response.json({ found: false });
   const [a] = await db.select().from(s.abstracts).where(eq(s.abstracts.refNo, ref));

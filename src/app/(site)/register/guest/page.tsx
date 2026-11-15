@@ -1,7 +1,7 @@
 import { PageHero } from "@/components/ui/PageHero";
 import { getEvent } from "@/lib/event";
 import { guestCodeOk } from "@/lib/guest-access";
-import { DEPARTMENTS } from "@/lib/scientific";
+import { listDepartments } from "@/lib/departments";
 import { GuestForm } from "../GuestForm";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function GuestRegistration({ searchParams }: { searchParams
     <>
       <PageHero eyebrow="Guests registration form" title={<>Invited <span className="text-grad">guests</span></>}
         sub="For invited speakers, chairpersons, moderators and panelists of the scientific sessions. Approved by the Head of your session's department." />
-      <div className="container-x max-w-4xl"><GuestForm code={searchParams.code} kind="GUEST" departments={[...DEPARTMENTS].sort()} /></div>
+      <div className="container-x max-w-4xl"><GuestForm code={searchParams.code} kind="GUEST" departments={await listDepartments()} /></div>
     </>
   );
 }

@@ -7,7 +7,7 @@ import { CampusMap } from "@/components/CampusMap";
 
 type V = { id: string; name: string; building: string; floor: string | null; capacity: number; onlineFacility: string | null; equipment: string | null; mapX: number; mapY: number; directions: string | null };
 export type WorkshopInitial = {
-  id?: string; title?: string; category?: string | null; department?: string | null; contributors?: string | null; format?: string | null;
+  id?: string; title?: string; category?: string | null; department?: string | null; contributors?: string[]; format?: string | null;
   date?: string; start?: string; end?: string; venueId?: string | null; capacity?: number | null; fee?: number; earlyFee?: number | null; cmeHours?: number | null;
   description?: string | null; leadFaculty?: string | null; facultyDegrees?: string | null; facultyContact?: string | null; facultyProfile?: string | null;
   facilitators?: number; volunteers?: number; technicians?: number; equipment?: { item: string; qty: number; source: string }[];
@@ -36,13 +36,13 @@ function Submit({ edit, blocked }: { edit: boolean; blocked?: boolean }) {
   return <button disabled={pending || blocked} className="a-btn-red">{pending ? "Saving…" : edit ? "Save changes" : "Submit for review"}</button>;
 }
 
-export function WorkshopForm({ venues, weeks, window, fixedDepartment, departments, init = {}, committee = false }: {
-  venues: V[]; weeks: { from: string; label: string }[]; window: { from: string; to: string; today?: string }; fixedDepartment: string | null; departments: string[]; init?: WorkshopInitial;
+export function WorkshopForm({ venues, weeks, window, fixedDepartment, departments, ownDepartments, init = {}, committee = false }: {
+  venues: V[]; weeks: { from: string; label: string }[]; window: { from: string; to: string; today?: string }; fixedDepartment: string | null; departments: string[]; ownDepartments?: string[]; init?: WorkshopInitial;
   committee?: boolean; // D3: the committee or Super Admin is editing (also after the decision)
 }) {
   const [mode, setMode] = useState(init.mode ?? "ONSITE");
   const online = mode === "ONLINE";
-  const [contrib, setContrib] = useState<string[]>(() => (init.contributors ?? "").split(",").map((x) => x.trim()).filter(Boolean));
+  const [contrib, setContrib] = useState<string[]>(() => init.contributors ?? []);
   const ddRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => { // the departments drop-down closes on a click outside it
     const f = (e: MouseEvent) => { if (ddRef.current?.open && !ddRef.current.contains(e.target as Node)) ddRef.current.open = false; };
@@ -105,9 +105,9 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
           <div><L>Format</L><select name="format" defaultValue={init.format ?? "Hands-on"} className="a-input">{FORMATS.map((x) => <option key={x}>{x}</option>)}</select></div>
           <div><L hint={fixedDepartment ? "(your department)" : undefined}>Owning department</L>
             {fixedDepartment ? <input value={fixedDepartment} readOnly className="a-input bg-slate-50" />
-              : <select name="department" required defaultValue={init.department ?? ""} className="a-input"><option value="" disabled>Choose department…</option>{init.department && !departments.includes(init.department) && <option>{init.department}</option>}{departments.map((d) => <option key={d}>{d}</option>)}</select>}</div>
+              : <select name="department" required defaultValue={init.department ?? ""} className="a-input"><option value="" disabled>Choose department…</option>{init.department && !(ownDepartments ?? departments).includes(init.department) && <option>{init.department}</option>}{(ownDepartments ?? departments).map((d) => <option key={d}>{d}</option>)}</select>}</div>
           <div><L hint="(multidisciplinary; optional)">Contributing departments</L>
-            <input type="hidden" name="contributors" value={contrib.join(", ")} />
+            {contrib.map((d) => <input key={d} type="hidden" name="contributors" value={d} />)}
             <details ref={ddRef} className="a-input relative cursor-pointer p-0">
               <summary className="list-none px-3 py-2 text-sm">{contrib.length ? contrib.join(", ") : <span className="text-slate-400">Choose departments…</span>}</summary>
               <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-lg">

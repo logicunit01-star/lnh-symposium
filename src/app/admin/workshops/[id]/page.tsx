@@ -25,10 +25,10 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
     db.select().from(s.waitlist).where(eq(s.waitlist.sessionId, w.id)).orderBy(asc(s.waitlist.createdAt)),
     db.select().from(s.venues),
   ]);
-  const own = !sc.all && w.department === sc.department;
-  const canEdit = (!w.locked || can(u.role, "workshops.review")) && (can(u.role, "workshops.edit") || (own && can(u.role, "workshops.submit")));
-  const canReview = can(u.role, "workshops.review");
-  const canMark = can(u.role, "workshops.edit");
+  const own = !sc.all && sc.departments.includes(w.department ?? "");
+  const canEdit = (!w.locked || can(u, "workshops.review")) && (can(u, "workshops.edit") || (own && can(u, "workshops.submit")));
+  const canReview = can(u, "workshops.review");
+  const canMark = can(u, "workshops.edit");
   const free = w.capacity ? Math.max(0, w.capacity - row.booked) : 0;
   const daysTo = Math.ceil((w.startsAt.getTime() - Date.now()) / 864e5);
   const weekLabel = w.themeWeek ? ev.themeWeeks[w.themeWeek - 1]?.label : null;
@@ -43,7 +43,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
           {canEdit && <Link href={`/admin/workshops/${w.id}/edit`} className="a-btn-ghost"><Pencil className="h-4 w-4" />Edit</Link>}
           {w.status === "APPROVED" && <a href={`/workshops/${w.slug}/flyer`} className="a-btn-ghost"><Download className="h-4 w-4" />{w.flyerStatus === "APPROVED" ? "Flyer PDF" : "Flyer preview"}</a>}
           {w.status === "APPROVED" && <Link href={`/workshops#${w.slug}`} target="_blank" className="a-btn-ghost"><ExternalLink className="h-4 w-4" />Catalogue</Link>}
-          {can(u.role, "sessions") && <Link href={`/admin/sessions/${w.id}`} className="a-btn-primary"><Users className="h-4 w-4" />Participants</Link>}
+          {can(u, "sessions") && <Link href={`/admin/sessions/${w.id}`} className="a-btn-primary"><Users className="h-4 w-4" />Participants</Link>}
         </>} />
 
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved. The committee sees this request in the approvals queue.</p>}
@@ -71,7 +71,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
               <F l="Time (24h)" v={<span className="font-mono">{row.time}</span>} />
               <F l="Venue" v={w.mode === "ONLINE" ? "Online" : venue ? `${venue.name}, ${venue.building}` : w.hall} />
               <F l="Seat cap" v={w.capacity} /><F l="Fee" v={pkr(w.fee)} /><F l="CME hours" v={w.cmeHours} />
-              <F l="Format" v={w.format} /><F l="Contributing departments" v={w.contributors} /><F l="Submitted" v={w.submittedAt ? fmtDateTime(w.submittedAt) : null} />
+              <F l="Format" v={w.format} /><F l="Contributing departments" v={(await db.select({ d: s.sessionDepartments.department }).from(s.sessionDepartments).where(eq(s.sessionDepartments.sessionId, w.id))).map((x) => x.d).join(", ") || null} /><F l="Submitted" v={w.submittedAt ? fmtDateTime(w.submittedAt) : null} />
               <F l="Mode" v={{ ONSITE: "Onsite", ONLINE: "Online", HYBRID: "Hybrid" }[w.mode] ?? w.mode} /><F l="Organising person" v={w.organiser} /><F l="Target audience" v={w.targetAudience} />
               {w.onlineLink && <F l="Online link" v={<a href={w.onlineLink} className="break-all text-lnh-blue hover:underline" target="_blank" rel="noreferrer">{w.onlineLink}</a>} />}
               {w.proposedTitle && w.proposedTitle !== w.title && <F l="Proposed title" v={w.proposedTitle} />}

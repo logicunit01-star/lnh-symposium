@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listDepartments } from "@/lib/departments";
 import { asc, desc, eq } from "drizzle-orm";
 import { BookOpen, CalendarClock, FileText, ShieldCheck } from "lucide-react";
 import { db, schema as s } from "@/lib/db";
@@ -18,7 +19,7 @@ export default async function Abstracts() {
   const ev = await getEvent();
   const w = abstractWindow(ev);
   const a = await currentAccount();
-  const depts = await db.select({ name: s.departments.name }).from(s.departments).where(eq(s.departments.active, true)).orderBy(asc(s.departments.name));
+  const depts = (await listDepartments()).map((name) => ({ name }));
   const mine = a ? await db.select().from(s.abstracts).where(eq(s.abstracts.accountId, a.id)).orderBy(desc(s.abstracts.createdAt)) : [];
   const O = SECTION_LIMITS.ORIGINAL, C = SECTION_LIMITS.CASE;
   const guidelines = [

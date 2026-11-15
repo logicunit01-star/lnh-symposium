@@ -1,14 +1,21 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { sendTemplate } from "./email";
 import type { TemplateKey } from "./email-templates";
 import type { MergeVars } from "./email-templates";
+import { DEPT_ROLE_PERMS, DEPT_ROLES, type Perm } from "./permissions";
 
-/** Email every active department (HOD) login of a speciality with a template. */
-export async function notifyDept(department: string, key: TemplateKey, vars: MergeVars) {
-  const logins = await db.select({ email: s.users.email, name: s.users.name }).from(s.users)
-    .where(and(eq(s.users.department, department), eq(s.users.role, "HOD"), eq(s.users.active, true)));
+/** Active people of a department whose department role grants permission p (e.g. dept.guests = the Heads). */
+export async function deptPeople(department: string, p: Perm) {
+  const roles = DEPT_ROLES.filter((r) => DEPT_ROLE_PERMS[r].includes(p));
+  return db.select({ email: s.users.email, name: s.users.name }).from(s.userDepartments).innerJoin(s.users, eq(s.users.id, s.userDepartments.userId))
+    .where(and(eq(s.userDepartments.department, department), inArray(s.userDepartments.role, roles), eq(s.users.active, true)));
+}
+
+/** Email the department's people who handle its scientific sessions (Heads and coordinators) with a template. */
+export async function notifyDept(department: string, key: TemplateKey, vars: MergeVars, p: Perm = "dept.sessions") {
+  const logins = await deptPeople(department, p);
   for (const l of logins) await sendTemplate(key, l.email, { name: l.name, department, ...vars }, { ref: String(vars.session_name ?? department) });
   return logins.length;
 }

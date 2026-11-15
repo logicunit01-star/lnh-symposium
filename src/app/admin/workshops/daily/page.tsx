@@ -23,7 +23,7 @@ export default async function Daily({ searchParams }: { searchParams: { date?: s
     <>
       <div className="print:hidden">
         <PageTitle title="Workshop Programme" sub="Daily requirements: one consolidated sheet per day for the Duty Officer, Skill Lab and stores." />
-        <WpTabs active="daily" pending={0} canSubmit={can(u.role, "workshops.submit")} canVenues={can(u.role, "venues")} canCheckin={can(u.role, "checkin")} />
+        <WpTabs active="daily" pending={0} canSubmit={can(u, "workshops.submit")} canVenues={can(u, "venues")} canCheckin={can(u, "checkin")} />
         <div className="mb-5 flex flex-wrap items-center gap-2">
           {dates.map((d) => (
             <Link key={d} href={`/admin/workshops/daily?date=${d}`} className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold ring-1", d === date ? "bg-lnh-navy text-white ring-lnh-navy" : "bg-white text-slate-600 ring-slate-200 hover:ring-slate-400")}>
