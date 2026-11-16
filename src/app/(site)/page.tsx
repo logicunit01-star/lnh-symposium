@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Bot, BrainCircuit, CalendarDays, FileText, Images, MapPin, Network, Play, Sparkles } from "lucide-react";
-import { getEvent, isEarlyBird, eventDays, eventDaysLabel, DAY_THEMES, GALLERY_DEFAULT, TICKER_DEFAULT } from "@/lib/event";
+import { ArrowRight, ArrowUpRight, Bot, BrainCircuit, CalendarDays, FileText, Images, Network, Play, Sparkles } from "lucide-react";
+import { getEvent, isEarlyBird, eventDays, eventDaysLabel, homeText, GALLERY_DEFAULT, TICKER_DEFAULT } from "@/lib/event";
 import { getProgramme, getSpeakers } from "@/lib/queries";
 import { fmtDate, fmtTime, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Countdown } from "@/components/ui/Countdown";
@@ -20,12 +20,13 @@ export default async function Home() {
   const ticker = ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT;
   const teaser = ev.videos.map(youtubeId).find(Boolean);
 
+  const ht = homeText(ev); // headings and day themes from Event settings (16 Nov 2026)
   const pillars = [
-    { day: 1, I: BrainCircuit, name: "Artificial Intelligence", short: "AI", tone: "from-lnh-sky/25", accent: "text-lnh-sky",
+    { day: 1, I: BrainCircuit, name: ht.day1, short: ht.day1Short, tone: "from-lnh-sky/25", accent: "text-lnh-sky",
       text: "Clinical decision support, AI imaging, predictive early warning and the governance that makes algorithms safe at the bedside." },
-    { day: 2, I: Bot, name: "Robotics", short: "Robotics", tone: "from-lnh-red/25", accent: "text-lnh-rose",
+    { day: 2, I: Bot, name: ht.day2, short: ht.day2Short, tone: "from-lnh-red/25", accent: "text-lnh-rose",
       text: "Robotic surgery, automation in pharmacy and labs, simulation-based training — and the economics of buying a robot." },
-    { day: 3, I: Network, name: "Digitization", short: "Digitization", tone: "from-lnh-blue/35", accent: "text-lnh-blue",
+    { day: 3, I: Network, name: ht.day3, short: ht.day3Short, tone: "from-lnh-blue/35", accent: "text-lnh-blue",
       text: "Electronic records, telemedicine, interoperability and data-driven quality — building the digital hospital." },
   ];
 
@@ -51,7 +52,6 @@ export default async function Home() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
                 <span className="chip gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{eventDaysLabel(ev, "short")}</span>
-                <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />Liaquat National Hospital, Karachi</span>
               </div>
             </div>
             <div className="hero-in" style={{ animationDelay: "120ms" }}>
@@ -107,8 +107,8 @@ export default async function Home() {
       {/* ================= PILLARS ================= */}
       <section className="circuit relative py-28">
         <div className="container-x">
-          <SectionHead eyebrow="Three days · three frontiers" title={<>One theme. <span className="text-holo">Three frontiers.</span></>}
-            sub="Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care."
+          <SectionHead eyebrow={ht.frontiersEyebrow} title={<>{ht.frontiersTitle} <span className="text-holo">{ht.frontiersHighlight}</span></>}
+            sub={ht.frontiersSub}
             action={<Link href="/about" className="btn-ghost shrink-0">Learn more <ArrowRight className="h-4 w-4" /></Link>} />
           {/* homepage changes 11.11.2026: icons with the heading only (no cards, dates or descriptions) */}
           <div className="grid gap-10 sm:grid-cols-3">
@@ -159,7 +159,7 @@ export default async function Home() {
       <section className="relative overflow-hidden border-y border-white/10 py-28">
         <div className="grid-lines absolute inset-0 opacity-50" />
         <div className="container-x relative">
-          <SectionHead eyebrow="At a glance" title={<>Three days on <span className="text-holo">the frontier</span></>}
+          <SectionHead eyebrow={ht.glanceEyebrow} title={<>{ht.glanceTitle} <span className="text-holo">{ht.glanceHighlight}</span></>}
             action={<Link href="/agenda" className="btn-blue shrink-0">View full agenda <ArrowRight className="h-4 w-4" /></Link>} />
           <div className="grid gap-4 lg:grid-cols-3">
             {[1, 2, 3].map((d, i) => {
@@ -171,7 +171,7 @@ export default async function Home() {
                     <div className="flex items-baseline justify-between border-b border-white/10 pb-5">
                       <div>
                         <p className="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Day {d}</p>
-                        <p className="h-display mt-2 text-3xl text-white">{DAY_THEMES[d]}</p>
+                        <p className="h-display mt-2 text-3xl text-white">{ht[`day${d}` as "day1"] ?? ""}</p>
                       </div>
                       {date && <p className="text-right font-display text-sm text-lnh-sky">{fmtDate(date, { weekday: "short" })}<br /><span className="text-2xl font-bold text-white">{fmtDate(date, { day: "2-digit", month: "short" })}</span></p>}
                     </div>

@@ -56,6 +56,7 @@ export const event = pgTable("event", {
   videos: jsonb("videos").$type<string[]>().notNull().default([]),
   // Homepage (changes 11.11.2026): ticker text, gallery link, and pages that show only once they go live
   tickerItems: jsonb("ticker_items").$type<string[]>().notNull().default([]),
+  homeText: jsonb("home_text").$type<Partial<Record<string, string>>>().notNull().default({}), // 16 Nov 2026: see HOME_TEXT in lib/event.ts
   galleryUrl: text("gallery_url"),
   galleryThumbUrl: text("gallery_thumb_url"),
   agendaLive: boolean("agenda_live").notNull().default(false),

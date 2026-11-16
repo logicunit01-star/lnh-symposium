@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getProgramme, seatsTaken } from "@/lib/queries";
-import { getEvent, isEarlyBird, eventDays, DAY_THEMES } from "@/lib/event";
+import { getEvent, isEarlyBird, eventDays, dayThemes } from "@/lib/event";
 import { PageHero } from "@/components/ui/PageHero";
 import { AgendaTabs } from "./AgendaTabs";
 import { AgendaTools, ItineraryItem } from "./AgendaTools";
@@ -24,7 +24,7 @@ export default async function Agenda({ searchParams }: { searchParams: { type?: 
   const sub = (d: number) => {
     if (d === 0) { const ws = all.filter((p) => p.day === 0); return `Pre-conference · ${fmtDate(ws[0].startsAt, { day: "numeric", month: "short" })} – ${fmtDate(ws.at(-1)!.startsAt, { day: "numeric", month: "short" })}`; }
     const dt = evDays[d - 1] ?? all.find((p) => p.day === d)!.startsAt;
-    return `${fmtDate(dt, { weekday: "short", day: "numeric", month: "short" })} · ${DAY_THEMES[d] ?? ""}`;
+    return `${fmtDate(dt, { weekday: "short", day: "numeric", month: "short" })} · ${dayThemes(ev)[d] ?? ""}`;
   };
   const q = (k: "type" | "hall", v: string) => {
     const p = new URLSearchParams(); const t = k === "type" ? v : type; const h = k === "hall" ? v : hall;

@@ -10,6 +10,7 @@ import { sendRegistrationNotice } from "@/lib/registration";
 import { issueCertificates } from "@/lib/certificates";
 import { sendEmail, emailLayout } from "@/lib/notify";
 import { staffLog } from "@/lib/staff-audit";
+import { HOME_TEXT } from "@/lib/event";
 
 const str = (f: FormData, k: string) => { const v = f.get(k); return v == null || v === "" ? null : String(v).trim(); };
 const num = (f: FormData, k: string) => { const v = str(f, k); return v == null ? null : Number(v); };
@@ -183,6 +184,7 @@ export async function saveSettings(f: FormData) {
     facebook: str(f, "facebook"), instagram: str(f, "instagram"), linkedin: str(f, "linkedin"), youtube: str(f, "youtube"), x: str(f, "x"), whatsapp: str(f, "whatsapp"),
     ...(/^[A-Za-z0-9]{8,40}$/.test(str(f, "guestCode") ?? "") ? { guestCode: str(f, "guestCode") } : {}),
     videos: (str(f, "videos") || "").split(/\s+/).filter(Boolean),
+    homeText: Object.fromEntries(Object.keys(HOME_TEXT).map((k) => [k, (str(f, `ht_${k}`) || "").slice(0, 300)]).filter(([, v]) => v)),
     tickerItems: (str(f, "tickerItems") || "").split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 12),
     galleryUrl: str(f, "galleryUrl"), galleryThumbUrl: str(f, "galleryThumbUrl"),
     agendaLive: bool(f, "agendaLive"), speakersLive: bool(f, "speakersLive"),

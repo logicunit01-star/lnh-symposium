@@ -43,3 +43,16 @@ export function eventDaysLabel(e: { eventDays: string[]; startDate: Date; endDat
   return days.map((d) => fmt(d, { day: "numeric", month: "short" })).join(", ") + " " + fmt(days.at(-1)!, { year: "numeric" });
 }
 export const DAY_THEMES: Record<number, string> = { 1: "Artificial Intelligence", 2: "Robotics", 3: "Digitization" };
+
+/** Home page wording editable in Admin → Event settings (16 Nov 2026). An empty field uses this built-in default. */
+export const HOME_TEXT = {
+  day1: "Artificial Intelligence", day1Short: "AI", day2: "Robotics", day2Short: "Robotics", day3: "Digitization", day3Short: "Digitization",
+  frontiersEyebrow: "Three days · three frontiers", frontiersTitle: "One theme.", frontiersHighlight: "Three frontiers.",
+  frontiersSub: "Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care.",
+  glanceEyebrow: "At a glance", glanceTitle: "Three days on", glanceHighlight: "the frontier",
+} as const;
+export type HomeTextKey = keyof typeof HOME_TEXT;
+export const homeText = (e: { homeText?: Partial<Record<string, string>> | null }) =>
+  Object.fromEntries(Object.entries(HOME_TEXT).map(([k, v]) => [k, e.homeText?.[k]?.trim() || v])) as Record<HomeTextKey, string>;
+/** Day theme names (Day 1-3) as set in Event settings. */
+export const dayThemes = (e: { homeText?: Partial<Record<string, string>> | null }): Record<number, string> => { const t = homeText(e); return { 1: t.day1, 2: t.day2, 3: t.day3 }; };

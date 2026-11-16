@@ -1,0 +1,11 @@
+const { chromium } = require('playwright'); const B='http://127.0.0.1:3100';
+(async()=>{ const b=await chromium.launch(); const c=await b.newContext({viewport:{width:1366,height:900}}); const p=await c.newPage();
+ await p.goto(B+'/'); console.log('chip gone', await p.locator('text=Liaquat National Hospital, Karachi').count()===0, '| default heading', await p.locator('text=Three days on').count());
+ await c.request.post(B+'/api/admin/login',{data:{email:'admin@lnh.edu.pk',password:'ChangeMe!2026'}});
+ await p.goto(B+'/admin/settings'); await p.fill('input[name=ht_glanceTitle]','Test heading'); await p.fill('input[name=ht_day2]','Robotics & Automation');
+ await p.getByRole('button',{name:/Save/}).first().click(); await p.waitForTimeout(2000);
+ await p.goto(B+'/'); console.log('custom heading', await p.locator('text=Test heading').count(), '| day2', await p.locator('text=Robotics & Automation').count());
+ await p.goto(B+'/agenda'); console.log('agenda day2 label', await p.locator('text=/Robotics & Automation/').count());
+ await p.goto(B+'/admin/settings'); await p.fill('input[name=ht_glanceTitle]',''); await p.fill('input[name=ht_day2]',''); await p.getByRole('button',{name:/Save/}).first().click(); await p.waitForTimeout(2000);
+ await p.goto(B+'/'); console.log('back to default', await p.locator('text=Three days on').count());
+ await b.close(); })();

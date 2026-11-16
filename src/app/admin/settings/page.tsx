@@ -8,7 +8,7 @@ import { PageTitle } from "@/components/admin/ui";
 import { TZ } from "@/lib/utils";
 import { saveSettings, saveFee, resetDemoContent } from "../actions";
 import { DEFAULT_QC_GUIDELINES, SESSION_FORMATS } from "@/lib/scientific";
-import { GALLERY_DEFAULT, TICKER_DEFAULT } from "@/lib/event";
+import { GALLERY_DEFAULT, HOME_TEXT, TICKER_DEFAULT, type HomeTextKey } from "@/lib/event";
 
 const dt = (d: Date | null) => {
   if (!d) return "";
@@ -73,6 +73,13 @@ export default async function Settings({ searchParams }: { searchParams: { reset
           {ev.guestCode && <p className="mt-2 break-all text-xs text-slate-600">Invitation links to share: <b>{appUrl()}/register/guest?code={ev.guestCode}</b> · <b>{appUrl()}/register/volunteer?code={ev.guestCode}</b></p>}
         </div>
         <div className="sm:col-span-2"><label className="a-label">Homepage teaser / promo videos (YouTube URLs, one per line; the first is the main video)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
+        <p className="sm:col-span-2 mt-2 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-wider text-slate-500">Home page headings and day themes (leave a field empty for the wording shown in grey)</p>
+        {([["day1", "Day 1 theme"], ["day1Short", "Day 1 short label (hero pill)"], ["day2", "Day 2 theme"], ["day2Short", "Day 2 short label"], ["day3", "Day 3 theme"], ["day3Short", "Day 3 short label"],
+          ["frontiersEyebrow", "Themes section: small line above"], ["frontiersTitle", "Themes section: heading"], ["frontiersHighlight", "Themes section: highlighted part of the heading"], ["glanceEyebrow", "Programme section: small line above"],
+          ["glanceTitle", "Programme section: heading"], ["glanceHighlight", "Programme section: highlighted part"]] as [HomeTextKey, string][]).map(([k, l]) => (
+          <div key={k}><label className="a-label">{l}</label><input name={`ht_${k}`} defaultValue={ev.homeText?.[k] ?? ""} placeholder={HOME_TEXT[k]} maxLength={300} className="a-input" /></div>
+        ))}
+        <div className="sm:col-span-2"><label className="a-label">Themes section: text under the heading</label><textarea name="ht_frontiersSub" rows={2} defaultValue={ev.homeText?.frontiersSub ?? ""} placeholder={HOME_TEXT.frontiersSub} maxLength={300} className="a-input" /></div>
         <div className="sm:col-span-2"><label className="a-label">Homepage ticker (one message per line)</label><textarea name="tickerItems" rows={3} defaultValue={(ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT).join("\n")} className="a-input" /></div>
         <F n="galleryUrl" l="Previous symposium gallery link" v={ev.galleryUrl ?? GALLERY_DEFAULT} /><F n="galleryThumbUrl" l="Gallery thumbnail image URL (optional)" v={ev.galleryThumbUrl} />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="agendaLive" defaultChecked={ev.agendaLive} /> Agenda is live (shows "View Agenda" in the homepage hero)</label>
