@@ -56,7 +56,7 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
 
   if (prov === "paypro") {
     // PayPro: create an order (OrderNumber = txnRef), keep its PayProId, send the customer to Click2Pay
-    const name = `${reg.title} ${reg.firstName} ${reg.lastName}`.replace(/\s+/g, " ").trim();
+    const name = `${reg.firstName} ${reg.lastName}`; // no title: PayPro accepts letters only (see payProName)
     // P2: the order expires when the workshop seat hold ends, so a bank/ATM voucher cannot be paid after the seats are released
     const expiresAt = await payBy(registrationId);
     try {

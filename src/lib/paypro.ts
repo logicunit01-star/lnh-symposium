@@ -85,16 +85,22 @@ export async function testSignIn(c: { base: string; clientId: string; clientSecr
 
 const pkDate = (d: Date) => { const p = new Date(d.getTime() + 5 * 3600_000); return `${String(p.getUTCDate()).padStart(2, "0")}/${String(p.getUTCMonth() + 1).padStart(2, "0")}/${p.getUTCFullYear()}`; };
 
+/** PayPro: "[CustomerName] should only contain alphabets!" (16 Nov 2026, "Dr. aamir khan" refused). Letters and single
+ *  spaces only: titles' dots, hyphens, apostrophes and digits are removed; accents are reduced to plain letters. */
+export const payProName = (n: string) =>
+  n.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z ]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "Participant";
 /** expiresAt (P2, 16 Nov 2026): the order stops being payable then (the workshop seat hold); none = due in PAYPRO_DUE_DAYS, no expiry. */
 export async function createOrder(o: { orderNumber: string; amount: number; name: string; mobile?: string; email?: string; expiresAt?: Date | null }) {
   const c = await ppConfig(), now = new Date();
   const secs = o.expiresAt ? Math.max(900, Math.floor((+o.expiresAt - +now) / 1000)) : 0;
   const due = o.expiresAt ? new Date(+now + secs * 1000) : new Date(+now + c.dueDays * 864e5);
-  const r = await authed(c, "POST", "/v2/ppro/co", [{ MerchantId: c.merchantId }, {
+  const send = (name: string) => authed(c, "POST", "/v2/ppro/co", [{ MerchantId: c.merchantId }, {
     OrderNumber: o.orderNumber, OrderAmount: String(o.amount), OrderDueDate: pkDate(due), OrderType: "Service",
-    IssueDate: pkDate(now), OrderExpireAfterSeconds: String(secs), CustomerName: o.name.slice(0, 100), CustomerMobile: (o.mobile || "").replace(/[^\d+]/g, ""), CustomerEmail: o.email || "", CustomerAddress: "",
+    IssueDate: pkDate(now), OrderExpireAfterSeconds: String(secs), CustomerName: name, CustomerMobile: (o.mobile || "").replace(/[^\d+]/g, ""), CustomerEmail: o.email || "", CustomerAddress: "",
   }]);
-  const j = parse(r.body), f = flat(j);
+  let r = await send(payProName(o.name)), j = parse(r.body), f = flat(j);
+  // if PayPro also refuses spaces, send the name without them
+  if (/customername/i.test(String(f.description || f.message || ""))) { r = await send(payProName(o.name).replace(/ /g, "") || "Participant"); j = parse(r.body); f = flat(j); }
   const payProId = f.payproid ?? f.payproId ?? f.cpayid, click2Pay = f.click2pay;
   if (r.status >= 400 || String(f.status ?? "00") !== "00" || !payProId || !click2Pay) throw new Error(`PayPro could not create the order: ${f.description || f.message || r.status}`);
   return { payProId: String(payProId), click2Pay: String(click2Pay), raw: j };
