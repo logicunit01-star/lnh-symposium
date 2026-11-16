@@ -13,9 +13,9 @@ type Cat = { id: number; label: string; fee: number; note: string | null; design
 type Details = { gender: string; institution: string; specialty: string; whatsapp: string; cnic: string; address: string; city: string; province: string; country: string; qualification: string; employeeNo: string; pmdcNo: string };
 type Item = { title: string; kind: "WORKSHOP"; fee: number; left: number | null; when: string; tag: string | null };
 const METHODS = [
-  { k: "card", I: CreditCard, t: "Credit / debit card", s: "Visa · Mastercard" },
-  { k: "wallet", I: Smartphone, t: "Mobile wallet", s: "JazzCash · EasyPaisa" },
-  { k: "bank", I: Landmark, t: "Bank transfer", s: "Internet banking" },
+  { k: "card", I: CreditCard, t: "Cards", s: "Visa · Mastercard" },
+  { k: "wallet", I: Smartphone, t: "Wallets", s: "JazzCash · EasyPaisa" },
+  { k: "bank", I: Landmark, t: "Bank account", s: "Internet banking" },
 ];
 
 /**
@@ -29,7 +29,6 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const router = useRouter();
   const { items: cart, pass, held, remove, setPass, clear, ready } = useCart();
   const [det, setDet] = useState<Details>({ ...account, cnic: (account.country || "Pakistan") === "Pakistan" ? account.cnic.replace(/\D/g, "").slice(0, 13) : account.cnic });
-  const [method, setMethod] = useState("card");
   const [agree, setAgree] = useState(false);
   const [wsTerms, setWsTerms] = useState(false);
   // Workshop-only buyers without a pass still give a designation: it prints on the receipt and certificate
@@ -60,7 +59,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const canPay = ready && !empty && !!categoryId && !!designation && (!pass || !!passCat) && detailsOk && agree && (valid.length === 0 || wsTerms) && invalid.length === 0;
 
   async function pay() {
-    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: method, details: { ...det, cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
+    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: "PayPro", details: { ...det, cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
     if (r) { clear(); router.push(`/register/success/${r.accessToken}?checkout=1`); }
   }
 
@@ -170,7 +169,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
               <li>Registration fees is non-refundable and non-transferable.</li>
               <li>Registration will be considered complete only after the payment proof is received.</li>
               <li>Please bring record of your registration confirmation email and keep it with you all the time during the workshop.</li>
-              <li>If you encounter any issues while submitting the form, please do not hesitate to reach out to <a href="mailto:workshop.lnhsymposium2027@lnh.edu.pk" className="text-lnh-sky underline">workshop.lnhsymposium2027@lnh.edu.pk</a></li>
+              <li>If you encounter any issues while submitting the form, please do not hesitate to reach out to <a href="mailto:workshop@symposium2027.lnh.edu.pk" className="text-lnh-sky underline">workshop@symposium2027.lnh.edu.pk</a></li>
             </ol>
             <label className="mt-4 flex cursor-pointer gap-3 text-sm text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={wsTerms} onChange={(e) => setWsTerms(e.target.checked)} />I accept the terms listed above.</label>
           </div>
@@ -178,14 +177,14 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
 
         {/* payment */}
         <div className="hud p-6">
-          <p className="eyebrow">Payment method · secured by PayPro</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            {METHODS.map(({ k, I, t, s }) => (
-              <button key={k} onClick={() => setMethod(k)} className={cn("rounded-2xl border p-4 text-left transition", method === k ? "border-lnh-sky bg-lnh-sky/10 shadow-[0_0_24px_-10px_#3FB8F0]" : "border-white/10 hover:border-white/30")}>
-                <I className={cn("h-6 w-6", method === k ? "text-lnh-sky" : "text-slate-400")} />
-                <p className="mt-3 text-sm font-semibold text-white">{t}</p><p className="text-[11px] text-slate-400">{s}</p>
-              </button>
-            ))}
+          {/* 16 Nov 2026: one PayPro panel; the method is chosen on PayPro's own page */}
+          <p className="eyebrow">Payment</p>
+          <div className="mt-4 rounded-2xl border border-lnh-sky/40 bg-lnh-sky/10 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white"><Lock className="h-4 w-4 text-lnh-sky" />Pay securely with PayPro</p>
+            <p className="mt-1 text-xs text-slate-300">Accepted on the PayPro page:</p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-200">
+              {METHODS.map(({ k, I, t, s }) => <span key={k} className="flex items-center gap-1.5"><I className="h-4 w-4 text-lnh-sky" /><b className="font-semibold">{t}</b><span className="text-slate-400">{s}</span></span>)}
+            </div>
           </div>
           <p className="mt-3 flex items-center gap-2 text-xs text-slate-400"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />You will be taken to the PayPro payment page. Card details are never stored by LNH.</p>
           {contact && <p className="mt-1 text-xs text-slate-400">Payment problem? Email the symposium secretariat at <a href={`mailto:${contact}`} className="text-lnh-sky underline">{contact}</a> with your registration number.</p>}

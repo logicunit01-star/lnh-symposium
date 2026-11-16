@@ -34,6 +34,7 @@ export const MERGE_FIELDS: [string, string][] = [
   ["approver", "Who approves (HOD / Chairperson)"],
   ["institution", "Institution"],
   ["contact_email", "Symposium contact email"],
+  ["reply_email", "Address replies to this email go to (the sending mailbox)"],
   ["certificate_no", "Certificate number"],
   ["enquiry_from", "Enquiry: sender name, email and phone"],
   ["message", "Enquiry message"],
@@ -362,7 +363,7 @@ Registration ID: **{{reg_no}}**
 You will then receive a separate email with your workshop QR code and session details. Seats are limited and allocated on a first-come, first-served basis.
 
 **Need help?**
-Email: {{contact_email}} | Phone: {{contact_phone}}
+Email: Reply to this email or write to {{reply_email}} | Phone: {{contact_phone}}
 
 We look forward to welcoming you!
 
@@ -398,7 +399,8 @@ Your unique registration QR code is provided below. Please present it at the reg
 
 This QR code is unique to you. Please do not share it.
 
-**For Assistance:** {{department}} | {{contact_email}} | {{contact_phone}}
+**For Assistance:** Please reply to this email.
+{{department}} | {{reply_email}} | {{contact_phone}}
 
 We look forward to welcoming you!
 
@@ -573,6 +575,6 @@ export const SAMPLE_VARS: MergeVars = {
   qr_html: '<p style="text-align:center"><span style="display:inline-block;width:180px;height:180px;line-height:180px;background:#eef2f9;border:1px dashed #9aa8c2;color:#5b6b8c;font-size:13px">QR code</span></p>',
   contact_phone: "+92 21 111 456 456", workshop_time: "09:00 – 13:00", payment_status: "Paid", transaction_id: "LNHS2611140930AB12",
   confirm_by: "Friday 8 January 2027", schedule_update_by: "Friday 15 January 2027", registration_deadline: "Friday 15 January 2027",
-  schedule_link: "https://symposium2027.lnh.edu.pk/agenda", registration_link: "https://symposium2027.lnh.edu.pk/register", sc_email: "scientific@symposium2027.lnh.edu.pk",
+  schedule_link: "https://symposium2027.lnh.edu.pk/agenda", registration_link: "https://symposium2027.lnh.edu.pk/register", sc_email: "Symposium.Scientific@lnh.edu.pk", reply_email: "registration@symposium2027.lnh.edu.pk",
   details_html: '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:14px"><tr><td style="padding:6px 0;color:#5b6b8c">Registration No.</td><td style="font-weight:700;font-size:18px">SYM-2027-00012</td></tr><tr><td style="padding:6px 0;color:#5b6b8c">Total fee</td><td><b>PKR 6,000</b></td></tr><tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:#0b8a4c">CONFIRMED</b></td></tr></table>',
 };

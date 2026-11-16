@@ -3,6 +3,7 @@ import { and, asc, eq, lte } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { getEvent } from "./event";
 import { sendEmail, emailLayout } from "./notify";
+import { pickAccount } from "./mail-config";
 import { appUrl, fmtDateTime } from "./utils";
 import { DEFAULT_TEMPLATES, SC_KEYS, TEMPLATE_KEYS, bodyToHtml, type MergeVars, type TemplateKey } from "./email-templates";
 
@@ -14,7 +15,9 @@ export async function getTemplate(key: TemplateKey): Promise<Template> {
   const [row] = await db.select().from(s.emailTemplates).where(eq(s.emailTemplates.key, key));
   const d = DEFAULT_TEMPLATES[key];
   return row
-    ? { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, enabled: d.locked ? true : row.enabled, custom: row.subject !== d.subject || row.body !== d.body || (row.buttonLabel ?? null) !== (d.buttonLabel ?? null), updatedBy: row.updatedBy, updatedAt: row.updatedAt, accountId: row.accountId, fromName: row.fromName, cc: row.cc, replyTo: row.replyTo }
+    // rows made by the mailbox setup only assign the mailbox: their text follows the current default (16 Nov 2026)
+    ? row.updatedBy?.startsWith("Setup (") ? { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, enabled: d.locked ? true : row.enabled, custom: false, updatedBy: null, updatedAt: null, accountId: row.accountId, fromName: row.fromName, cc: row.cc, replyTo: row.replyTo }
+    : { key, subject: row.subject, body: row.body, buttonLabel: row.buttonLabel, enabled: d.locked ? true : row.enabled, custom: row.subject !== d.subject || row.body !== d.body || (row.buttonLabel ?? null) !== (d.buttonLabel ?? null), updatedBy: row.updatedBy, updatedAt: row.updatedAt, accountId: row.accountId, fromName: row.fromName, cc: row.cc, replyTo: row.replyTo }
     : { key, subject: d.subject, body: d.body, buttonLabel: d.buttonLabel ?? null, enabled: true, custom: false, updatedBy: null, updatedAt: null, accountId: null, fromName: null, cc: null, replyTo: null };
 }
 export async function allTemplates() { return Promise.all(TEMPLATE_KEYS.map(getTemplate)); }
@@ -32,6 +35,7 @@ export function renderTemplate(t: Pick<Template, "subject" | "body" | "buttonLab
  * Not set on the template: the Scientific Committee templates keep the sender name and CC from Event Settings; others use the
  * default mailbox's name. Reply-to falls back to the mailbox's reply-to, then the symposium contact email.
  */
+const REPLY_TO_SC: TemplateKey[] = ["ABSTRACT_ACCEPTED", "ABSTRACT_ACCEPTED_POSTER", "ABSTRACT_REJECTED"];
 export async function senderFor(key: TemplateKey, t?: Template) {
   const ev = await getEvent();
   const tpl = t ?? (await getTemplate(key));
@@ -41,7 +45,8 @@ export async function senderFor(key: TemplateKey, t?: Template) {
     fromName: tpl.fromName || (sc && ev.emailFrom ? ev.emailFrom.split("<")[0].trim() : null),
     from: sc ? ev.emailFrom : null,
     cc: tpl.cc ?? (sc ? ev.emailCc : null),
-    replyTo: tpl.replyTo || null,
+    // abstract outcome emails: replies go to the Scientific Committee (Waqas, 16 Nov 2026)
+    replyTo: tpl.replyTo || (REPLY_TO_SC.includes(key) ? ev.scEmail || null : null),
     fallbackReplyTo: ev.contactEmail,
   };
 }
@@ -51,8 +56,11 @@ export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars
   const ev = await getEvent();
   const t = await getTemplate(key);
   if (!t.enabled && DEFAULT_TEMPLATES[key].switchable) return "DISABLED";
-  const { subject, html } = renderTemplate(t, { event_name: ev.name, contact_email: ev.contactEmail, ...vars });
   const snd = await senderFor(key, t);
+  // {{reply_email}}: where a reply to this email goes (same order as the Reply-To header in sendEmail)
+  const acc = await pickAccount(snd.accountId).catch(() => null);
+  const reply_email = opts.replyTo || snd.replyTo || acc?.replyTo || acc?.fromAddress || ev.contactEmail;
+  const { subject, html } = renderTemplate(t, { event_name: ev.name, contact_email: ev.contactEmail, reply_email, ...vars });
   return sendEmail(to, subject, html, opts.attachments ?? [], {
     from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: opts.noCc ? null : snd.cc,
     replyTo: opts.replyTo || snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: opts.ref ?? null, priority: opts.priority,

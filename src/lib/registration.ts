@@ -17,7 +17,7 @@ const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(
 
 /** Basic information block of the Registration Forms 2027 (participants, guests and volunteers). */
 /** Workshop support address (Final LNH Workshop Registration 2027 form). */
-export const WORKSHOP_EMAIL = "workshop.lnhsymposium2027@lnh.edu.pk";
+export const WORKSHOP_EMAIL = "workshop@symposium2027.lnh.edu.pk"; // Waqas, 16 Nov 2026
 
 export const basicInfo = z.object({
   title: z.string().min(1, "Required").max(20),

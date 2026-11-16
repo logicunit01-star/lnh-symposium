@@ -24,7 +24,8 @@ export async function sendEmail(to: string, subject: string, html: string, attac
     const from = account ? fromHeader(opts.fromName || legacyName || account.fromName, account.fromAddress)
       : opts.from || process.env.MAIL_FROM || "LNH Symposium <no-reply@lnh.edu.pk>";
     let cc = opts.cc?.trim() || undefined;
-    const replyTo = opts.replyTo || account?.replyTo || opts.fallbackReplyTo || undefined;
+    // a mailbox without its own reply-to takes the replies itself (no Reply-To header); fix 16 Nov 2026
+    const replyTo = opts.replyTo || account?.replyTo || (account ? undefined : opts.fallbackReplyTo) || undefined;
     let rcpt = to, subj = subject;
     // audit 16 Nov 2026: one-time codes are never shown in the sent log, and never redirected to the Test-mode address
     const secret = opts.templateKey === "SIGN_IN_CODE";
