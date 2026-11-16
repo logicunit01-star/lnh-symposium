@@ -38,7 +38,7 @@ export async function createGuestRegistration(input: z.infer<typeof guestInput> 
   const [r] = await db.insert(s.registrations).values({
     regNo, accessToken: randomToken(), regType: input.regType, title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
     email: input.email, phone: input.phone, whatsapp: input.whatsapp || null, address: input.address, country: input.country || "Pakistan", province: input.province || null, city: input.city,
-    cnic: normaliseCnic(input.cnic, input.country), pmdcNo: input.pmdcNo || null, qualification: input.qualification || null, institution: input.institution,
+    cnic: normaliseCnic(input.cnic ?? "", input.country), pmdcNo: input.pmdcNo || null, qualification: input.qualification || null, institution: input.institution,
     categoryId: cat.id, hasPass: true, conferenceFee: 0, totalFee: 0, paymentStatus: "WAIVED", paymentMethod: "Complimentary", approvalStatus: "PENDING",
     department: input.regType === "GUEST" ? input.department : null, volunteerDepartment: input.regType === "VOLUNTEER" ? input.department : null, guestRole: input.regType === "GUEST" ? input.guestRole : null, guestSession: input.regType === "GUEST" ? input.guestSession : null,
     academicYear: input.regType === "VOLUNTEER" ? input.academicYear : null,

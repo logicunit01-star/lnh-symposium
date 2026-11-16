@@ -31,12 +31,12 @@ export const basicInfo = z.object({
   country: z.string().trim().max(60).optional().or(z.literal("")),
   province: opt(60),
   city: z.string().trim().min(2, "Required").max(60),
-  cnic: z.string().trim().min(1, "Required").max(25),
+  cnic: z.string().trim().max(25).optional().or(z.literal("")), // optional since 16 Nov 2026; checked only when entered
   pmdcNo: opt(30),
   qualification: opt(120),
   institution: z.string().trim().min(2, "Required").max(160),
 }).superRefine((d, ctx) => {
-  if (!normaliseCnic(d.cnic, d.country)) ctx.addIssue({ code: "custom", path: ["cnic"], message: !d.country || /^pakistan$/i.test(d.country) ? "Enter the 13-digit CNIC (12345-1234567-1)" : "Enter your passport number" });
+  if (d.cnic && !normaliseCnic(d.cnic, d.country)) ctx.addIssue({ code: "custom", path: ["cnic"], message: !d.country || /^pakistan$/i.test(d.country) ? "Enter the 13-digit CNIC (12345-1234567-1)" : "Enter your passport number" });
 });
 
 export const registrationInput = z.intersection(basicInfo, z.object({
@@ -131,7 +131,7 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
       regNo, accountId: opts.accountId ?? null, accessToken: randomToken(), title: input.title, gender: input.gender, firstName: input.firstName, lastName: input.lastName,
       email: input.email, phone: input.phone, pmdcNo: input.pmdcNo || null, specialty: input.specialty || null, designation: input.designation || null,
       institution: input.institution, address: input.address || null, city: input.city || null, categoryId: cat.id,
-      whatsapp: input.whatsapp || null, cnic: normaliseCnic(input.cnic, input.country), country: input.country || "Pakistan", province: input.province || null,
+      whatsapp: input.whatsapp || null, cnic: normaliseCnic(input.cnic ?? "", input.country), country: input.country || "Pakistan", province: input.province || null,
       qualification: input.qualification || null, employeeId: input.employeeNo || null, banquetQty, banquetFee, hasPass: wantPass, primaryRegId: primary?.id ?? null,
       conferenceFee, totalFee, earlyBird: wantPass && early, paymentStatus: totalFee === 0 ? "WAIVED" : "PENDING",
     }).returning();
