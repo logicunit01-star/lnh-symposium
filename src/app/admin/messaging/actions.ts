@@ -22,7 +22,7 @@ const int = (f: FormData, k: string, min: number, max: number, d: number) => { c
 
 export async function saveMessaging(f: FormData) {
   const u = await superAdmin();
-  const cur = await notifyConfig();
+  const cur = await notifyConfig({ fresh: true });
   const apiUrl = field(f, "apiUrl") || "https://api.xnotify.ai/v2/send";
   if (!/^(https:\/\/[a-z0-9.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?(\/\S*)?$/i.test(apiUrl)) return back({ err: "The API address must start with https://" });
   const key = field(f, "apiKey");
@@ -54,6 +54,11 @@ export async function testMessage(f: FormData) {
   const phone = normalisePhone(field(f, "phone")), key = field(f, "key") as NotifyMessageKey;
   if (!/^92\d{10}$/.test(phone)) return back({ test: "fail", msg: "Enter a Pakistani mobile number, e.g. 03001234567." });
   if (!(key in NOTIFY_MESSAGES)) return back({ test: "fail", msg: "Choose a message." });
+  // say exactly what is missing (16 Nov 2026)
+  const cfg = await notifyConfig({ fresh: true });
+  if (!cfg.waEnabled) return back({ test: "fail", msg: "xNotify is switched off. Tick “Send messages through xNotify” and press Save at the bottom of the form first." });
+  if (!cfg.key) return back({ test: "fail", msg: "No API key is saved. Enter it and press Save." });
+  if (!cfg.templates[key]?.wa) return back({ test: "fail", msg: `No template ID is saved for “${NOTIFY_MESSAGES[key].label}”. Enter it and press Save.` });
   const before = new Date();
   await sendMessage(key, phone, { text: `LNH Symposium: test message (${NOTIFY_MESSAGES[key].label}).`, ref: "TEST", priority: 10 });
   const rows = await db.query.notificationLog.findMany({ where: (n, { and, gte, eq }) => and(gte(n.createdAt, before), eq(n.ref, "TEST")), orderBy: (n, { desc }) => desc(n.createdAt), limit: 3 });

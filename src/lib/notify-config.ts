@@ -24,8 +24,10 @@ export type NotifyConfig = typeof s.notifySettings.$inferSelect & { key: string 
 let cache: { at: number; cfg: NotifyConfig } | null = null;
 export const clearNotifyCache = () => { cache = null; };
 
-export async function notifyConfig(): Promise<NotifyConfig> {
-  if (cache && Date.now() - cache.at < 30_000) return cache.cfg;
+// fresh: read the database now (settings page and test). On Vercel each server instance keeps its own 30 s copy,
+// so a just-saved change may not be seen by the next request otherwise (16 Nov 2026)
+export async function notifyConfig(o: { fresh?: boolean } = {}): Promise<NotifyConfig> {
+  if (!o.fresh && cache && Date.now() - cache.at < 30_000) return cache.cfg;
   const [row] = await db.select().from(s.notifySettings).where(eq(s.notifySettings.id, 1)).catch(() => []);
   const base = row ?? {
     id: 1, waEnabled: false, smsEnabled: false, apiUrl: "https://api.xnotify.ai/v2/send", apiKey: null, authId: null, authUsername: null,

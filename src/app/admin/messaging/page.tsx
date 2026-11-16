@@ -16,7 +16,7 @@ const ST: Record<string, string> = { QUEUED: "bg-amber-100 text-amber-800", SEND
 /** Super Admin (14.11.2026 Part C): eOcean xNotify for WhatsApp and SMS, template ID per message, sending limits, and the outbox. */
 export default async function Messaging({ searchParams }: { searchParams: { saved?: string; err?: string; test?: string; msg?: string } }) {
   await requirePerm("messaging");
-  const cfg = await notifyConfig();
+  const cfg = await notifyConfig({ fresh: true });
   // mailbox test emails (Email settings) are sent directly, not through the queue
   const queued = and(inArray(s.notificationLog.status, ["QUEUED", "SENDING", "FAILED"]), sql`coalesce(${s.notificationLog.templateKey}, '') <> 'TEST'`);
   const [counts, queue, recent] = await Promise.all([
