@@ -57,13 +57,20 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawText(r.regNo, { x: 40, y: 678, size: 26, font: b, color: INK });
   page.drawText(`Registered on ${fmtDateTime(r.createdAt)}`, { x: 40, y: 660, size: 9, font: f, color: GREY });
   const awaiting = !!r.regType && r.regType !== "PARTICIPANT" && r.approvalStatus !== "APPROVED";
-  const status = awaiting ? "AWAITING APPROVAL" : r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED" ? "CONFIRMED" : "PAYMENT PENDING";
+  const status = awaiting ? "AWAITING APPROVAL" : r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED" ? "CONFIRMED" : "SAVED, NOT PAID";
   page.drawRectangle({ x: 40, y: 630, width: b.widthOfTextAtSize(status, 9) + 20, height: 20, color: status === "CONFIRMED" ? rgb(0.05, 0.55, 0.3) : rgb(0.85, 0.55, 0.05) });
   page.drawText(status, { x: 50, y: 636, size: 9, font: b, color: rgb(1, 1, 1) });
 
-  const qr = await qrPng(doc, qrPayload(r));
-  page.drawImage(qr, { x: W - 40 - 110, y: 600, width: 110, height: 110 });
-  page.drawText("Show at registration desk", { x: W - 150, y: 590, size: 7, font: f, color: GREY });
+  // issues email 16 Nov 2026 (item 11): the entry QR only on a confirmed (paid) registration
+  if (status === "CONFIRMED") {
+    const qr = await qrPng(doc, qrPayload(r));
+    page.drawImage(qr, { x: W - 40 - 110, y: 600, width: 110, height: 110 });
+    page.drawText("Show at registration desk", { x: W - 150, y: 590, size: 7, font: f, color: GREY });
+  } else {
+    page.drawRectangle({ x: W - 150, y: 600, width: 110, height: 110, borderColor: rgb(0.85, 0.88, 0.94), borderWidth: 1 });
+    page.drawText("QR code after", { x: W - 128, y: 660, size: 8, font: b, color: GREY });
+    page.drawText(awaiting ? "approval" : "payment", { x: W - 122, y: 648, size: 8, font: b, color: GREY });
+  }
 
   let y = 570;
   const section = (t: string) => { page.drawText(t.toUpperCase(), { x: 40, y, size: 9, font: b, color: BLUE }); y -= 6; page.drawLine({ start: { x: 40, y }, end: { x: W - 40, y }, thickness: 0.5, color: rgb(0.85, 0.88, 0.94) }); y -= 16; };

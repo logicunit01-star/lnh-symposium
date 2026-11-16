@@ -15,6 +15,8 @@ export default async function FeedbackIndex() {
       <p className="eyebrow">Your feedback</p>
       <h1 className="h-display mt-4 text-3xl text-white sm:text-4xl">Rate the sessions you attended</h1>
       <p className="mt-3 text-slate-300">Choose a session or workshop to give feedback. It takes under a minute.</p>
+      {/* item 5 (16 Nov 2026): feedback on the symposium as a whole */}
+      <Link href="/feedback/symposium" className="hud mt-6 flex min-h-[56px] items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.04]"><span><span className="block font-semibold text-white">The symposium as a whole</span><span className="text-sm text-slate-400">For participants who attended the symposium</span></span><span className="shrink-0 text-sm text-lnh-sky">Give feedback</span></Link>
       {days.map((d) => (
         <div key={d} className="mt-8">
           <h2 className="font-display text-lg font-bold text-white">{d}</h2>

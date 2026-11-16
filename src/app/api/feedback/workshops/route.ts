@@ -29,6 +29,8 @@ export async function POST(req: Request) {
   if (!row) return fail("This workshop is not on your registration.", 404);
   if (!row.w.feedbackOpen) return fail("Feedback for this workshop is closed.", 403);
   if (row.w.startsAt > new Date()) return fail("Feedback opens when the workshop starts.", 403);
+  // issues email 16 Nov 2026 (item 4): feedback only from participants who attended (scanned at the door or confirmed by the department)
+  if (!row.i.attendedAt && !row.i.verifiedAt) return fail("Feedback is for participants who attended this workshop. Your attendance has not been recorded; if you attended, please contact the workshop team.", 403);
   const [dup] = await db.select({ id: s.feedback.id }).from(s.feedback).where(and(eq(s.feedback.sessionId, row.w.id), eq(s.feedback.registrationId, r.id)));
   if (dup) return fail("You have already submitted feedback for this workshop. Thank you!", 409);
   await db.insert(s.feedback).values({

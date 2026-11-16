@@ -67,7 +67,7 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         ))}
         <F n="contactEmail" l="Contact email" v={ev.contactEmail} /><F n="contactPhone" l="Contact phone" v={ev.contactPhone} />
         <F n="facebook" l="Facebook" v={ev.facebook} /><F n="instagram" l="Instagram" v={ev.instagram} />
-        <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X / Twitter" v={ev.x} /><F n="whatsapp" l="WhatsApp (link)" v={ev.whatsapp} />
+        <F n="linkedin" l="LinkedIn" v={ev.linkedin} /><F n="youtube" l="YouTube" v={ev.youtube} /><F n="x" l="X (formerly Twitter)" v={ev.x} /><F n="whatsapp" l="WhatsApp (link)" v={ev.whatsapp} />
         <div className="sm:col-span-2 rounded-xl border border-slate-200 p-4">
           <F n="guestCode" l="Guest and volunteer forms: access code (letters and numbers, at least 8; change it to stop old links working)" v={ev.guestCode} />
           {ev.guestCode && <p className="mt-2 break-all text-xs text-slate-600">Invitation links to share: <b>{appUrl()}/register/guest?code={ev.guestCode}</b> · <b>{appUrl()}/register/volunteer?code={ev.guestCode}</b></p>}

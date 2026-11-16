@@ -35,7 +35,7 @@ export default async function SessionPage({ params }: { params: { slug: string }
         <ul className="mt-6 grid gap-3 text-slate-200 sm:grid-cols-3">
           <li className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-lnh-sky" />{fmtDate(s.startsAt, { weekday: "long", day: "numeric", month: "long" })}</li>
           <li className="flex items-center gap-2"><Clock className="h-5 w-5 text-lnh-sky" />{fmtTime(s.startsAt)} – {fmtTime(s.endsAt)} PKT</li>
-          {s.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{s.venueId ? <a href={`/venues#${s.venueId}`} className="underline">{s.hall}</a> : s.hall}</li>}
+          {s.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{s.venueId ? <a href="/venues#guide" className="underline">{s.hall}</a> : s.hall}</li>}
         </ul>
         {s.description && <div className="prose-lnh mt-8"><p>{s.description}</p></div>}
         <SessionAgenda people={people} />
@@ -45,7 +45,7 @@ export default async function SessionPage({ params }: { params: { slug: string }
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">{s.speakers.map(({ speaker, role }) => (
               <li key={speaker.id} className="hud flex items-center gap-3 p-4">
                 <Avatar name={speaker.name} src={speaker.photoUrl} className="h-12 w-12 rounded-full text-[9px]" />
-                <span><span className="block font-semibold text-white">{speaker.title} {speaker.name}</span><span className="text-sm text-slate-300">{[role, speaker.designation, speaker.institution].filter(Boolean).join(" · ")}</span></span>
+                <span className="min-w-0"><span className="block font-semibold text-white">{speaker.title} {speaker.name}</span><span className="text-sm text-slate-300">{[role, speaker.designation, speaker.institution].filter(Boolean).join(" · ")}</span></span>
               </li>
             ))}</ul>
           </div>

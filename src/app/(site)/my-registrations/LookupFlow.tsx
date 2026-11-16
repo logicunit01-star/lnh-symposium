@@ -23,7 +23,7 @@ export function LookupFlow() {
         <article key={r.regNo} className="hud p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><p className="mono text-xs text-lnh-sky">{r.regNo}</p><h2 className="font-display text-xl font-bold text-white">{r.name}</h2><p className="text-sm text-slate-400">{r.category} · {pkr(r.total)}</p></div>
-            <span className={cn("rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider", STATUS[r.status] ?? "border-white/15 text-slate-300")}>{r.status === "PENDING" ? "Payment pending" : r.status}</span>
+            <span className={cn("rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider", STATUS[r.status] ?? "border-white/15 text-slate-300")}>{r.status === "PENDING" ? "Saved, not paid" : r.status}</span>
           </div>
           {r.items.length > 0 && <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4 text-sm">{r.items.map((i) => <li key={i.title} className="flex flex-wrap justify-between gap-2"><span className="text-slate-200">{i.title}</span><span className="mono text-xs text-slate-500">{i.when}{i.venue ? ` · ${i.venue}` : ""}</span></li>)}</ul>}
           <div className="mt-5 flex flex-wrap gap-2">
@@ -44,7 +44,7 @@ export function LookupFlow() {
           <input id="lk-phone" inputMode="numeric" autoComplete="tel" placeholder="03XX-XXXXXXX" className="input mono pl-11" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} /></div>
       </Field>
       <button className="btn-primary w-full sm:w-auto" disabled={loading || phone.replace(/\D/g, "").length !== 11}>{loading ? "Sending code…" : "Send me a code"}</button>
-      <p className="text-xs text-slate-500">For your privacy we show the same message whether or not the number is registered. Codes expire in 5 minutes.</p>
+      <p className="text-xs text-slate-500">We email a one-time code to the address you registered with. Codes expire in 5 minutes.</p>
     </form>
   );
 }

@@ -11,7 +11,7 @@ import { qrPayload, ticketPayload } from "./qr-payload";
 import { registrationPdf } from "./pdf";
 import { sendMessage } from "./notify";
 import { qrLink } from "./qr-link";
-import { PHONE_RE, normaliseCnic } from "./reg-fields";
+import { PHONE_RE, normaliseCnic, phoneOk } from "./reg-fields";
 
 const opt = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
 
@@ -25,8 +25,8 @@ export const basicInfo = z.object({
   firstName: z.string().trim().min(1, "Required").max(60),
   lastName: z.string().trim().min(1, "Required").max(60),
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
-  phone: z.string().trim().regex(PHONE_RE, "Use format 03XX-XXXXXXX"),
-  whatsapp: z.string().trim().max(20).optional().or(z.literal("")).refine((v) => !v || PHONE_RE.test(v) || /^\+?\d[\d\s-]{7,18}$/.test(v), "Enter a valid WhatsApp number"),
+  phone: z.string().trim().refine(phoneOk, "Use 03XX-XXXXXXX, or choose the country code for a number abroad"),
+  whatsapp: z.string().trim().max(20).optional().or(z.literal("")).refine((v) => !v || phoneOk(v) || PHONE_RE.test(v) || /^\+?\d[\d\s-]{7,18}$/.test(v), "Enter a valid WhatsApp number"),
   address: z.string().trim().min(5, "Required").max(250),
   country: z.string().trim().max(60).optional().or(z.literal("")),
   province: opt(60),

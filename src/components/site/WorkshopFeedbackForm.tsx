@@ -55,7 +55,7 @@ export function WorkshopFeedbackForm({ slug, token }: { slug?: string; token?: s
   );
 
   const open = me.workshops.filter((w) => !w.done);
-  if (!open.length) return <p className="text-slate-300">{me.workshops.length ? "Thank you, you have given feedback for all your workshops." : "No workshop on your registration has started yet. Feedback opens when the workshop starts."}</p>;
+  if (!open.length) return <p className="text-slate-300">{me.workshops.length ? "Thank you, you have given feedback for all your workshops." : "There is no workshop to give feedback for yet. Feedback opens once a workshop has started and your attendance has been recorded at the door."}</p>;
   const complete = a.every(Boolean) && overall > 0 && rec && contact !== null && pick;
   let n = 0;
   return (

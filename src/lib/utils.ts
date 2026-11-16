@@ -1,3 +1,9 @@
+/** Issues sheet 16 Nov 2026: a tab click brings the list back to its top (the marker sits just above the sticky tab bar). */
+export function scrollToMarker(el: HTMLElement | null, offset = 84) {
+  if (!el || typeof window === "undefined") return;
+  const y = el.getBoundingClientRect().top + window.scrollY - offset;
+  if (window.scrollY > y) window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+}
 export const cn = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 export const TZ = "Asia/Karachi";

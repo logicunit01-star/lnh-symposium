@@ -13,7 +13,7 @@ import { authorStatus } from "@/lib/abstracts";
 export const metadata = { title: "My Registration", robots: { index: false } };
 const LIVE = ["PENDING", "PAID", "WAIVED"];
 const STATUS: Record<string, [string, string]> = {
-  CONFIRMED: ["Confirmed", "bg-emerald-400/15 text-emerald-300"], PENDING: ["Payment pending", "bg-amber-400/15 text-amber-300"],
+  CONFIRMED: ["Confirmed", "bg-emerald-400/15 text-emerald-300"], PENDING: ["Saved, not paid", "bg-amber-400/15 text-amber-300"],
   AWAITING: ["Awaiting approval", "bg-sky-400/15 text-sky-300"], REJECTED: ["Not approved", "bg-rose-400/15 text-rose-300"],
   FAILED: ["Payment failed", "bg-rose-400/15 text-rose-300"], REFUNDED: ["Refunded", "bg-white/10 text-slate-300"],
 };

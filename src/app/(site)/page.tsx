@@ -51,7 +51,7 @@ export default async function Home() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="chip gap-1.5 border-emerald-400/30 text-emerald-300"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-emerald-400" />{ev.registrationOpen ? "Registration open" : "Registration closed"}</span>
                 <span className="chip gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{eventDaysLabel(ev, "short")}</span>
-                <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />LNH, Karachi</span>
+                <span className="chip gap-1.5"><MapPin className="h-3.5 w-3.5" />Liaquat National Hospital, Karachi</span>
               </div>
             </div>
             <div className="hero-in" style={{ animationDelay: "120ms" }}>
@@ -78,12 +78,12 @@ export default async function Home() {
               {ev.speakersLive && <Link href="/speakers" className="btn-ghost px-7 py-4 text-base">Explore Speakers</Link>}
             </div>
             <div className="hero-in mt-12" style={{ animationDelay: "420ms" }}>
-              <p className="mono mb-3 text-[11px] uppercase tracking-[0.3em] text-slate-500">T-minus to Day 1 · {fmtDate(days[0], { weekday: "long", day: "numeric", month: "long" })}</p>
+              <p className="mono mb-3 text-[11px] uppercase tracking-[0.3em] text-slate-500">Countdown to Day 1 · {fmtDate(days[0], { weekday: "long", day: "numeric", month: "long" })}</p>
               <Countdown to={days[0].toISOString()} />
             </div>
           </div>
           <div className="hero-in relative" style={{ animationDelay: "200ms" }}>
-            <div className="relative mx-auto w-full max-w-[900px] lg:w-[108%] lg:max-w-none">
+            <div className="relative mx-auto w-full max-w-[900px] lg:w-[108%] lg:max-w-none lg:-translate-y-6">{/* issues sheet 16 Nov: image a little higher */}
               <div className="pointer-events-none absolute inset-x-6 bottom-6 top-1/3 rounded-[50%] bg-lnh-sky/25 blur-3xl" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/campus-scene.webp" alt="Liaquat National Hospital, Karachi, with robotics and digital health imagery" width={1232} height={560} className="relative w-full drop-shadow-[0_30px_40px_rgba(4,11,30,.45)]" />

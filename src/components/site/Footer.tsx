@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter, Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Youtube, Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+
+/** The X mark (16 Nov 2026: replaces the old Twitter bird). */
+const XLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+);
 import type { EventSettings } from "@/lib/db/schema";
 import { HOSPITAL } from "@/lib/brand";
 
@@ -7,7 +12,7 @@ export function Footer({ ev }: { ev: EventSettings }) {
   const year = new Date(ev.startDate).getFullYear();
   // 14.11.2026: the same accounts and order as the LNH website footer
   const socials = [
-    { href: ev.facebook, Icon: Facebook, label: "Facebook" }, { href: ev.x, Icon: Twitter, label: "X" }, { href: ev.youtube, Icon: Youtube, label: "YouTube" },
+    { href: ev.facebook, Icon: Facebook, label: "Facebook" }, { href: ev.x, Icon: XLogo, label: "X" }, { href: ev.youtube, Icon: Youtube, label: "YouTube" },
     { href: ev.linkedin, Icon: Linkedin, label: "LinkedIn" }, { href: ev.instagram, Icon: Instagram, label: "Instagram" }, { href: ev.whatsapp, Icon: MessageCircle, label: "WhatsApp" },
   ].filter((s) => s.href);
   const cols = [

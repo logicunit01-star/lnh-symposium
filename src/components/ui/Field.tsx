@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 export function Field({ label, name, error, required, children, className, hint }: { label: string; name?: string; error?: string; required?: boolean; children: React.ReactNode; className?: string; hint?: string }) {
   return (
-    <div className={className}>
+    <div className={cn(className, error && "field-invalid")} data-field="" data-required={required ? "1" : undefined}>
       <label htmlFor={name} className="label">{label}{required && <span className="text-lnh-red"> *</span>}</label>
       {children}
       {hint && !error && <p className="mt-1 text-xs text-slate-500">{hint}</p>}

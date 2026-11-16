@@ -546,6 +546,21 @@ export const feedback = pgTable("feedback", {
   createdAt: created(),
 }, (t) => ({ sIdx: index("fb_session_idx").on(t.sessionId) }));
 
+/** Issues email 16 Nov 2026 (item 5): overall symposium feedback, one per symposium registration (checked in). */
+export const symposiumFeedback = pgTable("symposium_feedback", {
+  id: id(),
+  registrationId: text("registration_id").notNull().references(() => registrations.id, { onDelete: "cascade" }),
+  regNo: text("reg_no").notNull(),
+  overall: integer("overall").notNull(),
+  content: integer("content").notNull(),
+  speaker: integer("speaker").notNull(),
+  relevance: integer("relevance").notNull(),
+  organization: integer("organization").notNull(),
+  recommend: boolean("recommend").notNull(),
+  comments: text("comments"),
+  createdAt: created(),
+}, (t) => ({ uq: uniqueIndex("symfb_reg_uq").on(t.registrationId) }));
+
 export const contactMessages = pgTable("contact_messages", {
   id: id(),
   name: text("name").notNull(),

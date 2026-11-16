@@ -35,7 +35,7 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
           <ul className="mt-6 grid gap-3 text-slate-200 sm:grid-cols-2">
             <li className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-lnh-sky" />{w.dateLabel}</li>
             <li className="flex items-center gap-2"><Clock className="h-5 w-5 text-lnh-sky" />{w.timeLabel} PKT</li>
-            {w.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{w.venueId ? <a href={`/venues#${w.venueId}`} className="underline">{w.hall}</a> : w.hall}{w.building ? `, ${w.building}` : ""}</li>}
+            {w.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{w.venueId ? <a href="/venues#guide" className="underline">{w.hall}</a> : w.hall}{w.building ? `, ${w.building}` : ""}</li>}
             {w.cme != null && <li className="flex items-center gap-2"><Award className="h-5 w-5 text-lnh-gold" />{w.cme} CME hours</li>}
             {w.capacity != null && <li className="flex items-center gap-2"><Users className="h-5 w-5 text-lnh-sky" />{full ? "Fully booked" : `${w.left} of ${w.capacity} seats left`}</li>}
           </ul>

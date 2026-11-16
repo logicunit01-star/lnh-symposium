@@ -31,7 +31,7 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
       <ul className="mono mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] text-slate-300">
         <li className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-lnh-sky" />{w.dateLabel}</li>
         <li className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-lnh-sky" />{w.timeLabel}</li>
-        <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-lnh-sky" />{w.venueId ? <a href={`/venues#${w.venueId}`} title={w.building ?? "Show on campus map"} className="underline decoration-white/20 underline-offset-2 hover:text-lnh-sky">{w.hall}</a> : w.hall}</li>
+        <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-lnh-sky" />{w.venueId ? <a href="/venues#guide" title={w.building ?? "Show on campus map"} className="underline decoration-white/20 underline-offset-2 hover:text-lnh-sky">{w.hall}</a> : w.hall}</li>
         {w.cme != null && <li className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5 text-lnh-gold" />{w.cme} CME hours</li>}
       </ul>
       {w.capacity != null && (

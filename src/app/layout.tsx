@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "9th LNH Symposium 2027 — Shaping the New Era of Healthcare", template: "%s · 9th LNH Symposium" },
   description: "9th LNH Symposium, 29–31 January 2027, Liaquat National Hospital, Karachi. Shaping the New Era of Healthcare: Convergence of AI, Robotics & Digitization — keynotes, scientific sessions and pre-symposium workshops.",
-  icons: { icon: "/favicon.svg" },
+  // favicon: src/app/icon.png, apple-icon.png and favicon.ico (the LNH mark, issues sheet 16 Nov 2026)
   openGraph: { images: ["/brand/symposium-poster.jpg"] },
 };
 export const viewport: Viewport = { themeColor: "#040B1E" };

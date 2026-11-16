@@ -2,6 +2,7 @@ import { Nav } from "@/components/site/Nav";
 import { Footer } from "@/components/site/Footer";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { FormGuard } from "@/components/ui/FormGuard";
 import { getEvent } from "@/lib/event";
 import { currentAccountClaims } from "@/lib/account";
 import { delegateStatus } from "@/lib/registration";
@@ -18,6 +19,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Nav year={new Date(ev.startDate).getFullYear()} account={account ? { name: account.name, hasPass: !!held } : null} />
       <main className="min-h-screen">{children}</main>
       <Footer ev={ev} />
+      <FormGuard />
       <CartDrawer />
     </CartProvider>
     </div>

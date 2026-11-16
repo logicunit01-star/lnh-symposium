@@ -1,10 +1,10 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Filter, Search, X } from "lucide-react";
 import type { WorkshopDTO } from "@/lib/workshops";
 import { WorkshopCard } from "@/components/site/WorkshopCard";
 import { OrderSummary, OrderBar } from "@/components/cart/CartDrawer";
-import { cn, matchesAll } from "@/lib/utils";
+import { cn, matchesAll, scrollToMarker } from "@/lib/utils";
 
 const DAY = 864e5;
 const parse = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -24,6 +24,7 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
   const months = useMemo(() => [...new Set(items.map((w) => w.date.slice(0, 7)))].sort(), [items]);
 
   const [week, setWeek] = useState<string>("all");
+  const tabsTop = useRef<HTMLDivElement>(null);
   const [day, setDay] = useState<string | null>(null);
   const [dept, setDept] = useState("");
   const [q, setQ] = useState("");
@@ -101,9 +102,10 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
         {active > 0 && <button onClick={reset} className="min-h-[44px] px-2 text-sm text-lnh-sky underline">Clear</button>}
       </div>
       {/* week tabs */}
+      <div ref={tabsTop} aria-hidden="true" />
       <div role="tablist" className={cn("z-20 -mx-4 mb-6 flex gap-2 overflow-x-auto bg-ink/80 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-full sm:border sm:border-white/10 sm:p-2", !embedded && "sticky top-20")}>
         {[{ key: "all", label: "All weeks", range: `${items.length} workshops` }, ...weeks].map((t) => (
-          <button key={t.key} role="tab" aria-selected={week === t.key} onClick={() => { setWeek(t.key); setDay(null); if (t.key !== "all") setMonth(t.key.slice(0, 7)); }}
+          <button key={t.key} role="tab" aria-selected={week === t.key} onClick={() => { setWeek(t.key); setDay(null); if (t.key !== "all") setMonth(t.key.slice(0, 7)); scrollToMarker(tabsTop.current); }}
             className={cn("shrink-0 rounded-full px-5 py-2.5 text-left transition", week === t.key ? "bg-lnh-red text-white shadow-[0_8px_30px_-8px_#B72025]" : "text-slate-300 hover:bg-white/5")}>
             <span className="block font-display text-sm font-bold">{t.label}</span>
             <span className={cn("mono block text-[11px]", week === t.key ? "text-white/90" : "text-slate-400")}>{t.range}</span>
@@ -113,7 +115,7 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
 
       <div className={cn("grid gap-6", !embedded && "lg:grid-cols-[280px_1fr_340px]")}>
         {/* filters (desktop) */}
-        <aside className={cn("hidden space-y-4 self-start lg:sticky lg:top-40", !embedded && "lg:block")}>
+        <aside className={cn("hidden space-y-4 self-start lg:sticky lg:top-40 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1", !embedded && "lg:block")}>{/* issues sheet: the filter column scrolls on short screens */}
           <p className="eyebrow">Filter by</p>
           {calendar}
           {selects}

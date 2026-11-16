@@ -141,3 +141,15 @@ body { @apply bg-ink text-slate-100 font-sans antialiased overflow-x-clip; }
 /* D6 (13 Nov): "My itinerary" on the Agenda shows only saved sessions */
 html[data-itin-only] .itin-item:not([data-saved]) { display: none; }
 html[data-itin-only] .itin-slot:not(:has(.itin-item[data-saved])) { display: none; }
+
+/* Issues email 16 Nov 2026 (item 10): placeholders in a very light colour, clearly not typed text */
+.site :is(input, textarea)::placeholder { color: rgb(255 255 255 / 0.28); opacity: 1; font-style: normal; }
+html[data-theme="light"] .site :is(input, textarea)::placeholder { color: rgb(148 163 184 / 0.7); }
+:is(.a-input, .admin input, .admin textarea)::placeholder { color: rgb(148 163 184 / 0.75); opacity: 1; }
+
+/* Item 12: invalid fields are outlined in red; messages in bold red */
+.site :is(.input, input, select, textarea)[aria-invalid="true"], .a-input[aria-invalid="true"] { border-color: rgb(225 29 72) !important; box-shadow: 0 0 0 3px rgb(225 29 72 / 0.18); }
+.site .err, .a-err { font-weight: 700; color: rgb(244 63 94); }
+html[data-theme="light"] .site .err { color: rgb(190 18 60); }
+/* the field that has an error (server or browser check) is outlined in red */
+.site .field-invalid :is(.input, input, select, textarea), .site :has(> .err) > :is(.input, input, select, textarea), .site :has(> .err) > div > :is(.input, input) { border-color: rgb(225 29 72) !important; }

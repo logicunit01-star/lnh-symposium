@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { focusFirstError } from "./FormGuard";
 
 /** Tiny helper: POST JSON, surface field errors. */
 export function useSubmit<T = any>(url: string) {
@@ -11,7 +12,7 @@ export function useSubmit<T = any>(url: string) {
     try {
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setError(j.error || "Something went wrong."); setFields(j.fields || {}); return null; }
+      if (!r.ok) { setError(j.error || "Something went wrong."); setFields(j.fields || {}); if (j.fields && Object.keys(j.fields).length) focusFirstError(); return null; }
       return j as T;
     } catch { setError("Network error — please try again."); return null; }
     finally { setLoading(false); }

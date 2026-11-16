@@ -14,7 +14,7 @@ export default async function QrLanding({ params }: { params: { regNo: string } 
       <div className="card w-full p-10 text-center">
         <p className="eyebrow">Registration</p>
         <p className="h-display mt-3 text-4xl text-white">{r.regNo}</p>
-        <p className={`mt-4 font-semibold ${ok ? "text-emerald-400" : "text-amber-400"}`}>{ok ? "Confirmed" : "Payment pending"}</p>
+        <p className={`mt-4 font-semibold ${ok ? "text-emerald-400" : "text-amber-400"}`}>{ok ? "Confirmed" : "Saved, not paid"}</p>
       </div>
     </section>
   );

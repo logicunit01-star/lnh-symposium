@@ -26,7 +26,7 @@ export async function SpecialSessionPage({ kind }: { kind: "PLENARY" | "DEBATE" 
             <ul className="mt-4 grid gap-3 text-slate-200 sm:grid-cols-3">
               <li className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-lnh-sky" />{fmtDate(s.startsAt, { weekday: "long", day: "numeric", month: "long" })}</li>
               <li className="flex items-center gap-2"><Clock className="h-5 w-5 text-lnh-sky" />{fmtTime(s.startsAt)} – {fmtTime(s.endsAt)} PKT</li>
-              {s.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{s.venueId ? <a href={`/venues#${s.venueId}`} className="underline">{s.hall}</a> : s.hall}</li>}
+              {s.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{s.venueId ? <a href="/venues#guide" className="underline">{s.hall}</a> : s.hall}</li>}
             </ul>
             {s.description && <p className="mt-6 text-slate-300">{s.description}</p>}
             <SessionAgenda people={people[s.id] ?? []} />

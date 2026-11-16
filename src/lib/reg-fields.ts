@@ -26,3 +26,12 @@ export function normaliseCnic(v: string, country?: string | null) {
 export const maskCnic = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 13); return d.length > 12 ? `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}` : d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d; };
 export const maskPhone = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 11); return d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d; };
 export const PHONE_RE = /^(\+92|0092|0)?3\d{2}[- ]?\d{7}$/;
+/** Issues sheet 16 Nov 2026: delegates from abroad. Dialling codes for the countries in the country list. */
+export const DIAL: Record<string, string> = {
+  Pakistan: "92", Afghanistan: "93", Bahrain: "973", Bangladesh: "880", Canada: "1", China: "86", Egypt: "20", Germany: "49", India: "91", Indonesia: "62",
+  Iran: "98", Iraq: "964", Jordan: "962", Kuwait: "965", Malaysia: "60", Nepal: "977", Oman: "968", Qatar: "974", "Saudi Arabia": "966", "Sri Lanka": "94",
+  Turkey: "90", "United Arab Emirates": "971", "United Kingdom": "44", "United States": "1",
+};
+/** International number as stored: "+971 501234567" (country code, space, 6 to 14 digits). Pakistani numbers stay 03XX-XXXXXXX. */
+export const INTL_RE = /^\+(?!92 )\d{1,4} \d{6,14}$/;
+export const phoneOk = (v: string) => PHONE_RE.test(v.trim()) || INTL_RE.test(v.trim());

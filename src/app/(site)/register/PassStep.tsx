@@ -21,7 +21,7 @@ export function ProductCards({ fromFee, early }: { fromFee: number; early: boole
           <ul className="mt-2 space-y-1 text-sm text-slate-200">
             <li>Access all sessions across the three symposium days.</li>
             <li>Includes one banquet entry</li>
-            <li>{early ? "Early-bird registration starting from" : "Registration starting from"} <b className="text-white">{pkr(fromFee)}</b></li>
+            <li>Fee according to your designation{early ? " (early-bird rates apply)" : ""}</li>
           </ul>
         )}
         <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-sky/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-sky/20">{held ? "View your registration" : "Register for the Symposium"}</span>
@@ -75,8 +75,7 @@ export function PassStep({ tiers, early, earlyUntil, banquet, open }: { tiers: T
               onClick={() => pickTier(t)}
               className={cn("flex h-full flex-col items-start justify-start rounded-2xl border p-4 text-left transition disabled:opacity-50", on ? "border-2 border-lnh-sky bg-lnh-sky/10" : "border-white/15 hover:border-white/40")}>
               <p className="font-display text-sm font-bold uppercase tracking-wider text-slate-200">{tierName(t)}</p>
-              <p className="mt-1 font-display text-2xl font-bold text-white">{pkr(t.fee)}</p>
-              {early && t.regular > t.fee && <p className="text-xs text-slate-400"><span className="line-through">{pkr(t.regular)}</span> after early bird</p>}
+              {/* issues sheet 16 Nov 2026: no fee on the tier cards (staff picked the cheapest tier); it shows once the designation is chosen */}
               <p className="mt-2 text-xs leading-relaxed text-slate-300">{t.designations.join(", ")}</p>
             </button>
           );
@@ -105,7 +104,7 @@ export function PassStep({ tiers, early, earlyUntil, banquet, open }: { tiers: T
           </div>
           {pass && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-400/10 px-4 py-3 text-sm">
-              <span className="flex items-center gap-2 text-emerald-200"><Check className="h-4 w-4" />Symposium Registration added: {pass.designation}, {pkr(pass.fee)}{pass.extraBanquet ? ` + ${pass.extraBanquet} extra banquet` : ""}</span>
+              <span className="flex items-center gap-2 text-emerald-200"><Check className="h-4 w-4" />Symposium Registration added: {pass.designation}, {pkr(pass.fee)}{early && sel && sel.regular > pass.fee ? ` (early bird; ${pkr(sel.regular)} after)` : ""}{pass.extraBanquet ? ` + ${pass.extraBanquet} extra banquet` : ""}</span>
               <button type="button" onClick={() => setPass(null)} className="min-h-[44px] px-2 text-sm text-slate-200 underline">Remove pass</button>
             </div>
           )}

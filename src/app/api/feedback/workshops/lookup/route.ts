@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   const done = rows.length ? new Set((await db.select({ sid: s.feedback.sessionId }).from(s.feedback).where(and(eq(s.feedback.registrationId, r.id), inArray(s.feedback.sessionId, rows.map((x) => x.w.id))))).map((x) => x.sid)) : new Set();
   return ok({
     name: `${r.title} ${r.firstName} ${r.lastName}`, regNo: r.regNo,
-    workshops: rows.map(({ w }) => ({ slug: w.slug, title: w.title, date: fmtDate(w.startsAt, { day: "numeric", month: "short", year: "numeric" }), done: done.has(w.id) })),
+    // item 4 (16 Nov 2026): only workshops the participant attended
+    workshops: rows.filter(({ i }) => i.attendedAt || i.verifiedAt).map(({ w }) => ({ slug: w.slug, title: w.title, date: fmtDate(w.startsAt, { day: "numeric", month: "short", year: "numeric" }), done: done.has(w.id) })),
   });
 }

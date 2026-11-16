@@ -24,12 +24,13 @@ export default async function Success({ params, searchParams }: { params: { toke
   const paid = r.paymentStatus === "PAID" || r.paymentStatus === "WAIVED";
   const confirmed = paid && !awaiting;
   const items = [...r.items].sort((a, b) => +a.session.startsAt - +b.session.startsAt);
-  const passQr = r.hasPass && !awaiting ? await QRCode.toDataURL(qrPayload(r), qrOpts) : null;
-  const ticketQrs = awaiting ? [] : await Promise.all(items.map((i) => QRCode.toDataURL(ticketPayload(r, i), qrOpts)));
+  // issues email 16 Nov 2026 (item 11): a saved, unpaid registration is not complete: no entry QR codes until it is paid
+  const passQr = r.hasPass && confirmed ? await QRCode.toDataURL(qrPayload(r), qrOpts) : null;
+  const ticketQrs = !confirmed ? [] : await Promise.all(items.map((i) => QRCode.toDataURL(ticketPayload(r, i), qrOpts)));
   // SC feedback: separate QR codes for the Scientific Agenda and the e-abstract book
   const [qrAgenda, qrBook] = await Promise.all([`${appUrl()}/agenda`, `${appUrl()}/abstracts/book`].map((u) => QRCode.toDataURL(u, { margin: 1, width: 200, color: { dark: "#232667", light: "#ffffff" } })));
   const prov = await provider();
-  const status = confirmed ? ["Confirmed", "bg-emerald-400/15 text-emerald-300"] : rejected ? ["Not approved", "bg-rose-400/15 text-rose-300"] : awaiting ? ["Awaiting approval", "bg-sky-400/15 text-sky-300"] : ["Payment pending", "bg-amber-400/15 text-amber-300"];
+  const status = confirmed ? ["Confirmed", "bg-emerald-400/15 text-emerald-300"] : rejected ? ["Not approved", "bg-rose-400/15 text-rose-300"] : awaiting ? ["Awaiting approval", "bg-sky-400/15 text-sky-300"] : ["Saved, not paid", "bg-amber-400/15 text-amber-300"];
   const ics = `/api/registrations/${r.accessToken}/ics`;
   return (
     <section className="relative overflow-hidden pb-10 pt-36">
@@ -44,7 +45,7 @@ export default async function Success({ params, searchParams }: { params: { toke
           <div className="flex items-center gap-3">
             {confirmed ? <CheckCircle2 className="h-7 w-7 text-emerald-300" /> : <Clock className="h-7 w-7 text-amber-300" />}
             <div>
-              <p className="font-display text-2xl font-bold text-white">{confirmed ? "You're registered" : rejected ? "Registration not approved" : awaiting ? "Registration received" : "Almost there: payment pending"}</p>
+              <p className="font-display text-2xl font-bold text-white">{confirmed ? "You're registered" : rejected ? "Registration not approved" : awaiting ? "Registration received" : "Registration saved: payment pending"}</p>
               <p className="text-sm text-slate-200">{r.title} {r.firstName} {r.lastName} · <span className="mono">{r.regNo}</span>{r.regType === "PARTICIPANT" && r.designation ? ` · ${r.designation}` : ""}</p>
               {awaiting && <p className="text-sm text-slate-200">Awaiting approval by {r.regType === "GUEST" ? `the HOD, ${r.department}` : "the Chairperson, Facilitation Committee"}. Your pass and QR appear here once approved.</p>}
             </div>
@@ -55,7 +56,7 @@ export default async function Success({ params, searchParams }: { params: { toke
         {/* pay first when pending */}
         {!confirmed && !awaiting && !rejected && (
           <div className="hud flex flex-wrap items-center justify-between gap-4 p-6">
-            <div><p className="font-semibold text-white">Pay {pkr(r.totalFee)} to confirm your tickets</p><p className="text-sm text-slate-300">Your QR codes work at entry once payment is received.</p></div>
+            <div><p className="font-semibold text-white">Pay {pkr(r.totalFee)} to complete your registration</p><p className="text-sm text-slate-300">Your registration is saved, but it is complete only after payment. You can pay now or come back to this page later; your entry QR codes appear here once the payment is received.</p></div>
             {prov !== "manual" && <PayButton token={r.accessToken} amount={pkr(r.totalFee)} />}
             {prov === "paypro" && <p className="w-full text-xs text-slate-400">Secure payment through PayPro: debit/credit card, bank app, ATM or over the counter.</p>}
           </div>
@@ -83,13 +84,13 @@ export default async function Success({ params, searchParams }: { params: { toke
               <p className="mt-2 font-display text-xl font-bold text-white">{i.session.title}</p>
               <p className="mt-1 text-slate-200">{i.session.days > 1 ? `${fmtDate(i.session.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(i.session.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · daily` : fmtDate(i.session.startsAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {fmtTime(i.session.startsAt)} – {fmtTime(i.session.endsAt)}</p>
               {confirmed && i.session.mode !== "ONSITE" && i.session.onlineLink && <p className="mt-1 text-slate-200">Online: <a href={i.session.onlineLink} className="break-all text-lnh-sky underline" target="_blank" rel="noreferrer">{i.session.onlineLink}</a></p>}
-              {i.session.mode !== "ONLINE" && i.session.hall && <p className="mt-1 flex items-center gap-1.5 text-slate-200"><MapPin className="h-4 w-4" />{i.session.venueId ? <a href={`/venues#${i.session.venueId}`} className="underline">{i.session.hall}</a> : i.session.hall}</p>}
+              {i.session.mode !== "ONLINE" && i.session.hall && <p className="mt-1 flex items-center gap-1.5 text-slate-200"><MapPin className="h-4 w-4" />{i.session.venueId ? <a href="/venues#guide" className="underline">{i.session.hall}</a> : i.session.hall}</p>}
               <p className="mono mt-3 text-sm text-slate-300">Ticket {i.ticketNo ?? r.regNo}</p>
               <div className="flex flex-wrap gap-x-5">
                 <a href={`${ics}?item=${i.id}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline"><CalendarPlus className="h-4 w-4" />Add to calendar</a>
                 {/* N6 / N7: feedback after the workshop starts; certificate once attendance is confirmed and feedback is in */}
                 {confirmed && i.certNo && <a href={workshopCertUrl(i.id, r.accessToken)} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-lnh-gold underline"><Award className="h-4 w-4" />Workshop certificate</a>}
-                {confirmed && !i.certNo && i.session.startsAt <= new Date() && <a href={`/feedback/${i.session.slug}?t=${encodeURIComponent(r.accessToken)}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline">Give feedback{i.verifiedAt ? " to get your certificate" : ""}</a>}
+                {confirmed && !i.certNo && i.session.startsAt <= new Date() && (i.attendedAt || i.verifiedAt) && <a href={`/feedback/${i.session.slug}?t=${encodeURIComponent(r.accessToken)}`} className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-lnh-sky underline">Give feedback{i.verifiedAt ? " to get your certificate" : ""}</a>}
               </div>
             </div>
             {ticketQrs[n] && <div className="text-center"><img src={ticketQrs[n]} alt={`Workshop registration QR code ${i.ticketNo ?? ""}`} className="mx-auto h-40 w-40 rounded-2xl bg-white p-2" /><p className="mt-2 text-xs text-slate-300">Show at the workshop door</p></div>}
@@ -101,6 +102,8 @@ export default async function Success({ params, searchParams }: { params: { toke
           <a href={ics} className="btn-ghost"><CalendarPlus className="h-4 w-4" />Add all to calendar</a>
           <a href={`/api/registrations/${r.accessToken}/pdf`} className="btn-ghost"><Download className="h-4 w-4" />PDF e-ticket and ID card</a>
           {r.certificateNo && <a href={`/api/certificates/${r.accessToken}`} className="btn-blue"><Award className="h-4 w-4" />E-certificate</a>}
+          {/* item 5 (16 Nov 2026): symposium feedback once the participant has been checked in */}
+          {confirmed && r.hasPass && r.checkedInAt && ev.startDate <= new Date() && <a href={`/feedback/symposium?t=${encodeURIComponent(r.accessToken)}`} className="btn-ghost">Give symposium feedback</a>}
           <Link href="/register#workshops" className="btn-ghost"><Plus className="h-4 w-4" />Add workshops</Link>
         </div>
 

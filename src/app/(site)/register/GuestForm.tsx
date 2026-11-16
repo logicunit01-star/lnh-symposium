@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { cn, TITLES, COUNTRIES } from "@/lib/utils";
 import { GUEST_ROLES, PROVINCES, maskCnic, maskPhone } from "@/lib/reg-fields";
 
@@ -30,8 +31,8 @@ export function GuestForm({ kind, departments, code }: { kind: "GUEST" | "VOLUNT
           <label key={g} className={cn("flex flex-1 cursor-pointer items-center justify-center rounded-xl border px-3 py-3 text-sm", f.gender === g ? "border-lnh-sky bg-lnh-sky/10 text-white" : "border-white/10 text-slate-300")}>
             <input type="radio" name="gender" value={g} className="sr-only" checked={f.gender === g} onChange={set("gender")} />{g}</label>))}</div>
       </Field>
-      <Field label="Cell no." name="phone" required error={fields.phone} className="sm:col-span-2"><input id="phone" inputMode="numeric" placeholder="03XX-XXXXXXX" className="input mono" value={f.phone ?? ""} onChange={set("phone")} /></Field>
-      <Field label="WhatsApp no." name="whatsapp" error={fields.whatsapp} className="sm:col-span-2"><input id="whatsapp" inputMode="numeric" placeholder="03XX-XXXXXXX" className="input mono" value={f.whatsapp ?? ""} onChange={set("whatsapp")} /></Field>
+      <Field label="Cell no." name="phone" required error={fields.phone} className="sm:col-span-3"><PhoneInput id="phone" value={f.phone ?? ""} onChange={(v) => setF((p) => ({ ...p, phone: v }))} invalid={!!fields.phone} /></Field>
+      <Field label="WhatsApp no." name="whatsapp" error={fields.whatsapp} className="sm:col-span-3"><PhoneInput id="whatsapp" value={f.whatsapp ?? ""} onChange={(v) => setF((p) => ({ ...p, whatsapp: v }))} invalid={!!fields.whatsapp} /></Field>
       <Field label="Address" name="address" required error={fields.address} className="sm:col-span-6"><input id="address" className="input" value={f.address ?? ""} onChange={set("address")} autoComplete="street-address" /></Field>
       <Field label="Country" name="country" className="sm:col-span-2"><select id="country" className="input" value={f.country} onChange={set("country")}>{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
       <Field label="Province" name="province" className="sm:col-span-2">{pk ? <select id="province" className="input" value={f.province ?? ""} onChange={set("province")}><option value="">Choose…</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select> : <input id="province" className="input" value={f.province ?? ""} onChange={set("province")} />}</Field>

@@ -4,6 +4,8 @@ import { ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
 import { useSubmit } from "@/components/ui/useForm";
 import { Field, Alert } from "@/components/ui/Field";
 import { OtpVerify } from "@/components/ui/OtpVerify";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { INTL_RE } from "@/lib/reg-fields";
 import { cn, TITLES } from "@/lib/utils";
 
 /**
@@ -147,12 +149,12 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
   const [f, setF] = useState({ title: "Dr.", firstName: "", lastName: "", phone: "", password: "" });
   const [show, setShow] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: k === "phone" ? maskPhone(e.target.value) : e.target.value }));
-  const ok = RULES.every(([, t]) => t(f.password)) && f.firstName.trim() && f.lastName.trim() && /^03\d{2}-\d{7}$/.test(f.phone);
+  const ok = RULES.every(([, t]) => t(f.password)) && f.firstName.trim() && f.lastName.trim() && (/^03\d{2}-\d{7}$/.test(f.phone) || INTL_RE.test(f.phone));
   return (
     <form className="mx-auto max-w-lg space-y-5" noValidate onSubmit={async (e) => {
       e.preventDefault();
       const r = await submit({ ...f, email });
-      if (r?.otpId) onCode({ otpId: r.otpId, sentTo: `${r.sentTo.phone} and ${r.sentTo.email}`, demoCode: r.demoCode });
+      if (r?.otpId) onCode({ otpId: r.otpId, sentTo: r.sentTo.email, demoCode: r.demoCode });
     }}>
       <div>
         <h2 className="font-display text-2xl font-bold text-white">Create your account</h2>
@@ -166,8 +168,8 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
         <Field label="First name" name="firstName" required error={fields.firstName}><input id="firstName" maxLength={50} autoComplete="given-name" className="input" value={f.firstName} onChange={set("firstName")} autoFocus /></Field>
         <Field label="Last name" name="lastName" required error={fields.lastName}><input id="lastName" maxLength={50} autoComplete="family-name" className="input" value={f.lastName} onChange={set("lastName")} /></Field>
       </div>
-      <Field label="Mobile number" name="phone" required error={fields.phone} hint="We text your code and tickets here">
-        <input id="phone" inputMode="numeric" autoComplete="tel" placeholder="03XX-XXXXXXX" className="input mono" value={f.phone} onChange={set("phone")} />
+      <Field label="Mobile number" name="phone" required error={fields.phone} hint="Choose the country code if your number is outside Pakistan">
+        <PhoneInput id="phone" value={f.phone} onChange={(v) => setF((p) => ({ ...p, phone: v }))} invalid={!!fields.phone} />
       </Field>
       <Field label="Password" name="password" required error={fields.password}>
         <div className="relative">
@@ -176,7 +178,7 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
         </div>
         <Strength pw={f.password} />
       </Field>
-      <p className="text-xs text-slate-300">Next, we send a 6-digit code to your mobile and email to verify the account.</p>
+      <p className="text-xs text-slate-300">Next, we email you a 6-digit code to verify the account.</p>
       <button className="btn-primary w-full" disabled={loading || !ok}>{loading ? "Sending code…" : "Create account"}</button>
       <div>{back}</div>
     </form>

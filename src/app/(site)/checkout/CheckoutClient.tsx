@@ -7,7 +7,8 @@ import { useCart } from "@/components/cart/CartProvider";
 import { useSubmit } from "@/components/ui/useForm";
 import { Alert } from "@/components/ui/Field";
 import { cn, pkr, processingFee, COUNTRIES, SPECIALTIES } from "@/lib/utils";
-import { PROVINCES, maskCnic, maskPhone } from "@/lib/reg-fields";
+import { PROVINCES, maskCnic, DIAL } from "@/lib/reg-fields";
+import { PhoneInput, splitPhone, joinPhone } from "@/components/ui/PhoneInput";
 
 type Cat = { id: number; label: string; fee: number; note: string | null; designations: string[] };
 type Details = { gender: string; institution: string; specialty: string; whatsapp: string; cnic: string; address: string; city: string; province: string; country: string; qualification: string; employeeNo: string; pmdcNo: string };
@@ -35,7 +36,15 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const [wsDesignation, setWsDesignation] = useState("");
   const { submit, loading, error, fields } = useSubmit<{ accessToken: string; regNo: string }>("/api/checkout");
   const setD = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setDet((p) => ({ ...p, [k]: k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? e.target.value.replace(/\D/g, "").slice(0, 13) : k === "whatsapp" ? maskPhone(e.target.value) : e.target.value }));
+    setDet((p) => {
+      // issues sheet 16 Nov 2026: changing the country switches CNIC / passport and the WhatsApp country code with it
+      if (k === "country") {
+        const c = e.target.value, wa = splitPhone(p.whatsapp);
+        return { ...p, country: c, cnic: (c === "Pakistan") !== ((p.country || "Pakistan") === "Pakistan") ? "" : p.cnic, province: c === "Pakistan" ? p.province : "",
+          whatsapp: wa.num.replace(/\D/g, "") ? p.whatsapp : joinPhone(DIAL[c] ?? "92", "") };
+      }
+      return { ...p, [k]: k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? e.target.value.replace(/\D/g, "").slice(0, 13) : e.target.value };
+    });
   const detailsOk = !!det.gender && det.institution.trim().length >= 2 && (!det.cnic.trim() || (det.country || "Pakistan") !== "Pakistan" || /^\d{13}$/.test(det.cnic)) && det.address.trim().length >= 5 && det.city.trim().length >= 2;
   const fe = (k: string) => fields[k] || fields[`details.${k}`];
 
@@ -59,7 +68,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const canPay = ready && !empty && !!categoryId && !!designation && (!pass || !!passCat) && detailsOk && agree && (valid.length === 0 || wsTerms) && invalid.length === 0;
 
   async function pay() {
-    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: "PayPro", details: { ...det, cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
+    const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: "PayPro", details: { ...det, whatsapp: splitPhone(det.whatsapp).num.replace(/\D/g, "") ? det.whatsapp : "", cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
     if (r) { clear(); router.push(`/register/success/${r.accessToken}?checkout=1`); }
   }
 
@@ -152,7 +161,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
             <label className="block sm:col-span-2"><span className="label">Address <span className="text-lnh-red">*</span></span><input className="input" value={det.address} onChange={setD("address")} autoComplete="street-address" />{fe("address") && <span className="err">{fe("address")}</span>}</label>
             <label className="block"><span className="label">Province</span>{(det.country || "Pakistan") === "Pakistan" ? <select className="input" value={det.province} onChange={setD("province")}><option value="">Choose…</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select> : <input className="input" value={det.province} onChange={setD("province")} />}</label>
             <label className="block"><span className="label">City <span className="text-lnh-red">*</span></span><input className="input" value={det.city} onChange={setD("city")} />{fe("city") && <span className="err">{fe("city")}</span>}</label>
-            <label className="block"><span className="label">WhatsApp no.</span><input className="input mono" inputMode="numeric" placeholder="03XX-XXXXXXX" value={det.whatsapp} onChange={setD("whatsapp")} />{fe("whatsapp") && <span className="err">{fe("whatsapp")}</span>}</label>
+            <label className="block"><span className="label">WhatsApp no.</span><PhoneInput value={det.whatsapp} onChange={(v) => setDet((p) => ({ ...p, whatsapp: v }))} invalid={!!fe("whatsapp")} />{fe("whatsapp") && <span className="err">{fe("whatsapp")}</span>}</label>
             <label className="block"><span className="label">PMDC no. (medical doctors only)</span><input className="input" value={det.pmdcNo} onChange={setD("pmdcNo")} /></label>
             <label className="block"><span className="label">Highest academic qualification</span><input className="input" value={det.qualification} onChange={setD("qualification")} placeholder="e.g. MBBS, FCPS" /></label>
             <label className="block"><span className="label">Emp # / Student ID (only for LNH)</span><input className="input mono" value={det.employeeNo} onChange={setD("employeeNo")} /></label>
