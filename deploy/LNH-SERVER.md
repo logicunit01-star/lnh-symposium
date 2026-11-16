@@ -135,7 +135,7 @@ Managed in the admin since 14 Nov 2026: **Admin → Payments (Super Admin only)*
 
 - Every message is written to the database first (`notification_log`, status QUEUED) and sent by `lnh-notifier`, with limits per minute and retries (1, 5, 15, 60, 180, 360 minutes). Admin → WhatsApp & SMS (Super Admin) shows the queue, failed messages ("Send now", "Cancel") and whether the notifier is running.
 - If `lnh-notifier` is stopped, nothing is lost: messages wait and go out when it starts again. `pm2 restart lnh-notifier`; logs `pm2 logs lnh-notifier`.
-- WhatsApp/SMS through eOcean: the Super Admin enters the API key, account ID, username and a template ID per message in Admin → WhatsApp & SMS. eOcean must be able to fetch `https://symposium2027.lnh.edu.pk/api/qr/...` (the QR image sent with WhatsApp messages), so that path must stay public.
+- WhatsApp/SMS through eOcean xNotify: the Super Admin enters the API key and a template ID per message in Admin → WhatsApp / SMS (xNotify); xNotify decides WhatsApp or SMS. eOcean must be able to fetch `https://symposium2027.lnh.edu.pk/api/qr/...` (the QR image sent with WhatsApp messages), so that path must stay public.
 
 ## Backups
 

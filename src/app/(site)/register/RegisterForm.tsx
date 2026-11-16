@@ -94,7 +94,7 @@ export function RegisterForm({ categories, sessions, preselect }: { categories: 
             <Field label="First name" name="firstName" required error={errs.firstName}><input id="firstName" className="input" value={f.firstName ?? ""} onChange={set("firstName")} autoComplete="given-name" /></Field>
             <Field label="Last name" name="lastName" required error={errs.lastName}><input id="lastName" className="input" value={f.lastName ?? ""} onChange={set("lastName")} autoComplete="family-name" /></Field>
             <Field label="Email address" name="email" required error={errs.email}><input id="email" type="email" className="input" value={f.email ?? ""} onChange={set("email")} autoComplete="email" /></Field>
-            <Field label="Contact no." name="phone" required error={errs.phone} hint="SMS confirmation will be sent here"><input id="phone" className="input" placeholder="03xx-xxxxxxx" value={f.phone ?? ""} onChange={set("phone")} autoComplete="tel" /></Field>
+            <Field label="Contact no." name="phone" required error={errs.phone} hint="WhatsApp / SMS confirmation will be sent here"><input id="phone" className="input" placeholder="03xx-xxxxxxx" value={f.phone ?? ""} onChange={set("phone")} autoComplete="tel" /></Field>
           </div>
         )}
 
@@ -174,7 +174,7 @@ export function RegisterForm({ categories, sessions, preselect }: { categories: 
             <Field label="" error={errs.consent}>
               <label className="flex cursor-pointer gap-3 text-sm text-slate-300">
                 <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[#B72025]" checked={!!f.consent} onChange={set("consent")} />
-                <span>I confirm the information above is correct and agree to receive registration updates by email and SMS. Fees are non-refundable after payment.</span>
+                <span>I confirm the information above is correct and agree to receive registration updates by email, WhatsApp and SMS. Fees are non-refundable after payment.</span>
               </label>
             </Field>
           </div>

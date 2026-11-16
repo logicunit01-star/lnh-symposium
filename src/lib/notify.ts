@@ -58,10 +58,9 @@ export const normalisePhone = (p: string) => {
 };
 
 /**
- * WhatsApp and/or SMS for one notification (Admin → WhatsApp & SMS). Never throws.
- * - WhatsApp: when switched on and the message has a WhatsApp template ID; mediaUrl (a QR image) goes with it.
- * - SMS: eOcean when switched on and the message has an SMS template ID; otherwise the free text through the
- *   SMS gateway in the server file (SMS_API_URL); otherwise only recorded, as before.
+ * One xNotify message for a notification (Admin → WhatsApp & SMS). Never throws. Sent when xNotify is switched on and the
+ * message has a template ID; mediaUrl (a QR image) goes with it. xNotify delivers it by WhatsApp or SMS (16 Nov 2026:
+ * the portal no longer sends SMS itself). m.text is kept only as a readable note in the log.
  */
 export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean } = {}) {
   try {
@@ -69,23 +68,15 @@ export async function sendMessage(key: NotifyMessageKey, phone: string | null | 
     const to = normalisePhone(phone);
     if (!/^\d{10,15}$/.test(to)) return;
     const cfg = await notifyConfig();
-    const t = cfg.templates[key] ?? {}, free = "freeText" in NOTIFY_MESSAGES[key];
-    const common = { to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer };
-    if (cfg.waEnabled && t.wa && !free) {
-      await enqueue({ ...common, channel: "WHATSAPP", body: `WhatsApp template ${t.wa}${m.mediaUrl ? " + QR image" : ""}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: t.wa, mediaUrl: m.mediaUrl, email: m.email, via: "XNOTIFY" } });
-    }
-    if (cfg.smsEnabled && t.sms && !free) {
-      await enqueue({ ...common, channel: "SMS", body: `SMS template ${t.sms}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: t.sms, email: m.email, via: "XNOTIFY" } });
-    } else if (m.text) {
-      const shown = key === "SIGN_IN_CODE" ? maskCodes(m.text) : m.text;
-      if (process.env.SMS_API_URL) await enqueue({ ...common, channel: "SMS", body: shown, payload: { messageKey: key, text: m.text, via: "GATEWAY" } });
-      else await logOnly({ channel: "SMS", to, templateKey: key, ref: m.ref ?? null, body: shown });
-    }
+    const tid = cfg.templates[key]?.wa;
+    if (!cfg.waEnabled || !tid || !(key in NOTIFY_MESSAGES)) return;
+    await enqueue({ to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer, channel: "WHATSAPP",
+      body: `xNotify template ${tid}${m.mediaUrl ? " + QR image" : ""}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: tid, mediaUrl: m.mediaUrl, email: m.email, via: "XNOTIFY" } });
   } catch (e) { console.error("[notify] could not queue", key, e); }
 }
 
-/** Free-text SMS (kept for existing callers): see sendMessage. */
-export async function sendSms(to: string, message: string, key: NotifyMessageKey = "BROADCAST", ref?: string | null) {
+/** Kept for existing callers (reminders, certificates): the text is only a log note; xNotify sends the template. */
+export async function sendSms(to: string, message: string, key: NotifyMessageKey, ref?: string | null) {
   return sendMessage(key, to, { text: message, ref });
 }
 
@@ -102,6 +93,6 @@ export function emailLayout(title: string, bodyHtml: string, cta?: { label: stri
     <tr><td style="padding:28px 32px;font-size:15px;line-height:1.6">${bodyHtml}
       ${cta ? `<p style="margin:28px 0 0"><a href="${cta.href}" style="background:#B72025;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600;display:inline-block">${cta.label}</a></p>` : ""}
     </td></tr>
-    <tr><td style="padding:18px 32px;background:#f6f8fc;font-size:12px;color:#5b6b8c">This is an automated message from the LNH Symposium secretariat. Please do not reply to this email.</td></tr>
+    <tr><td style="padding:18px 32px;background:#f6f8fc;font-size:12px;color:#5b6b8c">This is an automated message from the LNH Symposium secretariat.</td></tr>
   </table></td></tr></table></body></html>`;
 }

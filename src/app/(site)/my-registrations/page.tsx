@@ -15,8 +15,8 @@ export default function FindMyTickets() {
       </PageHero>
       <div className="container-x grid max-w-5xl gap-8 lg:grid-cols-2">
         <section aria-labelledby="h-code">
-          <h2 id="h-code" className="font-display text-xl font-bold text-white">Get a code by SMS</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-300">Enter the mobile number you registered with. We text a one-time code, then list every registration made with it.</p>
+          <h2 id="h-code" className="font-display text-xl font-bold text-white">Get a code by mobile number</h2>
+          <p className="mb-4 mt-1 text-sm text-slate-300">Enter the mobile number you registered with. We email a one-time code to the address of that registration, then list every registration made with it.</p>
           <LookupFlow />
         </section>
         <section aria-labelledby="h-reg">

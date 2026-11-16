@@ -4,7 +4,6 @@ import { sendTemplate } from "./email";
 import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
-import { sendSms } from "./notify";
 import { mailState } from "./mail-config";
 
 export const OTP_TTL_MS = 5 * 60_000;
@@ -14,12 +13,11 @@ export const OTP_MAX_SENDS = 4;
 const hash = (id: string, code: string) => createHmac("sha256", (process.env.AUTH_SECRET || "dev-secret") + ":otp").update(`${id}:${code}`).digest("hex");
 const newCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
-/** Demo mode: when neither email nor SMS delivery is configured, the code is shown on screen. */
+/** Demo mode: when email delivery is not configured, the code is shown on screen. Codes go by email only (16 Nov 2026). */
 export const otpDemoMode = async () => process.env.OTP_DEMO === "1" || (process.env.OTP_DEMO !== "0" && !(await codeDelivery()));
-/** Email or SMS delivery is configured. */
-/** Email or SMS delivery is configured: an active mailbox in Admin → Email settings (not "Log only"), SMTP_* or the SMS gateway in the server file. */
+/** Email delivery is configured: an active mailbox in Admin → Email settings (not "Log only") or SMTP_* in the server file. */
 export const codeDelivery = async () => {
-  if (process.env.SMTP_HOST || process.env.SMS_API_URL) return true;
+  if (process.env.SMTP_HOST) return true;
   const st = await mailState().catch(() => null);
   return !!st && st.mode !== "LOG" && st.accounts.some((a) => a.active);
 };
@@ -38,7 +36,6 @@ export const phoneDigits = (p: string) => { let d = p.replace(/\D/g, ""); if (d.
 async function deliver(code: string, to: { email?: string; phone?: string }, purpose: string) {
   const what = purpose === "SIGNUP" ? "verify your account" : purpose === "SIGNIN" ? "sign in to your account" : purpose === "RESET" ? "set a new password" : "view your registrations";
   if (to.email) await sendTemplate("SIGN_IN_CODE", to.email, { code, purpose: what }, { priority: 10 });
-  if (to.phone) await sendSms(to.phone, `LNH Symposium: your code is ${code}. It expires in 5 minutes. Do not share it.`, "SIGN_IN_CODE");
 }
 
 export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET", target: string, to: { email?: string; phone?: string }, payload?: unknown) {

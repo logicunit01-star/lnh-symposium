@@ -24,7 +24,7 @@ export default async function RegDetail({ params, searchParams }: { params: { id
         actions={<>
           <a className="a-btn-ghost" href={`/api/registrations/${r.accessToken}/pdf`} target="_blank">Confirmation PDF</a>
           {r.certificateNo && <a className="a-btn-ghost" href={`/api/certificates/${r.accessToken}`} target="_blank">Certificate</a>}
-          {edit && <form action={regResend.bind(null, r.id)}><button className="a-btn-ghost">Resend email + SMS</button></form>}
+          {edit && <form action={regResend.bind(null, r.id)}><button className="a-btn-ghost">Resend email + WhatsApp / SMS</button></form>}
         </>} />
       {searchParams.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{ERR[searchParams.err] ?? "Not done."}</p>}
       <div className="grid gap-6 lg:grid-cols-3">

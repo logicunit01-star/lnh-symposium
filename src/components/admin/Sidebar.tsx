@@ -35,7 +35,7 @@ const ITEMS: { href: string; label: string; I: any; p: Perm | Perm[] }[] = [
   { href: "/admin/settings", label: "Event Settings", I: Settings, p: "settings" },
   { href: "/admin/payments", label: "Payments (PayPro)", I: CreditCard, p: "payments" },
   { href: "/admin/email-settings", label: "Email settings", I: AtSign, p: "mail" },
-  { href: "/admin/messaging", label: "WhatsApp & SMS", I: MessageSquareText, p: "messaging" },
+  { href: "/admin/messaging", label: "WhatsApp / SMS (xNotify)", I: MessageSquareText, p: "messaging" },
   { href: "/admin/users", label: "Users & Roles", I: UserCog, p: "users" },
 ];
 

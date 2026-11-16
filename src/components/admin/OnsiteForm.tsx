@@ -104,7 +104,7 @@ export function OnsiteForm({ cats, items, procPct, banquet }: { cats: Cat[]; ite
           <div className="flex justify-between text-lg font-bold"><dt>Total</dt><dd>{pay === "WAIVED" ? <><s className="mr-2 text-sm font-normal text-slate-400">{pkr(total)}</s>{pkr(0)}</> : pkr(total)}</dd></div>
         </dl>
         <Go />
-        <p className="text-xs text-slate-500">Same registration number series, seat caps and confirmation email/SMS as online. The QR pass opens right after.</p>
+        <p className="text-xs text-slate-500">Same registration number series, seat caps and confirmation email and WhatsApp / SMS as online. The QR pass opens right after.</p>
       </aside>
     </form>
   );

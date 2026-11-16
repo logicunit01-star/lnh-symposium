@@ -4,10 +4,9 @@ import { db, schema as s } from "./db";
 import { openText } from "./secret-box";
 
 /**
- * Super Admin → WhatsApp & SMS (14.11.2026, Part C): eOcean xNotify settings. xNotify sends a pre-approved message
- * template (by its ID) to a number; it takes no merge values, so each message below has its own template ID per channel.
- * Messages marked freeText need the text itself (a sign-in code, a payment link), which a fixed template cannot carry:
- * they go by SMS only through the SMS gateway in the server file (SMS_API_URL), if one is set.
+ * Super Admin → WhatsApp / SMS (xNotify) (14.11.2026 Part C, simplified 16 Nov 2026): one xNotify API call per message
+ * with its template ID; xNotify delivers it by WhatsApp or SMS. Templates have fixed text, so sign-in codes and
+ * free-text news go by email only.
  */
 export const XNOTIFY_LABEL = "xnotify-api-key";
 export const NOTIFY_MESSAGES = {
@@ -18,8 +17,6 @@ export const NOTIFY_MESSAGES = {
   SYMPOSIUM_REMINDER: { label: "Symposium starts tomorrow", detail: "Day before the symposium." },
   WORKSHOP_REMINDER: { label: "Workshop reminder", detail: "Day before each workshop." },
   CERTIFICATE_READY: { label: "E-certificate ready", detail: "Symposium and workshop certificates." },
-  SIGN_IN_CODE: { label: "Sign-in code", detail: "Contains the one-time code: SMS gateway only.", freeText: true },
-  BROADCAST: { label: "Message to registrants (Admin → Messages)", detail: "Free text: SMS gateway only.", freeText: true },
 } as const;
 export type NotifyMessageKey = keyof typeof NOTIFY_MESSAGES;
 

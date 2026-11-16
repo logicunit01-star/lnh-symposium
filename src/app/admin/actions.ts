@@ -8,7 +8,7 @@ import { requirePerm } from "@/lib/auth";
 import { markPaidManually } from "@/lib/payments";
 import { sendRegistrationNotice } from "@/lib/registration";
 import { issueCertificates } from "@/lib/certificates";
-import { sendEmail, sendMessage, emailLayout } from "@/lib/notify";
+import { sendEmail, emailLayout } from "@/lib/notify";
 import { staffLog } from "@/lib/staff-audit";
 
 const str = (f: FormData, k: string) => { const v = f.get(k); return v == null || v === "" ? null : String(v).trim(); };
@@ -224,8 +224,8 @@ export async function broadcast(f: FormData) {
   if (f.get("confirm") !== "on") redirect("/admin/communications?err=confirm");
   const { audienceRecipients } = await import("@/lib/broadcast");
   const list = await audienceRecipients(str(f, "audience") || "PAID", str(f, "sessionId"));
-  const subject = str(f, "subject")!, body = str(f, "body")!, sms = str(f, "sms");
-  const channels = f.getAll("channel").map(String);
+  const subject = str(f, "subject")!, body = str(f, "body")!;
+  const channels = ["EMAIL"]; // free-text SMS removed (16 Nov 2026): xNotify sends fixed templates only
   // sender settings of "Messages from staff" (Automated emails), 14 Nov 2026
   const { senderFor } = await import("@/lib/email");
   const snd = await senderFor("BROADCAST");
@@ -236,7 +236,6 @@ export async function broadcast(f: FormData) {
   const html = (r: { title: string | null; firstName: string; lastName: string }) => emailLayout(esc(subject), `<p>Dear ${esc(`${r.title ?? ""} ${r.firstName} ${r.lastName}`.trim())},</p>${body.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("")}`);
   for (const r of list) {
     if (channels.includes("EMAIL")) await sendEmail(r.email, subject, html(r), [], { from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: null, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: "BROADCAST", ref: batch, defer: true });
-    if (channels.includes("SMS") && sms) await sendMessage("BROADCAST", r.phone, { text: sms.replace("{name}", r.firstName).replace("{regNo}", r.regNo), ref: batch, defer: true });
   }
   await staffLog(me, { label: `Message to ${list.length} registrant(s)` }, "Message sent", `${batch}: “${subject}” by ${channels.join(" + ")}`);
   redirect(`/admin/communications?batch=${batch}&sent=${list.length}`);

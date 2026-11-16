@@ -52,7 +52,7 @@ export function OtpVerify({ otpId, sentTo, demoCode, verifyUrl, onVerified, onCa
       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-lnh-sky/40 bg-lnh-sky/10 text-lnh-sky"><ShieldCheck className="h-7 w-7" /></span>
       <h2 id="otp-title" className="mt-4 font-display text-2xl font-bold text-white">{title}</h2>
       <p className="mt-2 text-sm text-slate-400">We sent a 6-digit code to <span className="mono text-white">{sentTo}</span>. It expires in <span className="mono text-white">{mm}</span>.</p>
-      {demo && <p className="mx-auto mt-4 w-fit rounded-xl border border-lnh-gold/40 bg-lnh-gold/10 px-4 py-2 text-xs text-lnh-gold">Demo mode (no SMS or email service connected): your code is <b className="mono text-base tracking-[0.3em]">{demo}</b></p>}
+      {demo && <p className="mx-auto mt-4 w-fit rounded-xl border border-lnh-gold/40 bg-lnh-gold/10 px-4 py-2 text-xs text-lnh-gold">Demo mode (no email service connected): your code is <b className="mono text-base tracking-[0.3em]">{demo}</b></p>}
       <div className="mt-6 flex justify-center gap-2" onPaste={(e) => { e.preventDefault(); put(0, e.clipboardData.getData("text")); }}>
         {digits.map((d, i) => (
           <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} inputMode="numeric" autoComplete={i === 0 ? "one-time-code" : "off"} maxLength={6} aria-label={`Digit ${i + 1}`}

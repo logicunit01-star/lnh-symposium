@@ -8,7 +8,7 @@ import { notifyConfig, workerMode } from "./notify-config";
 import { xnotifySend } from "./xnotify";
 
 /**
- * Outbox (14.11.2026 Part C). Every email, WhatsApp and SMS is first written to notification_log with status QUEUED and
+ * Outbox (14.11.2026 Part C). Every email and xNotify message (WhatsApp / SMS) is first written to notification_log with status QUEUED and
  * everything needed to deliver it (payload). Then:
  * - LNH server (NOTIFIER=worker): the separate "lnh-notifier" process (scripts/notifier.ts, PM2) sends the queue, with
  *   sending limits per minute and retries. The website never waits for a mail or WhatsApp server.
@@ -65,16 +65,11 @@ async function deliver(row: Row): Promise<Result> {
       });
       return { ok: true, ref: info?.messageId ?? null };
     }
-    if (p.via === "GATEWAY") {
-      const tpl = process.env.SMS_API_URL;
-      if (!tpl) return { ok: false, error: "No SMS gateway (SMS_API_URL) in the server file." };
-      const r = await fetch(tpl.replace("{to}", encodeURIComponent(row.to)).replace("{message}", encodeURIComponent(p.text ?? row.body)), { cache: "no-store" });
-      return r.ok ? { ok: true } : { ok: false, error: `SMS gateway HTTP ${r.status}` };
-    }
+    // WhatsApp / SMS: one xNotify call; xNotify decides WhatsApp or SMS (16 Nov 2026)
+    if (!p.templateId) return { ok: false, error: "No xNotify template for this message." };
     const cfg = await notifyConfig();
-    const on = row.channel === "WHATSAPP" ? cfg.waEnabled : cfg.smsEnabled;
-    if (!on) return { ok: false, error: `${row.channel === "WHATSAPP" ? "WhatsApp" : "SMS"} is switched off (Admin → WhatsApp & SMS).` };
-    const r = await xnotifySend(cfg, { to: row.to, email: p.email, templateId: p.templateId!, channel: row.channel === "WHATSAPP" ? cfg.waChannel : cfg.smsChannel, mediaUrl: p.mediaUrl });
+    if (!cfg.waEnabled) return { ok: false, error: "xNotify is switched off (Admin → WhatsApp & SMS)." };
+    const r = await xnotifySend(cfg, { to: row.to, email: p.email, templateId: p.templateId, mediaUrl: p.mediaUrl });
     return { ok: true, ref: r.ref };
   } catch (e: any) {
     return { ok: false, error: String(e?.message || e).slice(0, 500) };

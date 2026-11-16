@@ -26,24 +26,24 @@ export async function saveMessaging(f: FormData) {
   const apiUrl = field(f, "apiUrl") || "https://api.xnotify.ai/v2/send";
   if (!/^(https:\/\/[a-z0-9.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?(\/\S*)?$/i.test(apiUrl)) return back({ err: "The API address must start with https://" });
   const key = field(f, "apiKey");
-  const templates: Record<string, { wa?: string; sms?: string }> = {};
-  for (const k of Object.keys(NOTIFY_MESSAGES)) {
-    const wa = field(f, `wa_${k}`), sms = field(f, `sms_${k}`);
-    if ([wa, sms].some((v) => v && !/^[\w.-]{1,64}$/.test(v))) return back({ err: `Template IDs may contain only letters, digits, - . and _ (${k}).` });
-    if (wa || sms) templates[k] = { ...(wa ? { wa } : {}), ...(sms ? { sms } : {}) };
+  // one xNotify template per message (an integer, e.g. 2698); xNotify sends it by WhatsApp or SMS (16 Nov 2026)
+  const templates: Record<string, { wa?: string }> = {};
+  for (const [k, m] of Object.entries(NOTIFY_MESSAGES)) {
+    const wa = field(f, `wa_${k}`);
+    if (wa && !/^\d{1,10}$/.test(wa)) return back({ err: `The template ID is a number, e.g. 2698 (${m.label}).` });
+    if (wa) templates[k] = { wa };
   }
   const values = {
-    waEnabled: f.get("waEnabled") === "on", smsEnabled: f.get("smsEnabled") === "on", apiUrl,
+    waEnabled: f.get("waEnabled") === "on", smsEnabled: false, apiUrl,
     apiKey: f.get("removeKey") === "on" ? null : key ? sealText(XNOTIFY_LABEL, key) : (cur.keyUnreadable ? null : (await db.select({ k: s.notifySettings.apiKey }).from(s.notifySettings).where(eq(s.notifySettings.id, 1)))[0]?.k ?? null),
-    authId: field(f, "authId") || null, authUsername: field(f, "authUsername") || null,
-    waChannel: field(f, "waChannel") || "Whatsapp", smsChannel: field(f, "smsChannel") || "SMS", templates,
+    waChannel: field(f, "waChannel") || "Whatsapp", templates,
     emailPerMin: int(f, "emailPerMin", 1, 600, 60), msgPerMin: int(f, "msgPerMin", 1, 600, 30), maxAttempts: int(f, "maxAttempts", 1, 20, 6),
     updatedBy: `${u.name} (${u.email})`, updatedAt: new Date(),
   };
-  if ((values.waEnabled || values.smsEnabled) && (!values.apiKey || !values.authId || !values.authUsername)) return back({ err: "To switch WhatsApp or SMS on, enter the eOcean API key, account ID and username." });
+  if (values.waEnabled && !values.apiKey) return back({ err: "To switch xNotify on, enter the API key." });
   await db.insert(s.notifySettings).values({ id: 1, ...values }).onConflictDoUpdate({ target: s.notifySettings.id, set: values });
   clearNotifyCache();
-  console.log(`[messaging] settings changed by ${u.email}: WhatsApp ${values.waEnabled ? "on" : "off"}, SMS ${values.smsEnabled ? "on" : "off"}`); // no secrets logged
+  console.log(`[messaging] settings changed by ${u.email}: xNotify ${values.waEnabled ? "on" : "off"}`); // no secrets logged
   revalidatePath("/admin/messaging");
   back({ saved: "1" });
 }
@@ -57,8 +57,8 @@ export async function testMessage(f: FormData) {
   const before = new Date();
   await sendMessage(key, phone, { text: `LNH Symposium: test message (${NOTIFY_MESSAGES[key].label}).`, ref: "TEST", priority: 10 });
   const rows = await db.query.notificationLog.findMany({ where: (n, { and, gte, eq }) => and(gte(n.createdAt, before), eq(n.ref, "TEST")), orderBy: (n, { desc }) => desc(n.createdAt), limit: 3 });
-  if (!rows.length) return back({ test: "fail", msg: "Nothing was queued: switch WhatsApp or SMS on and enter a template ID for this message (or set an SMS gateway)." });
-  back({ test: "ok", msg: rows.map((r) => `${r.channel}: ${r.status}${r.error ? ` (${r.error.slice(0, 120)})` : ""}`).join(" · ") });
+  if (!rows.length) return back({ test: "fail", msg: "Nothing was queued: switch xNotify on and enter a template ID for this message." });
+  back({ test: rows[0].status === "FAILED" || rows[0].error ? "fail" : "ok", msg: rows.map((r) => `xNotify: ${r.status}${r.error ? ` (${r.error.slice(0, 160)})` : ""}${r.providerRef ? `, ref ${r.providerRef}` : ""}`).join(" · ") });
 }
 
 export async function retryMessage(id: string) { await superAdmin(); await retryNow(id); revalidatePath("/admin/messaging"); back({ q: "1" }); }

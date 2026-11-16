@@ -26,7 +26,7 @@ export function BatchProgress({ batch }: { batch: string }) {
   return (
     <div className="mb-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900" aria-live="polite">
       {c.waiting > 0 ? <>Sending… {c.sent + c.failed + c.logged} of {total} done. {c.worker ? "The sender continues even if you close this page." : "Keep this page open until it finishes."}</>
-        : <>Finished: {c.sent} sent{c.logged ? `, ${c.logged} recorded only (no mailbox / SMS gateway)` : ""}{c.failed ? `, ${c.failed} not delivered yet (retried automatically; see WhatsApp & SMS → Queue)` : ""}.</>}
+        : <>Finished: {c.sent} sent{c.logged ? `, ${c.logged} recorded only (no mailbox switched on)` : ""}{c.failed ? `, ${c.failed} not delivered yet (retried automatically; see WhatsApp & SMS → Queue)` : ""}.</>}
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sky-100"><div className="h-full bg-lnh-blue transition-all" style={{ width: `${total ? ((total - c.waiting) / total) * 100 : 100}%` }} /></div>
     </div>
   );
