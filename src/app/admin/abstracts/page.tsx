@@ -59,21 +59,21 @@ export default async function Abstracts({ searchParams }: { searchParams: { q?: 
       </form>
       <div className="a-card overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>ID</th><th>Title</th><th>Presenting author</th><th>Department</th><th>Preferred</th><th>HOD decision</th><th>Stage</th><th className="min-w-[260px]">Venue · placement</th></tr></thead>
+          <thead><tr><th>ID</th><th>Title</th><th>Presenting author</th><th>Department</th><th>Preferred</th><th>HOD decision</th><th>Stage</th><th className="min-w-[200px]">Venue · placement</th></tr></thead>
           <tbody>{rows.map((a) => (
             <tr key={a.id}>
-              <td><Link href={`/admin/abstracts/${a.id}`} className="font-mono text-xs font-semibold text-lnh-blue">{a.refNo}</Link><p className="text-[10px] text-slate-400">{fmtDateTime(a.createdAt)}</p></td>
-              <td className="max-w-md"><Link href={`/admin/abstracts/${a.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{a.abstractTitle}</Link></td>
-              <td className="text-sm">{a.presentingAuthor}<p className="text-xs text-slate-400">{a.organization}</p></td>
-              <td className="text-xs text-slate-600">{a.assignedDept ?? a.specialty}{a.phase === 2 && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">P2</span>}</td>
+              <td className="whitespace-nowrap"><Link href={`/admin/abstracts/${a.id}`} className="font-mono text-xs font-semibold text-lnh-blue">{a.refNo}</Link><p className="text-[10px] text-slate-400">{fmtDateTime(a.createdAt)}</p></td>
+              <td className="min-w-[200px] max-w-md"><Link href={`/admin/abstracts/${a.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{a.abstractTitle}</Link></td>
+              <td className="min-w-[130px] text-sm">{a.presentingAuthor}<p className="text-xs text-slate-400">{a.organization}</p></td>
+              <td className="min-w-[110px] text-xs text-slate-600">{a.assignedDept ?? a.specialty}{a.phase === 2 && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">P2</span>}</td>
               <td className="text-xs">{PREF_LABEL[a.presentationPref ?? ""] ?? a.type}</td>
-              <td className="text-xs">{a.hodDecision ? <>{decisionLabel(a.hodDecision, a.presentationPref)}<span className="text-slate-400"> · {scoreText(a.hodTotal, a.hodScores)}</span></> : <span className="text-slate-400">—</span>}</td>
+              <td className="min-w-[110px] text-xs">{a.hodDecision ? <>{decisionLabel(a.hodDecision, a.presentationPref)}<span className="text-slate-400"> · {scoreText(a.hodTotal, a.hodScores)}</span></> : <span className="text-slate-400">—</span>}</td>
               <td><StatusBadge s={a.status} />{a.acceptedAs && <span className="ml-1 text-[10px] font-bold text-emerald-700">{a.acceptedAs}</span>}</td>
               <td>{a.status === "ACCEPTED" && canAssign ? (
                 <form action={assignAbstractVenue.bind(null, a.id)} className="flex flex-wrap items-center gap-1">
                   <input type="hidden" name="back" value={here} />
-                  <select name="venueId" defaultValue={a.venueId ?? ""} className="a-input w-40 py-1 text-xs" aria-label={`Venue for ${a.refNo}`}><option value="">No venue</option>{venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
-                  <input name="placement" defaultValue={a.placement ?? ""} placeholder={a.acceptedAs === "POSTER" ? "Board no., day" : "Slot, remarks"} className="a-input w-28 py-1 text-xs" aria-label={`Placement for ${a.refNo}`} />
+                  <select name="venueId" defaultValue={a.venueId ?? ""} className="a-input w-36 py-1 text-xs" aria-label={`Venue for ${a.refNo}`}><option value="">No venue</option>{venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
+                  <input name="placement" defaultValue={a.placement ?? ""} placeholder={a.acceptedAs === "POSTER" ? "Board no., day" : "Slot, remarks"} className="a-input w-24 py-1 text-xs" aria-label={`Placement for ${a.refNo}`} />
                   <button className="a-btn-ghost px-2 py-1 text-xs">Save</button>
                 </form>
               ) : <span className="text-xs text-slate-500">{[venues.find((v) => v.id === a.venueId)?.name, a.placement].filter(Boolean).join(" · ") || "—"}</span>}</td>

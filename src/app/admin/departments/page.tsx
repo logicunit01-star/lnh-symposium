@@ -51,10 +51,13 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
       {review.length > 0 && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{review.length} department name{review.length === 1 ? "" : "s"} came from records that did not match the list ({review.map((r) => `“${r.d.name}”`).join(", ")}). Open each one and rename it or merge it into the right department.</p>}
       {logins && <DeptLoginsPanel />}
 
-      <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
+      {/* layout fix 16 Nov 2026: the table uses the full width; the editor column appears only while a department is open
+          (above it, in two columns on wide screens) */}
+      <div className="mt-6 grid gap-6">
         <div className="space-y-3">
           <form className="flex flex-wrap gap-2"><input name="q" defaultValue={sp.q} placeholder="Search department or code…" className="a-input max-w-xs" />
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show" value="all" defaultChecked={sp.show === "all"} />Show inactive</label><button className="a-btn-ghost">Filter</button></form>
+          <p className="text-xs text-slate-500">{edit ? "Choose Edit to rename a department, set its code, type and email, see its people, or merge a duplicate. " : ""}Deactivated departments disappear from forms but keep their records; departments cannot be deleted, only merged.</p>
           <div className="a-card overflow-x-auto">
             <table className="a-table">
               <thead><tr><th>Department</th><th>People</th><th>Department login</th><th>Abstracts</th><th>Phase 1 / 2</th><th>Sessions · Workshops · Guests</th><th /></tr></thead>
@@ -88,7 +91,7 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
           )}
         </div>
 
-        <aside className="space-y-4">
+        {sel && edit ? <aside className="order-first grid gap-4 lg:grid-cols-2 [&>*]:self-start">
           {sel && edit ? (
             <>
               <form key={`${sel.d.id}-${sel.d.name}-${sp.saved ?? ""}-${sp.err ?? ""}`} action={saveDepartment.bind(null, sel.d.id)} className="a-card space-y-3 p-5">
@@ -128,11 +131,11 @@ export default async function Departments({ searchParams: sp }: { searchParams: 
             </>
           ) : (
             <div className="a-card p-5 text-sm text-slate-600">
-              <p>{edit ? "Choose Edit on a department to rename it, set its code, type and email, see its people, or merge a duplicate." : "Super Admin and Admin can edit departments."}</p>
+              <p>Super Admin and Admin can edit departments.</p>
               <p className="mt-3 text-xs text-slate-500">Deactivated departments disappear from forms but keep their records. Departments cannot be deleted, only merged.</p>
             </div>
           )}
-        </aside>
+        </aside> : null}
       </div>
     </>
   );

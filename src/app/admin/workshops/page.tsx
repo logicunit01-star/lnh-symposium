@@ -142,15 +142,14 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
       </div>
       <div className="a-card mt-3 overflow-x-auto">
         <table className="a-table">
-          <thead><tr><th>Workshop</th><th>Proposed date</th><th>Time (24h)</th><th>Venue</th><th>Registered</th><th>Cap</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
+          <thead><tr><th>Workshop</th><th>Date · time (24h)</th><th>Venue</th><th>Registered</th><th>Cap</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.w.id} className={cn(r.clash && "[&>td:first-child]:border-l-4 [&>td:first-child]:border-l-lnh-red")}>
-                <td className="min-w-[240px]"><Link href={`/admin/workshops/${r.w.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{r.w.title}</Link>
+                <td className="min-w-[220px]"><Link href={`/admin/workshops/${r.w.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{r.w.title}</Link>
                   <p className="text-xs text-slate-400">{r.w.department}{r.w.category ? ` · ${CATEGORY_LABEL[r.w.category]}` : ""}{r.w.themeWeek ? ` · Week ${r.w.themeWeek}` : ""}{r.clash ? " · " : ""}{r.clash && <b className="text-lnh-red">clash</b>}</p></td>
-                <td className="whitespace-nowrap font-mono text-xs">{fmtDate(r.w.startsAt, { day: "2-digit", month: "short", year: "numeric" })}</td>
-                <td className="whitespace-nowrap font-mono text-xs">{r.time}</td>
-                <td className="whitespace-nowrap text-xs">{r.venue?.name ?? r.w.hall ?? "—"}</td>
+                <td className="whitespace-nowrap font-mono text-xs">{fmtDate(r.w.startsAt, { day: "2-digit", month: "short", year: "numeric" })}<span className="block text-slate-500">{r.time}</span></td>
+                <td className="min-w-[120px] text-xs">{r.venue?.name ?? r.w.hall ?? "—"}</td>
                 <td className="min-w-[110px]"><span className="font-semibold">{r.booked}</span>{r.waiting > 0 && <span className="text-xs text-slate-400"> +{r.waiting} wait</span>}
                   {r.w.status === "APPROVED" && r.w.capacity ? <div className="mt-1"><Bar pct={r.fill} tone={r.fill >= 1 ? "red" : r.fill < LOW_FILL ? "amber" : "blue"} /></div> : null}</td>
                 <td className="text-sm">{r.w.capacity ?? "—"}</td>
@@ -162,7 +161,7 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={8} className="py-10 text-center text-sm text-slate-400">No workshops match. {can(u, "workshops.submit") && <Link href="/admin/workshops/new" className="text-lnh-blue underline">Submit a request</Link>}</td></tr>}
+            {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No workshops match. {can(u, "workshops.submit") && <Link href="/admin/workshops/new" className="text-lnh-blue underline">Submit a request</Link>}</td></tr>}
           </tbody>
         </table>
       </div>
