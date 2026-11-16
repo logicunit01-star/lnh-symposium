@@ -73,6 +73,9 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   const contact = str(f, "facultyContact");
 
   if (title.length < 5) return { error: "Enter the workshop title (at least 5 characters)." };
+  if (title.length > 100) return { error: "The workshop title can be at most 100 characters (best under 70 for the flyer)." };
+  const flyerSummary = str(f, "flyerSummary");
+  if (flyerSummary && flyerSummary.length > 140) return { error: "The flyer summary can be at most 140 characters." };
   if (!department) return { error: "Choose the owning department." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Pick the proposed date." };
   // No past dates and no Sundays (Dashboard Findings, 9 Nov); an existing request may keep its own date
@@ -110,7 +113,7 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
 
   const fee = int(f, "fee"), earlyFee = str(f, "earlyFee") ? int(f, "earlyFee") : null;
   const data = {
-    title, description: str(f, "description"), department, format: str(f, "format"),
+    title, description: str(f, "description"), flyerSummary: flyerSummary ?? null, department, format: str(f, "format"),
     category: str(f, "category") === "A" ? "A" : "B", themeWeek: themeWeekOf(date, ev.themeWeeks),
     startsAt, endsAt, venueId, hall: venue ? venue.name : "Online", capacity, days, mode, onlineLink,
     organiser, objectives, targetAudience, prelimProgramme: str(f, "prelimProgramme"), facilitatorNames, fee, earlyFee, cmeHours: str(f, "cmeHours") ? Number(str(f, "cmeHours")) : null,

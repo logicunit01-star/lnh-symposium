@@ -183,6 +183,13 @@
       "when": 1795262869503,
       "tag": "0025_committee_list",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795349269503,
+      "tag": "0026_flyer_summary",
+      "breakpoints": true
     }
   ]
 }

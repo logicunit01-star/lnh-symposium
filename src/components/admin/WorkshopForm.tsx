@@ -9,7 +9,7 @@ type V = { id: string; name: string; building: string; floor: string | null; cap
 export type WorkshopInitial = {
   id?: string; title?: string; category?: string | null; department?: string | null; contributors?: string[]; format?: string | null;
   date?: string; start?: string; end?: string; venueId?: string | null; capacity?: number | null; fee?: number; earlyFee?: number | null; cmeHours?: number | null;
-  description?: string | null; leadFaculty?: string | null; facultyDegrees?: string | null; facultyContact?: string | null; facultyProfile?: string | null;
+  description?: string | null; flyerSummary?: string | null; leadFaculty?: string | null; facultyDegrees?: string | null; facultyContact?: string | null; facultyProfile?: string | null;
   facilitators?: number; volunteers?: number; technicians?: number; equipment?: { item: string; qty: number; source: string }[];
   // Workshop Decisions and New Requirements (13 Nov 2026)
   days?: number; proposedTitle?: string | null; organiser?: string | null; objectives?: string | null; targetAudience?: string | null; prelimProgramme?: string | null;
@@ -41,6 +41,8 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
   committee?: boolean; // D3: the committee or Super Admin is editing (also after the decision)
 }) {
   const [mode, setMode] = useState(init.mode ?? "ONSITE");
+  const [titleLen, setTitleLen] = useState((init.title ?? "").length);
+  const [sumLen, setSumLen] = useState((init.flyerSummary ?? "").length);
   const online = mode === "ONLINE";
   const [contrib, setContrib] = useState<string[]>(() => init.contributors ?? []);
   const ddRef = useRef<HTMLDetailsElement>(null);
@@ -96,7 +98,8 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
       <section className="a-card p-6">
         <h2 className="mb-4 font-display text-base font-bold text-slate-900">1 · Workshop</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2"><L hint={committee && init.id ? "(finalised title, set by the committee)" : init.id ? undefined : "(proposed title; the committee finalises it)"}>Workshop title</L><input name="title" required minLength={5} defaultValue={init.title ?? ""} className="a-input" placeholder="e.g. Critical Care Day: Ventilation and Bedside Ultrasound" />
+          <div className="sm:col-span-2"><L hint={committee && init.id ? "(finalised title, set by the committee)" : init.id ? undefined : "(proposed title; the committee finalises it)"}>Workshop title</L><input name="title" required minLength={5} maxLength={100} defaultValue={init.title ?? ""} onInput={(e) => setTitleLen(e.currentTarget.value.length)} className="a-input" placeholder="e.g. Critical Care Day: Ventilation and Bedside Ultrasound" />
+            <p className={`mt-1 text-xs ${titleLen > 70 ? "text-amber-700" : "text-slate-400"}`}>{titleLen}/100 characters · best under 70 for the flyer{titleLen > 70 ? " (a longer title prints in a smaller font)" : ""}</p>
             {init.proposedTitle && init.proposedTitle !== init.title && <p className="mt-1 text-xs text-slate-500">Proposed title: “{init.proposedTitle}”</p>}</div>
           <div><L>Organising person</L><input name="organiser" required defaultValue={init.organiser ?? ""} className="a-input" placeholder="Dr. Firstname Lastname, designation" /></div>
           <div><L>Workshop mode</L><select name="mode" value={mode} onChange={(e) => setMode(e.target.value)} className="a-input">{MODES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
@@ -118,6 +121,8 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
               </div>
             </details></div>
           <div className="sm:col-span-2"><L>Workshop description</L><textarea name="description" rows={3} maxLength={1200} defaultValue={init.description ?? ""} className="a-input" placeholder="What participants will practise and take away (max 1,200 characters)." /></div>
+          <div className="sm:col-span-2"><L hint="(optional, max 140 characters)">Flyer summary</L><textarea name="flyerSummary" rows={2} maxLength={140} defaultValue={init.flyerSummary ?? ""} onInput={(e) => setSumLen(e.currentTarget.value.length)} className="a-input" placeholder="One or two lines for the flyer, e.g. Hands-on ventilator modes, lung and cardiac ultrasound, and haemodynamic monitoring." />
+            <p className="mt-1 text-xs text-slate-400">{sumLen}/140 · printed on the flyer. If left empty, the flyer uses the first sentence of the description.</p></div>
           <div className="sm:col-span-2"><L>Educational objectives</L><textarea name="objectives" rows={3} maxLength={1500} required defaultValue={init.objectives ?? ""} className="a-input" placeholder={"By the end of the workshop participants will be able to…\n1. …\n2. …"} /></div>
           <div className="sm:col-span-2"><L>Target audience</L><input name="targetAudience" required maxLength={300} defaultValue={init.targetAudience ?? ""} className="a-input" placeholder="e.g. Residents, nurses and allied health staff in critical care" /></div>
           <div className="sm:col-span-2"><L hint="(time, topic, facilitator; one line each)">Preliminary programme</L><textarea name="prelimProgramme" rows={4} maxLength={3000} defaultValue={init.prelimProgramme ?? ""} className="a-input font-mono text-xs" placeholder={"09:00 Registration and pre-test\n09:30 Airway assessment, Dr. A\n10:30 Hands-on stations"} /></div>

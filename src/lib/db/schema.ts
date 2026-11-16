@@ -216,6 +216,7 @@ export const sessions = pgTable("sessions", {
   type: sessionTypeEnum("type").notNull(),
   title: text("title").notNull(),
   description: text("description"),
+  flyerSummary: text("flyer_summary"), // 16 Nov 2026: up to 140 characters, shown on the flyer instead of the description
   track: text("track"),
   department: text("department").references((): AnyPgColumn => departments.name, { onUpdate: "cascade" }),
   format: text("format"), // Simulation, Hands-on, Lecture, Panel, Drill

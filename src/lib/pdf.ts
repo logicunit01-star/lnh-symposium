@@ -245,7 +245,7 @@ const clean = (v: unknown) => String(v ?? "-").replace(/[\u0000-\u001f]/g, " ");
 export type FlyerInput = {
   slug: string; title: string; description: string | null; department: string | null; format: string | null; startsAt: Date; endsAt: Date;
   hall: string | null; building?: string | null; capacity: number | null; left: number | null; fee: number; earlyFee: number | null; cmeHours: number | null;
-  leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null;
+  leadFaculty: string | null; facultyDegrees: string | null; themeLabel?: string | null; category: string | null; flyerSummary?: string | null;
   days?: number; mode?: string; facilitatorNames?: string[];
 };
 type FlyerEvent = { name: string; mainTheme: string; contactEmail: string; contactPhone: string; startDate?: Date; endDate?: Date; eventDays?: string[] };
@@ -319,7 +319,10 @@ async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
 
   const L = cx + 40, colW = 600, qrW = 250;
   y -= 56;
-  for (const line of wrap(clean(spec.title), bold, 40, colW).slice(0, 3)) { page.drawText(line, { x: L, y, size: 40, font: bold, color: NAVYT }); y -= 46; }
+  // a long title steps down from 40 to 32 pt to stay on two lines; otherwise three lines at 32 pt (16 Nov 2026)
+  let ts = 40, tLines = wrap(clean(spec.title), bold, ts, colW);
+  while (tLines.length > 2 && ts > 32) { ts -= 2; tLines = wrap(clean(spec.title), bold, ts, colW); }
+  for (const line of tLines.slice(0, 3)) { page.drawText(line, { x: L, y, size: ts, font: bold, color: NAVYT }); y -= Math.round(ts * 1.15); }
   if (spec.subtitle) { page.drawText(clean(spec.subtitle).slice(0, 70), { x: L, y: y + 8, size: 15, font: med, color: BLUET }); y -= 22; }
 
   // facts: up to 2 rows x 3 columns
@@ -363,7 +366,7 @@ async function posterFlyer(spec: PosterSpec, ev: FlyerEvent) {
     y -= 30;
   }
   const extra = [...(spec.lines ?? []), ...(spec.description ? wrap(clean(spec.description), reg, 15, colW) : [])];
-  const maxLines = Math.max(0, Math.floor((y - (cBot + 30)) / 21));
+  const maxLines = Math.max(0, Math.floor((y - (cBot + 30)) / 21)); // none fits: the summary is left off, never cut mid-word
   extra.slice(0, maxLines).forEach((line, i) => page.drawText(i === maxLines - 1 && extra.length > maxLines ? line.replace(/\s*\S*$/, " ...") : line, { x: L, y: y - 4 - i * 21, size: 15, font: reg, color: MUTED }));
 
   // QR panel
@@ -388,6 +391,7 @@ const facilitatorRows = (names: string[]) => {
   const list = short.length > 3 ? `${short.slice(0, 3).join(", ")} +${short.length - 3} more` : short.join(", ");
   return [{ label: short.length > 1 ? "Facilitators" : "Facilitator", name: list }];
 };
+const firstSentence = (t: string | null) => { const v = (t ?? "").replace(/\s+/g, " ").trim(); if (!v) return null; const m = v.match(/^.{20,}?[.!?](?=\s|$)/); return m ? m[0] : v; };
 export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
   return posterFlyer({
     docTitle: `${w.title} - flyer`, tag: "PRE-SYMPOSIUM WORKSHOP", tagColor: "#B72025",
@@ -401,7 +405,7 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
       ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, (w.days ?? 1) > 1 ? "Each day, Pakistan time" : "Pakistan time"],
       w.mode === "ONLINE" ? ["Venue", "Online", "Link sent to registered participants"] : ["Venue", w.hall ?? "-", w.mode === "HYBRID" ? `${w.building ? `${w.building} · ` : ""}also online` : w.building ?? undefined],
       ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
-      ["Fee", pkr(w.fee), "Separate fee, no symposium registration required"],
+      ["Fee", pkr(w.fee), "No symposium registration needed"],
       ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
     ],
     // N3 (13 Nov): one Workshop Director and the facilitators by name, no photos
@@ -409,7 +413,8 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
       ...(w.leadFaculty ? [{ label: "Workshop Director", name: w.leadFaculty, note: w.facultyDegrees }] : []),
       ...facilitatorRows(w.facilitatorNames ?? []),
     ],
-    description: w.description,
+    // the flyer summary, or the description's first sentence (16 Nov 2026)
+    description: w.flyerSummary?.trim() || firstSentence(w.description),
     // standard link: the workshop's own page (Dashboard Findings, 9 Nov)
     qrUrl: `${appUrl()}/workshops/${w.slug}`, qrTitle: "SCAN TO REGISTER", qrSub: "Limited seats", footerPath: "/workshops",
   }, ev);
