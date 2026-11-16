@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import Link from "next/link";
+import { desc, eq, isNotNull } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
 import { DEMO_BASE, paymentConfig, readPaymentRow, unseal } from "@/lib/payment-config";
@@ -18,11 +19,14 @@ const MODES = [
 ] as const;
 
 /** Super Admin only (14 Nov 2026): PayPro switch and credentials. Saved values are encrypted and never shown again. */
-export default async function Payments({ searchParams }: { searchParams: { saved?: string; err?: string; test?: string; result?: string } }) {
+export default async function Payments({ searchParams }: { searchParams: { saved?: string; err?: string; test?: string; result?: string; why?: string } }) {
   const u = await requirePerm("payments");
   const [me] = await db.select({ role: s.users.role }).from(s.users).where(eq(s.users.id, u.sub));
   if (me?.role !== "SUPER_ADMIN") redirect("/admin?denied=1");
   const [row, cfg] = await Promise.all([readPaymentRow(), paymentConfig()]);
+  // 16 Nov 2026: payments staff must handle (duplicate, paid after cancellation, short)
+  const flagged = await db.select({ p: s.payments, regNo: s.registrations.regNo, name: s.registrations.firstName, last: s.registrations.lastName }).from(s.payments)
+    .innerJoin(s.registrations, eq(s.registrations.id, s.payments.registrationId)).where(isNotNull(s.payments.flag)).orderBy(desc(s.payments.createdAt)).limit(100);
   const sec = unseal(row?.secrets);
   const has = (v?: string) => !!v;
   const idHint = (v?: string) => (v ? `saved, ends in …${v.slice(-3)}` : "not set");
@@ -39,7 +43,7 @@ export default async function Payments({ searchParams }: { searchParams: { saved
             {has(x.clientId) && <button formAction={testPayments.bind(null, k)} formNoValidate className="a-btn-ghost py-1 text-xs">Test connection</button>}</div>
         </div>
         {searchParams.test === k && <p className={cn("mt-3 rounded-lg px-3 py-2 text-sm", searchParams.result === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800")}>
-          {searchParams.result === "ok" ? "Connected: PayPro accepted these credentials." : searchParams.result === "missing" ? "Enter the client ID and secret first." : "PayPro did not accept these credentials, or could not be reached."}</p>}
+          {searchParams.result === "ok" ? "Connected: PayPro accepted these credentials." : searchParams.result === "missing" ? "Enter the client ID and secret first." : `PayPro did not accept these credentials, or could not be reached.${searchParams.why ? ` Details: ${searchParams.why}` : ""}`}</p>}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2"><label className="a-label">API address</label>
             <input name={`${k}_baseUrl`} type="url" autoComplete="off" className="a-input font-mono text-sm" placeholder={x.baseUrl ? `${x.baseUrl} (saved)` : k === "demo" ? `${DEMO_BASE} (default)` : "https://… (from PayPro, required for live)"} /></div>
@@ -57,6 +61,13 @@ export default async function Payments({ searchParams }: { searchParams: { saved
       <PageTitle title="Payments" sub="Super Admin only. Choose how participants pay, and keep the PayPro credentials. Saved credentials are encrypted and never shown again; leave a field blank to keep what is saved." />
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved. The new setting applies to new payments straight away.</p>}
       {searchParams.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{searchParams.err}</p>}
+      {flagged.length > 0 && <div className="a-card mb-6 border-rose-200 p-5">
+        <h2 className="font-display text-base font-bold text-rose-800">Payments that need action ({flagged.length})</h2>
+        <p className="mt-1 text-xs text-slate-500">Refund in the PayPro merchant portal (or collect the difference), then open the registration and press “Mark resolved”.</p>
+        <ul className="mt-3 divide-y divide-slate-100 text-sm">{flagged.map(({ p, regNo, name, last }) => (
+          <li key={p.id} className="flex flex-wrap items-baseline gap-x-3 py-2"><Link href={`/admin/registrations/${p.registrationId}`} className="font-semibold text-lnh-blue hover:underline">{regNo}</Link>
+            <span>{name} {last}</span><span className="font-mono text-xs">{p.txnRef} · PKR {p.amount.toLocaleString()}</span><span className="badge bg-rose-100 text-rose-800">{p.flag}</span><span className="text-xs text-slate-600">{p.flagNote}</span></li>))}</ul>
+      </div>}
       {sec === null && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">The saved credentials cannot be read (the server secret was changed). Enter them again.</p>}
       <div className="mb-4 a-card flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
         <p>Now: <b>{current}</b>{cfg.provider === "paypro" && !cfg.paypro && <span className="ml-2 font-semibold text-rose-700">credentials incomplete: online payment will fail</span>}</p>

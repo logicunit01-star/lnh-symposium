@@ -34,6 +34,8 @@ export const MERGE_FIELDS: [string, string][] = [
   ["approver", "Who approves (HOD / Chairperson)"],
   ["institution", "Institution"],
   ["contact_email", "Symposium contact email"],
+  ["pay_by_note", "Pay-by sentence (unpaid workshop seats; empty when not needed)"],
+  ["hold_hours", "Seat hold in hours (Event settings)"],
   ["reply_email", "Address replies to this email go to (the sending mailbox)"],
   ["certificate_no", "Certificate number"],
   ["enquiry_from", "Enquiry: sender name, email and phone"],
@@ -53,7 +55,7 @@ export const MERGE_FIELDS: [string, string][] = [
 ];
 
 export const TEMPLATE_KEYS = [
-  "REGISTRATION_RECEIVED", "REGISTRATION_CONFIRMED", "WORKSHOP_CONFIRMED", "PAYMENT_PENDING",
+  "REGISTRATION_RECEIVED", "REGISTRATION_CONFIRMED", "WORKSHOP_CONFIRMED", "PAYMENT_PENDING", "SEAT_HOLD_EXPIRED",
   "SIGN_IN_CODE",
   "GUEST_RECEIVED", "GUEST_TO_APPROVE", "GUEST_NOT_APPROVED",
   "WORKSHOP_REQUEST_APPROVED", "WORKSHOP_REQUEST_REJECTED", "WORKSHOP_FLYER_APPROVED", "WAITLIST_SEAT_FREE", "WORKSHOP_CANCELLED",
@@ -337,7 +339,9 @@ Thank you for registering for the **{{event_name}}**.
 
 {{details_html}}
 
-Your registration is confirmed once the payment of **{{amount}}** is received. A PDF with all the details you submitted is attached.`,
+Your registration is confirmed once the payment of **{{amount}}** is received. A PDF with all the details you submitted is attached.
+
+{{pay_by_note}}`,
     buttonLabel: "Complete payment",
   },
   REGISTRATION_CONFIRMED: {
@@ -415,8 +419,22 @@ Liaquat National Hospital, Karachi`,
     subject: "Payment pending: {{reg_no}}",
     body: `Dear {{name}},
 
-Your registration **{{reg_no}}** for the {{event_name}} is awaiting payment of **{{amount}}**. Workshop seats are limited and are confirmed on payment.`,
+Your registration **{{reg_no}}** for the {{event_name}} is awaiting payment of **{{amount}}**. Workshop seats are limited and are confirmed on payment.
+
+{{pay_by_note}}`,
     buttonLabel: "Pay now",
+  },
+  SEAT_HOLD_EXPIRED: {
+    category: "Registration and payment", name: "Unpaid registration cancelled (seat hold ended)", audience: "Participant with an unpaid workshop registration", when: "Automatically, when the seat hold (Event settings) ends without payment",
+    subject: "Registration {{reg_no}} cancelled: payment not received",
+    body: `Dear {{name}},
+
+We did not receive the payment of **{{amount}}** for registration **{{reg_no}}** within {{hold_hours}} hours, so the registration has been cancelled and its workshop seats were released to other participants.
+
+Workshop(s): {{workshop}}
+
+You are welcome to register again while seats are available. If you have already paid, please reply to this email with your payment receipt and registration number.`,
+    buttonLabel: "Register again",
   },
   SIGN_IN_CODE: {
     category: "Account and security", name: "One-time code", audience: "Participant", when: "When someone signs up, signs in, resets a password or looks up a registration", locked: true,
@@ -565,6 +583,7 @@ export function bodyToHtml(body: string, vars: MergeVars) {
 
 /** Sample values for the admin preview. */
 export const SAMPLE_VARS: MergeVars = {
+  pay_by_note: "Please pay by 20 Nov 2026, 10:30 (Pakistan time). After that, unpaid workshop seats are released to other participants and this registration is cancelled.", hold_hours: "72",
   name: "Dr. Ayesha Khan", role: "Oral presenter", session_name: "Advances in interventional cardiology", session_date: "Friday 29 January 2027",
   session_time: "08:30–10:30", venue: "Hall-B (Convention Center)", department: "Cardiology", abstract_title: "Same-day discharge after elective PCI",
   author_name: "Dr. Ayesha Khan", ticket_no: "SYM-2027-00012-W1", abstract_id: "ABS-2027-0001", status: "accepted as an oral presentation", event_name: "9th LNH Symposium 2027", link: "https://symposium2027.lnh.edu.pk",

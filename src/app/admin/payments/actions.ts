@@ -57,5 +57,5 @@ export async function testPayments(set: "demo" | "live") {
   const c = sec?.[set];
   if (!c?.clientId || !c.clientSecret) return back({ test: set, result: "missing" });
   const r = await testSignIn({ base: (c.baseUrl || (set === "demo" ? DEMO_BASE : "")).replace(/\/$/, ""), clientId: c.clientId, clientSecret: c.clientSecret });
-  back({ test: set, result: r.ok ? "ok" : "fail" });
+  back({ test: set, result: r.ok ? "ok" : "fail", ...(r.ok ? {} : { why: r.error.slice(0, 300) }) });
 }

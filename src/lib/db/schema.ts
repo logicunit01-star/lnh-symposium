@@ -65,6 +65,8 @@ export const event = pgTable("event", {
   workshopEnd: timestamp("workshop_end", { withTimezone: true }),
   themeWeeks: jsonb("theme_weeks").$type<{ from: string; label: string }[]>().notNull().default([]),
   seatTarget: integer("seat_target").notNull().default(3000),
+  seatHoldHours: integer("seat_hold_hours").notNull().default(72), // P1 (16 Nov 2026): unpaid workshop seats released after this; 0 = never
+  seatHoldSince: timestamp("seat_hold_since", { withTimezone: true }).notNull().defaultNow(), // older registrations: the hold counts from here
   usdRate: real("usd_rate").notNull().default(280),
   // Scientific programme (Scientific Committee)
   sessionSlots: jsonb("session_slots").$type<SessionSlot[]>().notNull().default([]),
@@ -443,6 +445,10 @@ export const payments = pgTable("payments", {
   txnRef: text("txn_ref").notNull().unique(),
   providerRef: text("provider_ref"),
   raw: jsonb("raw"),
+  // 16 Nov 2026: a payment staff must look at: DUPLICATE (second payment), LATE (paid after the seats were released,
+  // no seat free), SHORT (less than the fee). Cleared by "Mark resolved".
+  flag: text("flag"),
+  flagNote: text("flag_note"),
   createdAt: created(),
   updatedAt: updated(),
 });

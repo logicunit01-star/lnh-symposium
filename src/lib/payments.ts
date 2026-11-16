@@ -1,11 +1,12 @@
 import "server-only";
 import crypto from "node:crypto";
-import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { appUrl, randomToken } from "./utils";
 import { sendRegistrationNotice } from "./registration";
 import { createOrder, orderStatus, click2PayUrl } from "./paypro";
 import { paymentConfig } from "./payment-config";
+import { payBy, seatsFree } from "./seat-hold";
 
 export type Checkout =
   | { kind: "redirect"; url: string }
@@ -35,6 +36,19 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
   const prov = await provider();
   if (prov === "manual") return { kind: "manual", instructions: BANK_DETAILS };
 
+  // P3 (16 Nov 2026): reuse the open PayPro order for this registration (same amount, not expired), so one person
+  // cannot end up with two vouchers for the same fee
+  if (prov === "paypro") {
+    const [open] = await db.select().from(s.payments).where(and(eq(s.payments.registrationId, registrationId), eq(s.payments.provider, "paypro"),
+      eq(s.payments.status, "PENDING"), eq(s.payments.amount, reg.totalFee), isNotNull(s.payments.providerRef))).orderBy(desc(s.payments.createdAt)).limit(1);
+    const raw = (open?.raw ?? {}) as { click2Pay?: string; expiresAt?: string };
+    if (open && raw.click2Pay && (!raw.expiresAt || +new Date(raw.expiresAt) > Date.now() + 10 * 60_000)) {
+      const c = await checkPayPro(open.txnRef).catch(() => null);
+      if (c?.paid) return { kind: "redirect", url: `${appUrl()}/register/success/${reg.accessToken}?paid=1` };
+      return { kind: "redirect", url: click2PayUrl(raw.click2Pay, `${appUrl()}/api/payments/paypro/return?txn=${open.txnRef}`) };
+    }
+  }
+
   // Order number sent to the gateway. "LNHS" + yyMMddHHmmss (PKT) + random: distinct from other LNH systems that use the
   // same PayPro merchant account (e.g. Liaquat_OPD), max 20 characters.
   const txnRef = `LNHS${pktStamp().slice(2)}${randomToken(4).replace(/[^A-Za-z0-9]/g, "").toUpperCase()}`.slice(0, 20);
@@ -43,9 +57,11 @@ export async function startCheckout(registrationId: string): Promise<Checkout> {
   if (prov === "paypro") {
     // PayPro: create an order (OrderNumber = txnRef), keep its PayProId, send the customer to Click2Pay
     const name = `${reg.title} ${reg.firstName} ${reg.lastName}`.replace(/\s+/g, " ").trim();
+    // P2: the order expires when the workshop seat hold ends, so a bank/ATM voucher cannot be paid after the seats are released
+    const expiresAt = await payBy(registrationId);
     try {
-      const o = await createOrder({ orderNumber: txnRef, amount: reg.totalFee, name, mobile: reg.phone, email: reg.email });
-      await db.update(s.payments).set({ providerRef: o.payProId, raw: { order: o.raw, click2Pay: o.click2Pay } as any }).where(eq(s.payments.txnRef, txnRef));
+      const o = await createOrder({ orderNumber: txnRef, amount: reg.totalFee, name, mobile: reg.phone, email: reg.email, expiresAt });
+      await db.update(s.payments).set({ providerRef: o.payProId, raw: { order: o.raw, click2Pay: o.click2Pay, expiresAt: expiresAt?.toISOString() ?? null } as any }).where(eq(s.payments.txnRef, txnRef));
       return { kind: "redirect", url: click2PayUrl(o.click2Pay, `${appUrl()}/api/payments/paypro/return?txn=${txnRef}`) };
     } catch (e) {
       await db.update(s.payments).set({ status: "FAILED", raw: { error: String((e as Error).message) } as any }).where(eq(s.payments.txnRef, txnRef));
@@ -82,6 +98,11 @@ export async function checkPayPro(txnRef: string) {
   if (!pay || pay.provider !== "paypro" || !pay.providerRef) return null;
   if (pay.status === "PAID") return { pay, paid: true };
   const st = await orderStatus(pay.providerRef);
+  // P4: confirm only when the amount PayPro reports covers the fee (a missing amount is taken as the full order amount)
+  if (st.paid && st.amountPaid > 0 && st.amountPaid < pay.amount) {
+    if (pay.flag !== "SHORT") await db.update(s.payments).set({ flag: "SHORT", flagNote: `PayPro reports ${st.amountPaid} paid against ${pay.amount} due. Not confirmed: collect the difference or refund.`, raw: { ...(pay.raw as object || {}), status: st.raw } as any }).where(eq(s.payments.id, pay.id));
+    return { pay, paid: false, status: "SHORT" };
+  }
   if (st.paid) await settlePayment(txnRef, true, pay.providerRef, { ...(pay.raw as object || {}), status: st.raw });
   return { pay, paid: st.paid, status: st.status };
 }
@@ -112,10 +133,22 @@ export async function settlePayment(txnRef: string, ok: boolean, providerRef?: s
   if (!pay) throw new Error("Unknown transaction");
   if (expect && pay.provider !== expect) throw new Error("This transaction belongs to another payment method.");
   if (pay.status === "PAID") return pay;
-  await db.update(s.payments).set({ status: ok ? "PAID" : "FAILED", providerRef, raw: raw as any }).where(eq(s.payments.id, pay.id));
+  await db.update(s.payments).set({ status: ok ? "PAID" : "FAILED", providerRef, raw: raw as any, flag: ok ? null : pay.flag, flagNote: ok ? null : pay.flagNote }).where(eq(s.payments.id, pay.id));
   if (ok) {
-    const reg = await db.query.registrations.findFirst({ where: eq(s.registrations.id, pay.registrationId), columns: { paymentStatus: true } });
-    if (reg?.paymentStatus === "PAID" || reg?.paymentStatus === "WAIVED") return pay; // already settled through another payment: no second email
+    const reg = await db.query.registrations.findFirst({ where: eq(s.registrations.id, pay.registrationId), columns: { paymentStatus: true, regNo: true } });
+    // P3: already settled through another payment: no second email, flag this one for refund
+    if (reg?.paymentStatus === "PAID" || reg?.paymentStatus === "WAIVED") {
+      await db.update(s.payments).set({ flag: "DUPLICATE", flagNote: `${reg.regNo} was already ${reg.paymentStatus === "PAID" ? "paid" : "waived"}. Refund this payment.` }).where(eq(s.payments.id, pay.id));
+      return pay;
+    }
+    // P2: paid after the registration was cancelled (seat hold ended, or by staff): confirm only if every workshop still has a seat
+    if (reg?.paymentStatus === "FAILED" || reg?.paymentStatus === "REFUNDED") {
+      if (!(await seatsFree(pay.registrationId))) {
+        await db.update(s.payments).set({ flag: "LATE", flagNote: `Paid after ${reg.regNo} was cancelled and a workshop is now full. Refund, or offer another workshop.` }).where(eq(s.payments.id, pay.id));
+        return pay;
+      }
+      await db.update(s.registrations).set({ notes: sql`concat_ws(E'\n', ${s.registrations.notes}, ${`Re-opened ${new Date().toISOString().slice(0, 16)}: paid after cancellation, seats still free.`}::text)` }).where(eq(s.registrations.id, pay.registrationId));
+    }
     await db.update(s.registrations).set({ paymentStatus: "PAID", paymentMethod: pay.provider, paidAt: new Date() })
       .where(and(eq(s.registrations.id, pay.registrationId)));
     await sendRegistrationNotice(pay.registrationId, "paid").catch((e) => console.error(e));

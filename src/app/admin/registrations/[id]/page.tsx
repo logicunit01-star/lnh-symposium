@@ -6,8 +6,9 @@ import { can } from "@/lib/permissions";
 import { loadRegistration } from "@/lib/registration";
 import { PageTitle, StatusBadge } from "@/components/admin/ui";
 import { fmtDateTime, pkr } from "@/lib/utils";
-import { regMarkPaid, regSetStatus, regResend, regNotes, regCheckIn, itemAttend } from "../../actions";
+import { regMarkPaid, regSetStatus, regResend, regNotes, regCheckIn, itemAttend, payResolve } from "../../actions";
 
+const FLAG: Record<string, string> = { DUPLICATE: "Second payment: refund.", LATE: "Paid after cancellation, no seat free: refund or move.", SHORT: "Paid less than the fee." };
 const ERR: Record<string, string> = { unpaid: "Payment pending: record the payment before checking in.", approval: "This guest / volunteer registration has not been approved.", nopass: "No Symposium Registration: workshop tickets only.", notfound: "Registration not found.", already: "This registration is already paid or waived.", status: "That change is not possible for the current payment status." };
 export default async function RegDetail({ params, searchParams }: { params: { id: string }; searchParams: { err?: string } }) {
   const u = await requirePerm("registrations");
@@ -58,7 +59,10 @@ export default async function RegDetail({ params, searchParams }: { params: { id
           <div className="a-card overflow-hidden">
             <p className="px-5 py-4 text-sm font-semibold text-slate-700">Payments</p>
             <table className="a-table"><thead><tr><th>Ref</th><th>Provider</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-              <tbody>{r.payments.map((p) => <tr key={p.id}><td className="font-mono text-xs">{p.txnRef}{p.providerRef && <p className="text-slate-400">{p.providerRef}</p>}</td><td>{p.provider}</td><td>{pkr(p.amount)}</td><td><StatusBadge s={p.status} /></td><td className="text-xs">{fmtDateTime(p.createdAt)}</td></tr>)}
+              <tbody>{r.payments.map((p) => <tr key={p.id}><td className="font-mono text-xs">{p.txnRef}{p.providerRef && <p className="text-slate-400">{p.providerRef}</p>}</td><td>{p.provider}</td><td>{pkr(p.amount)}</td><td><StatusBadge s={p.status} />
+                {p.flag && <div className="mt-1 max-w-xs rounded bg-rose-50 p-2 text-xs text-rose-800"><b>{FLAG[p.flag] ?? p.flag}</b> {p.flagNote}
+                  {edit && <form action={payResolve.bind(null, p.id)} className="mt-1 flex gap-1"><input name="note" placeholder="e.g. refunded in PayPro on 20 Nov" className="a-input py-1 text-xs" /><button className="a-btn-ghost py-1 text-xs">Mark resolved</button></form>}</div>}
+                {!p.flag && p.flagNote && <p className="mt-1 text-xs text-slate-400">{p.flagNote}</p>}</td><td className="text-xs">{fmtDateTime(p.createdAt)}</td></tr>)}
                 {!r.payments.length && <tr><td colSpan={5} className="text-center text-slate-400">No payment attempts</td></tr>}</tbody></table>
           </div>
           <div className="a-card overflow-hidden">

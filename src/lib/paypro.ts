@@ -21,7 +21,8 @@ import { paymentConfig } from "./payment-config";
 export async function ppConfig() {
   const c = await paymentConfig();
   if (!c.paypro || !c.paypro.clientId || !c.paypro.clientSecret || !c.paypro.merchantId) throw new Error("PayPro is not configured. The Super Admin enters the credentials in Admin → Payments.");
-  return { base: c.paypro.baseUrl, clientId: c.paypro.clientId, clientSecret: c.paypro.clientSecret, merchantId: c.paypro.merchantId, dueDays: c.paypro.dueDays };
+  // the address may be entered with or without "/v2/ppro" (e.g. https://demoapi.paypro.com.pk/v2/ppro)
+  return { base: c.paypro.baseUrl.replace(/\/+$/, "").replace(/\/v2\/ppro$/i, ""), clientId: c.paypro.clientId, clientSecret: c.paypro.clientSecret, merchantId: c.paypro.merchantId, dueDays: c.paypro.dueDays };
 }
 type Cfg = Awaited<ReturnType<typeof ppConfig>>;
 
@@ -50,10 +51,16 @@ export function flat(j: any): Record<string, any> {
 
 let cached: { token: string; at: number; key: string } | null = null; // the token belongs to one base URL + client ID
 async function signIn(c: Pick<Cfg, "base" | "clientId" | "clientSecret">) {
-  const r = await call(c.base, "POST", "/v2/ppro/auth", { clientid: c.clientId, clientsecret: c.clientSecret });
-  const t = (r.headers["token"] as string) || flat(parse(r.body)).token;
-  if (r.status >= 400 || !t) throw new Error(`PayPro sign-in failed (${r.status})`);
-  return String(t);
+  // field names as in LNH's PayPro sandbox collection (16 Nov 2026); the lower-case form of the API document is tried second
+  let r: Res | null = null;
+  for (const body of [{ ClientID: c.clientId, ClientSecret: c.clientSecret }, { clientid: c.clientId, clientsecret: c.clientSecret }]) {
+    try { r = await call(c.base, "POST", "/v2/ppro/auth", body); }
+    catch (e: any) { throw new Error(`PayPro could not be reached at ${c.base}: ${e?.code || ""} ${e?.message || e}`.trim()); }
+    const t = (r.headers["token"] as string) || flat(parse(r.body)).token;
+    if (r.status < 400 && t) return String(t);
+  }
+  const f = flat(parse(r!.body));
+  throw new Error(`PayPro sign-in refused: HTTP ${r!.status}${f.status ? `, status ${f.status}` : ""}${f.description || f.message ? `, “${f.description || f.message}”` : r!.body && !parse(r!.body) ? `, “${r!.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120)}”` : ""} (${c.base}/v2/ppro/auth)`);
 }
 async function token(c: Cfg, force = false) {
   const k = `${c.base}|${c.clientId}`;
@@ -69,16 +76,19 @@ async function authed(c: Cfg, method: "GET" | "POST", path: string, body: unknow
 }
 /** Admin → Payments "Test connection": signs in with a credential set without using or caching it. */
 export async function testSignIn(c: { base: string; clientId: string; clientSecret: string }) {
-  try { await signIn(c); return { ok: true as const }; } catch (e) { return { ok: false as const, error: (e as Error).message }; }
+  try { await signIn({ ...c, base: c.base.replace(/\/+$/, "").replace(/\/v2\/ppro$/i, "") }); return { ok: true as const }; } catch (e) { return { ok: false as const, error: (e as Error).message }; }
 }
 
 const pkDate = (d: Date) => { const p = new Date(d.getTime() + 5 * 3600_000); return `${String(p.getUTCDate()).padStart(2, "0")}/${String(p.getUTCMonth() + 1).padStart(2, "0")}/${p.getUTCFullYear()}`; };
 
-export async function createOrder(o: { orderNumber: string; amount: number; name: string; mobile?: string; email?: string }) {
+/** expiresAt (P2, 16 Nov 2026): the order stops being payable then (the workshop seat hold); none = due in PAYPRO_DUE_DAYS, no expiry. */
+export async function createOrder(o: { orderNumber: string; amount: number; name: string; mobile?: string; email?: string; expiresAt?: Date | null }) {
   const c = await ppConfig(), now = new Date();
+  const secs = o.expiresAt ? Math.max(900, Math.floor((+o.expiresAt - +now) / 1000)) : 0;
+  const due = o.expiresAt ? new Date(+now + secs * 1000) : new Date(+now + c.dueDays * 864e5);
   const r = await authed(c, "POST", "/v2/ppro/co", [{ MerchantId: c.merchantId }, {
-    OrderNumber: o.orderNumber, OrderAmount: String(o.amount), OrderDueDate: pkDate(new Date(+now + c.dueDays * 864e5)), OrderType: "Service",
-    IssueDate: pkDate(now), OrderExpireAfterSeconds: "0", CustomerName: o.name.slice(0, 100), CustomerMobile: (o.mobile || "").replace(/[^\d+]/g, ""), CustomerEmail: o.email || "", CustomerAddress: "",
+    OrderNumber: o.orderNumber, OrderAmount: String(o.amount), OrderDueDate: pkDate(due), OrderType: "Service",
+    IssueDate: pkDate(now), OrderExpireAfterSeconds: String(secs), CustomerName: o.name.slice(0, 100), CustomerMobile: (o.mobile || "").replace(/[^\d+]/g, ""), CustomerEmail: o.email || "", CustomerAddress: "",
   }]);
   const j = parse(r.body), f = flat(j);
   const payProId = f.payproid ?? f.payproId ?? f.cpayid, click2Pay = f.click2pay;

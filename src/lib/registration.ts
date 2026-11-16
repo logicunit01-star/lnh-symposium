@@ -180,7 +180,8 @@ export async function sendRegistrationNotice(id: string, kind: "created" | "paid
   const pdfFile = { filename: `${r.regNo}.pdf`, content: pdf, contentType: "application/pdf" };
   const common = { name, reg_no: r.regNo, amount: pkr(r.totalFee), details_html: details, link, contact_phone: ev.contactPhone };
   if (!confirmed) {
-    await sendTemplate("REGISTRATION_RECEIVED", r.email, common, { ref: r.regNo, attachments: [pdfFile] });
+    const { payByNote } = await import("./seat-hold");
+    await sendTemplate("REGISTRATION_RECEIVED", r.email, { ...common, pay_by_note: await payByNote(r.id) }, { ref: r.regNo, attachments: [pdfFile] });
   } else {
     // 14.11.2026 templates: the symposium confirmation with its QR code, then one confirmation per workshop with that workshop's QR code
     const qrImg = (cid: string) => `<p style="text-align:center;margin:16px 0"><img src="cid:${cid}" width="200" height="200" alt="Your registration QR code" style="border:8px solid #ffffff"></p>`;

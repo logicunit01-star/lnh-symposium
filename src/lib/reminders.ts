@@ -10,15 +10,19 @@ import { getTemplate, sendTemplate } from "./email";
 export async function runReminders(now = new Date()) {
   const ev = await getEvent();
   let pending = 0, event = 0;
-  // 1) payment pending > 48h, at most one reminder every 72h
-  const due = await db.select().from(s.registrations).where(and(
+  // 1) payment pending > 48h, at most one reminder every 72h. With workshop seats on hold (P1, 16 Nov 2026) the reminder
+  //    comes about a day before the hold ends (hold - 24 h, at least half the hold), with the pay-by time.
+  const H = ev.seatHoldHours, holdRemind = H > 0 ? Math.max(H - 24, H / 2) : 48;
+  const due = await db.select({ r: s.registrations, items: sql<number>`(select count(*)::int from registration_items i where i.registration_id = ${s.registrations.id})` }).from(s.registrations).where(and(
     eq(s.registrations.paymentStatus, "PENDING"),
-    lt(s.registrations.createdAt, new Date(+now - 48 * 3600e3)),
+    lt(s.registrations.createdAt, new Date(+now - Math.min(48, holdRemind) * 3600e3)),
     or(isNull(s.registrations.remindedAt), lt(s.registrations.remindedAt, new Date(+now - 72 * 3600e3))),
   ));
-  for (const r of due) {
+  const { payByNote } = await import("./seat-hold");
+  for (const { r, items } of due) {
+    if (+now - +r.createdAt < (items > 0 ? Math.min(48, holdRemind) : 48) * 3600e3) continue;
     const link = `${appUrl()}/register/success/${r.accessToken}`;
-    await sendTemplate("PAYMENT_PENDING", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, reg_no: r.regNo, amount: pkr(r.totalFee), link }, { ref: r.regNo });
+    await sendTemplate("PAYMENT_PENDING", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, reg_no: r.regNo, amount: pkr(r.totalFee), link, pay_by_note: await payByNote(r.id) }, { ref: r.regNo });
     await sendSms(r.phone, `LNH Symposium: Reg ${r.regNo} payment of ${pkr(r.totalFee)} pending. Pay: ${link}`, "PAYMENT_REMINDER", r.regNo);
     await db.update(s.registrations).set({ remindedAt: now }).where(eq(s.registrations.id, r.id));
     pending++;

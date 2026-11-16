@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
-import { settlePayment } from "@/lib/payments";
+import { checkPayPro } from "@/lib/payments";
 import { callbackAuthOk } from "@/lib/paypro";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +23,10 @@ export async function POST(req: Request) {
     try {
       const pay = await db.query.payments.findFirst({ where: eq(s.payments.txnRef, id) });
       if (!pay || pay.provider !== "paypro") { out.push({ StatusCode: "03", InvoiceID: id, Description: "No records found." }); continue; }
-      await settlePayment(id, true, pay.providerRef || undefined, { ...((pay.raw as object) || {}), callback: { at: new Date().toISOString() } });
-      out.push({ StatusCode: "00", InvoiceID: id, Description: "Invoice successfully marked as paid" });
+      // P5 (16 Nov 2026): the callback is a signal only; the order status is asked from PayPro before anything is confirmed
+      const c = await checkPayPro(id);
+      if (c?.paid) out.push({ StatusCode: "00", InvoiceID: id, Description: "Invoice successfully marked as paid" });
+      else out.push({ StatusCode: "01", InvoiceID: id, Description: c?.status === "SHORT" ? "Invalid Data. Amount paid is less than the order amount" : "Invalid Data. Order is not paid at PayPro" });
     } catch (e) {
       console.error("PayPro callback", id, e);
       out.push({ StatusCode: "02", InvoiceID: id, Description: "Service Failure" });

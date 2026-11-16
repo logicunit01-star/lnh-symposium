@@ -40,6 +40,16 @@ export async function regSetStatus(id: string, status: "WAIVED" | "PENDING" | "R
   if (status === "WAIVED") await sendRegistrationNotice(id, "paid");
   revalidatePath(`/admin/registrations/${id}`);
 }
+/** A flagged payment (duplicate, late, short) was handled outside the portal (refund, difference collected): clears the flag. */
+export async function payResolve(payId: string, f: FormData) {
+  const me = await requirePerm("registrations.edit");
+  const [p] = await db.select().from(s.payments).where(eq(s.payments.id, payId));
+  if (!p?.flag) return;
+  const note = str(f, "note") || "resolved";
+  await db.update(s.payments).set({ flag: null, flagNote: `${p.flag} resolved by ${me.name}: ${note}` }).where(eq(s.payments.id, payId));
+  await staffLog(me, await regLabel(p.registrationId), "Payment flag resolved", `${p.txnRef} ${p.flag}: ${note}`);
+  revalidatePath(`/admin/registrations/${p.registrationId}`); revalidatePath("/admin/payments");
+}
 export async function regResend(id: string) {
   const me = await requirePerm("registrations.edit");
   // resend what matches the current status (the confirmation with QR codes once paid)
@@ -178,7 +188,7 @@ export async function saveSettings(f: FormData) {
     agendaLive: bool(f, "agendaLive"), speakersLive: bool(f, "speakersLive"),
     workshopStart: d("workshopStart"), workshopEnd: d("workshopEnd"),
     themeWeeks: (str(f, "themeWeeks") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s*[,|]\s*(.+?)\s*$/)).filter(Boolean).map((m) => ({ from: m![1], label: m![2] })),
-    seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280,
+    seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280, seatHoldHours: Math.max(0, Math.min(720, num(f, "seatHoldHours") ?? 72)),
     sessionSlots: (str(f, "sessionSlots") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})((?:\s+(?:optional|plenary|debate))*)\s*$/i)).filter(Boolean)
       .map((m) => { const tags = (m![4] || "").toLowerCase(); return { key: `${m![1]}|${m![2]}`, day: m![1], start: m![2], end: m![3], optional: tags.includes("optional"), ...(tags.includes("plenary") ? { special: "PLENARY" as const } : tags.includes("debate") ? { special: "DEBATE" as const } : {}) }; })
       .sort((a, b) => a.key.localeCompare(b.key)),

@@ -5,14 +5,14 @@ http.createServer((req, res) => {
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const u = new URL(req.url, 'http://x'); const j = b ? JSON.parse(b) : null;
     const send = (code, obj, h = {}) => { res.writeHead(code, { 'Content-Type': 'application/json', ...h }); res.end(JSON.stringify(obj)); };
-    if (u.pathname === '/v2/ppro/auth') return j.clientid === 'cid' && j.clientsecret === 'sec' ? send(200, [{ Status: '00' }], { Token: TOKEN }) : send(401, [{ Status: '01' }]);
+    if (u.pathname === '/v2/ppro/auth') { for (const k of Object.keys(j)) j[k.toLowerCase()] = j[k]; } if (u.pathname === '/v2/ppro/auth') return ((j.clientid === 'cid' && j.clientsecret === 'sec') || (j.clientid === 'demo-client-001' && j.clientsecret === 'demo-secret-xyz-123')) ? send(200, [{ Status: '00' }], { Token: TOKEN }) : send(401, [{ Status: '01' }]);
     if (u.pathname === '/pay') { // customer page: ?bid=&callback_url=&act=pay|fail
       const o = orders.get(u.searchParams.get('bid')); const act = u.searchParams.get('act') || 'pay';
       if (act === 'pay') o.status = 'PAID';
       const cb = u.searchParams.get('callback_url'); res.writeHead(302, { Location: `${cb}&ordId=${u.searchParams.get('bid')}&status=${act === 'pay' ? 'success' : 'failure'}&msg=x` }); return res.end();
     }
     if (u.pathname === '/_debug') return send(200, [...orders.entries()]);
-    if (u.pathname === '/_markpaid') { orders.get(u.searchParams.get('id')).status = 'PAID'; return send(200, {}); }
+    if (u.pathname === '/_markpaid') { const o = orders.get(u.searchParams.get('id')); o.status = 'PAID'; if (u.searchParams.get('amt')) o.paidAmt = Number(u.searchParams.get('amt')); return send(200, {}); }
     if (req.headers.token !== TOKEN) return send(401, [{ Status: '01', Description: 'token' }]);
     if (u.pathname === '/v2/ppro/co' && req.method === 'POST') {
       const o = j[1]; const id = '0110' + String(++n).padStart(10, '0');
@@ -21,7 +21,7 @@ http.createServer((req, res) => {
     }
     if (u.pathname === '/v2/ppro/ggos' && req.method === 'GET') {
       const o = orders.get(j.cpayId); if (!o) return send(200, [{ Status: '03' }]);
-      return send(200, [{ Status: '00' }, { DatePaid: '', AmountPayable: Number(o.OrderAmount), OrderNumber: o.OrderNumber, CustomerName: o.CustomerName, OrderStatus: o.status, OrderAmountPaid: o.status === 'PAID' ? Number(o.OrderAmount) : 0 }]);
+      return send(200, [{ Status: '00' }, { DatePaid: '', AmountPayable: Number(o.OrderAmount), OrderNumber: o.OrderNumber, CustomerName: o.CustomerName, OrderStatus: o.status, OrderAmountPaid: o.status === 'PAID' ? (o.paidAmt ?? Number(o.OrderAmount)) : 0 }]);
     }
     send(404, {});
   });

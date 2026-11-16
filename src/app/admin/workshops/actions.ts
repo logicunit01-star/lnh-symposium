@@ -213,18 +213,8 @@ export async function deleteWorkshop(id: string) {
 /** Email the next people on the waitlist when seats are free. */
 export async function notifyWaitlist(id: string) {
   await requirePerm("workshops.edit");
-  const [w] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
-  if (!w?.capacity) return;
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.registrationItems)
-    .innerJoin(s.registrations, eq(s.registrations.id, s.registrationItems.registrationId))
-    .where(and(eq(s.registrationItems.sessionId, id), inArray(s.registrations.paymentStatus, ["PENDING", "PAID", "WAIVED"])));
-  const free = Math.max(0, w.capacity - n);
-  if (!free) return;
-  const next = await db.select().from(s.waitlist).where(and(eq(s.waitlist.sessionId, id), isNull(s.waitlist.notifiedAt))).orderBy(asc(s.waitlist.createdAt)).limit(free);
-  for (const p of next) {
-    await sendTemplate("WAITLIST_SEAT_FREE", p.email, { name: p.name, workshop: w.title, workshop_date: fmtDate(w.startsAt), link: `${appUrl()}/workshops/${w.slug}` }, { ref: w.title });
-    await db.update(s.waitlist).set({ notifiedAt: new Date() }).where(eq(s.waitlist.id, p.id));
-  }
+  const { notifyWaitlistFor } = await import("@/lib/seat-hold");
+  await notifyWaitlistFor(id);
   revalidatePath(`/admin/workshops/${id}`);
 }
 

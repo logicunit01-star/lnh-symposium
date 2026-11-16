@@ -13,7 +13,7 @@ const HOST = "symposium2027.lnh.edu.pk";
  */
 export const MAILBOXES: { address: string; label: string; fromName: string; replyTo?: string; isDefault?: boolean; sends: TemplateKey[] }[] = [
   { address: "registration@symposium2027.lnh.edu.pk", label: "Registration", fromName: "Registration, 9th LNH Symposium",
-    sends: ["REGISTRATION_RECEIVED", "REGISTRATION_CONFIRMED", "PAYMENT_PENDING", "SYMPOSIUM_REMINDER", "GUEST_RECEIVED", "GUEST_NOT_APPROVED", "CERTIFICATE_READY", "BROADCAST"] },
+    sends: ["REGISTRATION_RECEIVED", "REGISTRATION_CONFIRMED", "PAYMENT_PENDING", "SEAT_HOLD_EXPIRED", "SYMPOSIUM_REMINDER", "GUEST_RECEIVED", "GUEST_NOT_APPROVED", "CERTIFICATE_READY", "BROADCAST"] },
   { address: "workshop@symposium2027.lnh.edu.pk", label: "Workshops", fromName: "Workshops, 9th LNH Symposium",
     sends: ["WORKSHOP_CONFIRMED", "WORKSHOP_REMINDER", "WORKSHOP_CANCELLED", "WAITLIST_SEAT_FREE", "WORKSHOP_REQUEST_APPROVED", "WORKSHOP_REQUEST_REJECTED", "WORKSHOP_FLYER_APPROVED", "WORKSHOP_CERTIFICATE"] },
   { address: "poster@symposium2027.lnh.edu.pk", label: "Posters", fromName: "Posters Committee, 9th LNH Symposium", sends: ["ABSTRACT_ACCEPTED_POSTER"] },
