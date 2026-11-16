@@ -62,7 +62,8 @@ export default async function RegDetail({ params, searchParams }: { params: { id
               <tbody>{r.payments.map((p) => <tr key={p.id}><td className="font-mono text-xs">{p.txnRef}{p.providerRef && <p className="text-slate-400">{p.providerRef}</p>}</td><td>{p.provider}</td><td>{pkr(p.amount)}</td><td><StatusBadge s={p.status} />
                 {p.flag && <div className="mt-1 max-w-xs rounded bg-rose-50 p-2 text-xs text-rose-800"><b>{FLAG[p.flag] ?? p.flag}</b> {p.flagNote}
                   {edit && <form action={payResolve.bind(null, p.id)} className="mt-1 flex gap-1"><input name="note" placeholder="e.g. refunded in PayPro on 20 Nov" className="a-input py-1 text-xs" /><button className="a-btn-ghost py-1 text-xs">Mark resolved</button></form>}</div>}
-                {!p.flag && p.flagNote && <p className="mt-1 text-xs text-slate-400">{p.flagNote}</p>}</td><td className="text-xs">{fmtDateTime(p.createdAt)}</td></tr>)}
+                {!p.flag && p.flagNote && <p className="mt-1 text-xs text-slate-400">{p.flagNote}</p>}
+                {p.status === "FAILED" && (p.raw as any)?.error && <p className="mt-1 max-w-xs text-xs text-rose-700">{String((p.raw as any).error).slice(0, 300)}</p>}</td><td className="text-xs">{fmtDateTime(p.createdAt)}</td></tr>)}
                 {!r.payments.length && <tr><td colSpan={5} className="text-center text-slate-400">No payment attempts</td></tr>}</tbody></table>
           </div>
           <div className="a-card overflow-hidden">
