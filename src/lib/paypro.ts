@@ -33,7 +33,9 @@ function call(base: string, method: "GET" | "POST", path: string, body: unknown,
   const data = Buffer.from(JSON.stringify(body));
   const lib = url.protocol === "http:" ? http : https;
   return new Promise((resolve, reject) => {
-    const req = lib.request(url, { method, headers: { "Content-Type": "application/json", "Content-Length": String(data.length), ...headers }, timeout: 20000 }, (res) => {
+    // Accept and User-Agent as PayPro's own examples send them: a request without a User-Agent is stopped by the
+    // Cloudflare check in front of demoapi.paypro.com.pk ("Just a moment…", HTTP 403), 16 Nov 2026
+    const req = lib.request(url, { method, headers: { "Content-Type": "application/json", Accept: "application/json, text/plain, */*", "User-Agent": "LNH-Symposium-Portal/1.0 (+https://symposium2027.lnh.edu.pk)", "Content-Length": String(data.length), ...headers }, timeout: 20000 }, (res) => {
       let b = ""; res.setEncoding("utf8"); res.on("data", (c) => (b += c)); res.on("end", () => resolve({ status: res.statusCode || 0, headers: res.headers, body: b }));
     });
     req.on("timeout", () => req.destroy(new Error("PayPro did not respond in time")));
@@ -60,6 +62,8 @@ async function signIn(c: Pick<Cfg, "base" | "clientId" | "clientSecret">) {
     if (r.status < 400 && t) return String(t);
   }
   const f = flat(parse(r!.body));
+  if (r!.status === 403 && /just a moment|cloudflare|cf-chl|challenge/i.test(r!.body + JSON.stringify(r!.headers)))
+    throw new Error(`PayPro's Cloudflare protection blocked this server (HTTP 403 "Just a moment…" check) before the credentials were checked. PayPro must allow this server's address for ${c.base}.`);
   throw new Error(`PayPro sign-in refused: HTTP ${r!.status}${f.status ? `, status ${f.status}` : ""}${f.description || f.message ? `, “${f.description || f.message}”` : r!.body && !parse(r!.body) ? `, “${r!.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120)}”` : ""} (${c.base}/v2/ppro/auth)`);
 }
 async function token(c: Cfg, force = false) {
