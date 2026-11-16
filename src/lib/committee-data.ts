@@ -1,5 +1,5 @@
 // Organising committees of the 9th LNH Symposium 2027, from "List Of 9th LNH Symposium 2027 Members.pdf" (29 Oct 2026),
-// plus three Website & Social Media members shared on 16 Nov 2026. Loaded by migration 0025 and the demo seed; edited afterwards in Admin → Content.
+// plus four Website & Social Media members shared on 16 Nov 2026. Loaded by migration 0025 and the demo seed; edited afterwards in Admin → Content.
 export const COMMITTEES: { group: string; people: { role: string; name: string }[] }[] = [
  {
   "group": "Core Committee",
@@ -885,6 +885,10 @@ export const COMMITTEES: { group: string; people: { role: string; name: string }
    {
     "role": "Member",
     "name": "Mr. Hamza Shah"
+   },
+   {
+    "role": "Member",
+    "name": "Mr. Muhammad Asim Siddiqui"
    }
   ]
  },
