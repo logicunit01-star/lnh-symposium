@@ -41,9 +41,13 @@ export async function saveMailAccount(id: string | null, f: FormData) {
   if (replyTo && !EMAIL.test(replyTo)) return back({ ...q, err: "Enter a valid reply-to address, or leave it blank." });
   if (!id && !pw) return back({ ...q, err: "Enter the mailbox password." });
   const isDefault = f.get("isDefault") === "on";
+  // a mailbox prepared without its password (setup, 16 Nov 2026) switches on when its first password is entered
+  const firstPassword = !!pw && !!old && !old.secret;
+  const active = f.get("active") === "on" || firstPassword;
+  if (active && !pw && !old?.secret) return back({ ...q, err: "Enter the mailbox password before switching it on." });
   const row = {
     label: label.slice(0, 80), host, port, security, username, fromName: fromName.slice(0, 120), fromAddress, replyTo,
-    isDefault, active: f.get("active") === "on", updatedBy: u.name, updatedAt: new Date(),
+    isDefault, active, updatedBy: u.name, updatedAt: new Date(),
     ...(pw ? { secret: sealText(MAIL_LABEL, pw) } : {}),
   };
   let saved: MailAccount;

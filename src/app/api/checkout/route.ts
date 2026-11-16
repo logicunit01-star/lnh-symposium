@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { ok, fail, zodFail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
@@ -48,6 +48,9 @@ export async function POST(req: Request) {
   }).where(eq(s.accounts.id, a.id));
   try {
     const r = await createRegistration(reg.data, { accountId: a.id });
+    // the delegate's Symposium Registration made without a designation takes the one chosen now (fix 16 Nov 2026)
+    await db.update(s.registrations).set({ designation: reg.data.designation })
+      .where(and(eq(s.registrations.accountId, a.id), eq(s.registrations.hasPass, true), or(isNull(s.registrations.designation), eq(s.registrations.designation, ""))));
     return ok({ regNo: r.regNo, accessToken: r.accessToken });
   } catch (e: any) {
     if (e instanceof CapacityError) return fail(e.message, 409);

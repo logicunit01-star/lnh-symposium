@@ -77,9 +77,11 @@ export async function createRegistration(input: RegistrationInput, opts: { accou
   if (!wantPass && !ids.length) throw new Error("Choose a Symposium Registration or at least one workshop registration.");
 
   const result = await db.transaction(async (tx) => {
-    const [cat] = await tx.select().from(s.feeCategory).where(and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)));
-    if (!cat) throw new Error("Invalid registration category.");
-    if (cat.designations?.length && !cat.designations.includes(input.designation)) throw new Error(`"${input.designation}" is not in the ${cat.label} fee category.`);
+    // workshop-only orders keep the category of the delegate's existing registration, even if that category has since been
+    // switched off or its designations changed (fix 16 Nov 2026: "Invalid registration category" when adding workshops)
+    const [cat] = await tx.select().from(s.feeCategory).where(wantPass ? and(eq(s.feeCategory.id, input.categoryId), eq(s.feeCategory.active, true)) : eq(s.feeCategory.id, input.categoryId));
+    if (!cat) throw new Error(wantPass ? "This registration category is no longer offered. Please choose your registration again." : "Invalid registration category.");
+    if (wantPass && cat.designations?.length && !cat.designations.includes(input.designation)) throw new Error(`"${input.designation}" is not in the ${cat.label} fee category.`);
     // One Symposium Pass per delegate; later orders are linked to the delegate's first registration (D1)
     let primary: { id: string; regNo: string } | null = null;
     if (opts.accountId) {

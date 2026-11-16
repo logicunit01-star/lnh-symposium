@@ -44,7 +44,11 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const valid = lines.filter((l) => l.live && l.live.left !== 0);
   const invalid = lines.filter((l) => !l.live || l.live.left === 0);
   const passCat = pass ? categories.find((c) => c.id === pass.categoryId && c.designations.includes(pass.designation)) ?? null : null;
-  const designation = pass ? pass.designation : held?.designation ?? wsDesignation;
+  // a held registration made without a designation (e.g. by the desk, or before it was asked) asks for it here (fix 16 Nov 2026)
+  const heldCat = held ? categories.find((c) => c.id === held.categoryId) ?? null : null;
+  const heldOk = !!held?.designation && (!heldCat || heldCat.designations.includes(held.designation));
+  const pickList = heldCat?.designations.length ? heldCat.designations : categories.flatMap((c) => c.designations);
+  const designation = pass ? pass.designation : heldOk ? held!.designation! : wsDesignation;
   const categoryId = pass ? passCat?.id ?? null : held ? held.categoryId : categories.find((c) => c.designations.includes(wsDesignation))?.id ?? null;
   const passFee = passCat ? passCat.fee : 0;
   const extra = pass ? Math.min(banquet.max, pass.extraBanquet) : 0;
@@ -119,14 +123,14 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
             </ul>
           )}
           {invalid.length > 0 && <Alert className="mt-4 flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0" />Remove the highlighted workshop(s) to continue: they are full or no longer offered.</Alert>}
-          {!pass && !held && lines.length > 0 && (
+          {!pass && (!held || !heldOk) && lines.length > 0 && (
             <div className="mt-5 rounded-2xl border border-white/15 p-4">
               <label className="block"><span className="label">Your designation <span className="text-lnh-red">*</span></span>
                 <select className="input" value={wsDesignation} onChange={(e) => setWsDesignation(e.target.value)}>
                   <option value="">Choose…</option>
-                  {categories.flatMap((c) => c.designations).map((d) => <option key={d} value={d}>{d}</option>)}
+                  {pickList.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select></label>
-              <p className="mt-2 text-xs text-slate-300">Pre-symposium workshops only: no Symposium Registration is included. Your designation prints on your receipt and certificate. <Link href="/register#pass" className="text-lnh-sky underline">Add Symposium Registration</Link></p>
+              {held ? <p className="mt-2 text-xs text-slate-300">Your designation is not recorded on {held.regNo}. Choose it once: it prints on your receipts and certificates.</p> : <p className="mt-2 text-xs text-slate-300">Pre-symposium workshops only: no Symposium Registration is included. Your designation prints on your receipt and certificate. <Link href="/register#pass" className="text-lnh-sky underline">Add Symposium Registration</Link></p>}
               {fe("designation") && <p className="err">{fe("designation")}</p>}
             </div>
           )}

@@ -4,6 +4,7 @@ import { db, schema as s } from "../src/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { DEMO_STAFF, EVENT_DEFAULTS, VENUES, seedDemoContent, seedDepartments } from "../src/lib/demo-content";
 import { DEFAULT_TIERS } from "../src/lib/reg-fields";
+import { seedMailboxes } from "../src/lib/mailbox-seed";
 
 
 async function main() {
@@ -54,6 +55,9 @@ async function main() {
   if (!nv) await db.insert(s.venues).values(VENUES.map((v) => ({ ...v, usage: "SCIENTIFIC" }))).onConflictDoNothing(); // D5: the 43 workshop rooms come from migration 0015
 
   await seedDepartments(db);
+  // the five symposium mailboxes, switched off until the Super Admin enters their passwords (Admin -> Email settings)
+  const boxes = await seedMailboxes(db);
+  if (boxes.length) console.log(`Mailboxes added (enter their passwords in Admin -> Email settings): ${boxes.join(", ")}`);
   // SC feedback: official sender for automated emails, and the default dispatch schedule (31 Dec)
   await db.execute(sql`update event set email_from = 'Scientific Committee, 9th LNH Symposium <' || contact_email || '>' where email_from is null`);
   const [{ nj }] = await db.select({ nj: sql<number>`count(*)::int` }).from(s.emailJobs);

@@ -34,6 +34,7 @@ export default async function EmailSettings({ searchParams }: { searchParams: { 
       <PageTitle title="Email settings" sub="Super Admin and Admin. The mailboxes the site sends from, and how emails are delivered. Choose which mailbox, sender name, CC and reply-to each notification uses in Automated emails." />
       {searchParams.saved && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{searchParams.saved === "deleted" ? "Mailbox removed." : "Saved."}</p>}
       {searchParams.err && <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{searchParams.err}</p>}
+      {accounts.some((a) => !a.secret) && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{accounts.filter((a) => !a.secret).length} mailbox(es) are ready but switched off until their password is entered: {accounts.filter((a) => !a.secret).map((a) => a.username).join(", ")}. Open each one, type the password and save; then press “Send test email”. Until then their notifications are sent from an active mailbox.</p>}
       {!accounts.some((a) => a.active) && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">No active mailbox yet{envFallback ? ": emails use the SMTP settings in the server file." : ": emails are only recorded, not delivered. Add the registration mailbox below."}</p>}
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -59,7 +60,7 @@ export default async function EmailSettings({ searchParams }: { searchParams: { 
               <thead><tr><th>Mailbox</th><th>Sends as</th><th>Server</th><th>Notifications</th><th /></tr></thead>
               <tbody>{accounts.map((a) => (
                 <tr key={a.id} className={cn(!a.active && "opacity-50", sel?.id === a.id && "bg-lnh-blue/5")}>
-                  <td className="font-medium">{a.label}{a.isDefault && <span className="badge ml-2 bg-emerald-100 text-emerald-800">Default</span>}{!a.active && <span className="ml-1 text-xs text-slate-400">(off)</span>}</td>
+                  <td className="font-medium">{a.label}{a.isDefault && <span className="badge ml-2 bg-emerald-100 text-emerald-800">Default</span>}{!a.secret ? <span className="badge ml-2 bg-amber-100 text-amber-800">Password needed</span> : !a.active && <span className="ml-1 text-xs text-slate-400">(off)</span>}</td>
                   <td className="text-sm">{a.fromName}<span className="block text-xs text-slate-500">{a.fromAddress}</span></td>
                   <td className="text-xs text-slate-600">{a.host}:{a.port} · {a.security}</td>
                   <td className="text-xs">{a.isDefault ? "All not set to another mailbox" : `${used(a.id)} chosen`}</td>
