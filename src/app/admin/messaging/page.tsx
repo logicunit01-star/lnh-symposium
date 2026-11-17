@@ -54,7 +54,7 @@ export default async function Messaging({ searchParams }: { searchParams: { save
             <div className="sm:col-span-2"><label className="a-label">API address</label><input name="apiUrl" defaultValue={cfg.apiUrl} className="a-input font-mono text-sm" /></div>
             <div className="sm:col-span-2"><label className="a-label">API key (x-api-key)</label><input name="apiKey" type="password" autoComplete="new-password" placeholder={cfg.key ? `saved (hidden), ends in …${cfg.key.slice(-3)}; leave blank to keep` : "from eOcean"} className="a-input font-mono text-sm" />
               {cfg.key && <label className="mt-1 flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" name="removeKey" />Remove the saved key</label>}</div>
-            <div><label className="a-label">Preferred channel (preferred_channel)</label><input name="waChannel" defaultValue={cfg.waChannel} className="a-input" /><p className="mt-1 text-xs text-slate-500">As eOcean spells it, e.g. Whatsapp.</p></div>
+            <div><label className="a-label">Preferred channel (preferred_channel)</label><input name="waChannel" defaultValue={cfg.waChannel} placeholder="empty: xNotify chooses" className="a-input" /><p className="mt-1 text-xs text-slate-500">Whatsapp or SMS, as eOcean spells it. Leave it empty to let xNotify choose the channel (Smart / Custom Routing).</p></div>
           </fieldset>
           <fieldset>
             <legend className="mb-1 font-display text-base font-bold">Template ID per message</legend>
@@ -62,7 +62,7 @@ export default async function Messaging({ searchParams }: { searchParams: { save
             <div className="overflow-x-auto"><table className="a-table">
               <thead><tr><th>Message</th><th>xNotify template ID</th></tr></thead>
               <tbody>{Object.entries(NOTIFY_MESSAGES).map(([k, m]) => { const t = cfg.templates[k] ?? {}; return (
-                <tr key={k}><td className="text-sm"><span className="font-medium">{m.label}</span><span className="block text-xs text-slate-500">{m.detail}</span></td>
+                <tr key={k}><td className="text-sm"><span className="font-medium">{m.label}</span><span className="block text-xs text-slate-500">{m.detail}</span><span className="block text-[11px] text-slate-400">Sends: {m.vars}</span></td>
                   <td><input name={`wa_${k}`} inputMode="numeric" defaultValue={t.wa ?? ""} placeholder="e.g. 2698" className="a-input w-36 font-mono text-sm" /></td></tr>
               ); })}</tbody>
             </table></div>

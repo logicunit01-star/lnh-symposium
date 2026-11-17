@@ -69,7 +69,7 @@ async function deliver(row: Row): Promise<Result> {
     if (!p.templateId) return { ok: false, error: "No xNotify template for this message." };
     const cfg = await notifyConfig();
     if (!cfg.waEnabled) return { ok: false, error: "xNotify is switched off (Admin → WhatsApp & SMS)." };
-    const r = await xnotifySend(cfg, { to: row.to, email: p.email, templateId: p.templateId, mediaUrl: p.mediaUrl });
+    const r = await xnotifySend(cfg, { to: row.to, templateId: p.templateId, mediaUrl: p.mediaUrl, vars: p.vars });
     return { ok: true, ref: r.ref };
   } catch (e: any) {
     return { ok: false, error: String(e?.message || e).slice(0, 500) };

@@ -601,6 +601,7 @@ export type OutboxPayload = {
   attachments?: { filename: string; content: string /* base64 */; contentType?: string; cid?: string }[];
   // WHATSAPP / SMS
   messageKey?: string; templateId?: string; mediaUrl?: string; email?: string; text?: string; via?: "XNOTIFY" | "GATEWAY";
+  vars?: Record<string, string>; // xNotify template variables (17 Nov 2026), e.g. participant_name, workshop_title
 };
 
 /** Super Admin → Notifications: eOcean xNotify (WhatsApp and SMS), message template IDs and sending limits. API key encrypted (lib/secret-box). */

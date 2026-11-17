@@ -8,6 +8,7 @@ import { sealText } from "@/lib/secret-box";
 import { clearNotifyCache, notifyConfig, NOTIFY_MESSAGES, XNOTIFY_LABEL, type NotifyMessageKey } from "@/lib/notify-config";
 import { cancelMessage, retryNow } from "@/lib/outbox";
 import { normalisePhone, sendMessage } from "@/lib/notify";
+import { appUrl } from "@/lib/utils";
 
 /** Super Admin only: checked from the signed-in role AND the current database row. */
 async function superAdmin() {
@@ -36,7 +37,7 @@ export async function saveMessaging(f: FormData) {
   const values = {
     waEnabled: f.get("waEnabled") === "on", smsEnabled: false, apiUrl,
     apiKey: f.get("removeKey") === "on" ? null : key ? sealText(XNOTIFY_LABEL, key) : (cur.keyUnreadable ? null : (await db.select({ k: s.notifySettings.apiKey }).from(s.notifySettings).where(eq(s.notifySettings.id, 1)))[0]?.k ?? null),
-    waChannel: field(f, "waChannel") || "Whatsapp", templates,
+    waChannel: field(f, "waChannel").slice(0, 40), templates, // empty: xNotify Smart / Custom Routing chooses the channel
     emailPerMin: int(f, "emailPerMin", 1, 600, 60), msgPerMin: int(f, "msgPerMin", 1, 600, 30), maxAttempts: int(f, "maxAttempts", 1, 20, 6),
     updatedBy: `${u.name} (${u.email})`, updatedAt: new Date(),
   };
@@ -60,7 +61,10 @@ export async function testMessage(f: FormData) {
   if (!cfg.key) return back({ test: "fail", msg: "No API key is saved. Enter it and press Save." });
   if (!cfg.templates[key]?.wa) return back({ test: "fail", msg: `No template ID is saved for “${NOTIFY_MESSAGES[key].label}”. Enter it and press Save.` });
   const before = new Date();
-  await sendMessage(key, phone, { text: `LNH Symposium: test message (${NOTIFY_MESSAGES[key].label}).`, ref: "TEST", priority: 10 });
+  // sample values for the template variables, so a template that needs them can be tested
+  const sample = { participant_name: "Test Participant", workshop_title: "Test workshop", date: "14 December 2026", start_time: "09:00 AM", end_time: "01:00 PM", venue: "Skill Lab", status: "Confirmed" };
+  const want = NOTIFY_MESSAGES[key].vars.split(", ").map((v) => v.split(" ")[0]).filter((v) => v in sample);
+  await sendMessage(key, phone, { text: `LNH Symposium: test message (${NOTIFY_MESSAGES[key].label}).`, ref: "TEST", priority: 10, vars: Object.fromEntries(want.map((k) => [k, sample[k as keyof typeof sample]])), mediaUrl: NOTIFY_MESSAGES[key].qr ? `${appUrl()}/brand/lnh-mark.png` : undefined });
   const rows = await db.query.notificationLog.findMany({ where: (n, { and, gte, eq }) => and(gte(n.createdAt, before), eq(n.ref, "TEST")), orderBy: (n, { desc }) => desc(n.createdAt), limit: 3 });
   if (!rows.length) return back({ test: "fail", msg: "Nothing was queued: switch xNotify on and enter a template ID for this message." });
   back({ test: rows[0].status === "FAILED" || rows[0].error ? "fail" : "ok", msg: rows.map((r) => `xNotify: ${r.status}${r.error ? ` (${r.error.slice(0, 160)})` : ""}${r.providerRef ? `, ref ${r.providerRef}` : ""}`).join(" · ") });

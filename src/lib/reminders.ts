@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { getEvent } from "./event";
-import { sendSms } from "./notify";
+import { sendSms, workshopVars } from "./notify";
 import { appUrl, fmtDate, fmtTime24, pkr } from "./utils";
 import { getTemplate, sendTemplate } from "./email";
 
@@ -23,7 +23,7 @@ export async function runReminders(now = new Date()) {
     if (+now - +r.createdAt < (items > 0 ? Math.min(48, holdRemind) : 48) * 3600e3) continue;
     const link = `${appUrl()}/register/success/${r.accessToken}`;
     await sendTemplate("PAYMENT_PENDING", r.email, { name: `${r.title} ${r.firstName} ${r.lastName}`, reg_no: r.regNo, amount: pkr(r.totalFee), link, pay_by_note: await payByNote(r.id) }, { ref: r.regNo });
-    await sendSms(r.phone, `LNH Symposium: Reg ${r.regNo} payment of ${pkr(r.totalFee)} pending. Pay: ${link}`, "PAYMENT_REMINDER", r.regNo);
+    await sendSms(r.phone, `LNH Symposium: Reg ${r.regNo} payment of ${pkr(r.totalFee)} pending. Pay: ${link}`, "PAYMENT_REMINDER", r.regNo, { participant_name: `${r.title} ${r.firstName} ${r.lastName}` });
     await db.update(s.registrations).set({ remindedAt: now }).where(eq(s.registrations.id, r.id));
     pending++;
   }
@@ -40,7 +40,7 @@ export async function runReminders(now = new Date()) {
           name: `${r.title} ${r.firstName} ${r.lastName}`, session_date: fmtDate(ev.startDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
           venue: ev.venue, ticket_no: r.regNo, link: `${appUrl()}/register/success/${r.accessToken}`,
         }, { ref: r.regNo, noCc: true }).catch((e) => console.error("symposium reminder failed", e));
-        await sendSms(r.phone, `LNH Symposium starts tomorrow, ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}, 8:30 AM. Bring reg no. ${r.regNo}. See you there!`, "SYMPOSIUM_REMINDER", r.regNo);
+        await sendSms(r.phone, `LNH Symposium starts tomorrow, ${fmtDate(ev.startDate, { day: "numeric", month: "short" })}, 8:30 AM. Bring reg no. ${r.regNo}. See you there!`, "SYMPOSIUM_REMINDER", r.regNo, { participant_name: `${r.title} ${r.firstName} ${r.lastName}` });
         event++;
       }
     }
@@ -58,7 +58,7 @@ export async function runReminders(now = new Date()) {
       name: `${r.title} ${r.firstName} ${r.lastName}`, session_name: ses.title, session_date: fmtDate(ses.startsAt, { weekday: "long", day: "numeric", month: "long" }),
       session_time: `${fmtTime24(ses.startsAt)}–${fmtTime24(ses.endsAt)}`, venue: ses.hall, ticket_no: item.ticketNo ?? r.regNo, link: `${appUrl()}/register/success/${r.accessToken}`,
     }, { ref: item.ticketNo ?? r.regNo, noCc: true }).catch((e) => console.error("workshop reminder failed", e));
-    await sendSms(r.phone, `LNH Symposium: reminder, workshop "${ses.title.slice(0, 60)}" on ${fmtDate(ses.startsAt, { day: "numeric", month: "short" })} at ${fmtTime24(ses.startsAt)}, ${ses.hall ?? ""}. Show ticket ${item.ticketNo ?? r.regNo} QR at the door.`, "WORKSHOP_REMINDER", item.ticketNo ?? r.regNo);
+    await sendSms(r.phone, `LNH Symposium: reminder, workshop "${ses.title.slice(0, 60)}" on ${fmtDate(ses.startsAt, { day: "numeric", month: "short" })} at ${fmtTime24(ses.startsAt)}, ${ses.hall ?? ""}. Show ticket ${item.ticketNo ?? r.regNo} QR at the door.`, "WORKSHOP_REMINDER", item.ticketNo ?? r.regNo, workshopVars(`${r.title} ${r.firstName} ${r.lastName}`, ses, "Reminder"));
     await db.update(s.registrationItems).set({ remindedAt: now }).where(eq(s.registrationItems.id, item.id));
     workshop++;
   }

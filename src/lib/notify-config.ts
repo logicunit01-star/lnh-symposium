@@ -10,13 +10,14 @@ import { openText } from "./secret-box";
  */
 export const XNOTIFY_LABEL = "xnotify-api-key";
 export const NOTIFY_MESSAGES = {
-  REGISTRATION_CONFIRMED: { label: "Symposium registration confirmed", detail: "Sent with the participant's symposium QR code image.", qr: true },
-  WORKSHOP_CONFIRMED: { label: "Workshop registration confirmed", detail: "One per workshop, with that workshop's QR code image.", qr: true },
-  REGISTRATION_RECEIVED: { label: "Registration received, payment pending", detail: "After registering, before payment." },
-  PAYMENT_REMINDER: { label: "Payment pending reminder", detail: "Daily reminder for unpaid registrations." },
-  SYMPOSIUM_REMINDER: { label: "Symposium starts tomorrow", detail: "Day before the symposium." },
-  WORKSHOP_REMINDER: { label: "Workshop reminder", detail: "Day before each workshop." },
-  CERTIFICATE_READY: { label: "E-certificate ready", detail: "Symposium and workshop certificates." },
+  // vars: the template variables the portal sends (xNotify documents of 17 Nov 2026: symposium_registration 2730, symposium_workshop 2731)
+  REGISTRATION_CONFIRMED: { label: "Symposium registration confirmed", detail: "eOcean template symposium_registration (2730).", vars: "participant_name, pdf_url (the symposium QR image)", qr: true },
+  WORKSHOP_CONFIRMED: { label: "Workshop registration confirmed", detail: "One per workshop. eOcean template symposium_workshop (2731).", vars: "participant_name, workshop_title, date, start_time, end_time, venue, status", qr: false },
+  REGISTRATION_RECEIVED: { label: "Registration received, payment pending", detail: "After registering, before payment.", vars: "participant_name", qr: false },
+  PAYMENT_REMINDER: { label: "Payment pending reminder", detail: "Reminder for unpaid registrations.", vars: "participant_name", qr: false },
+  SYMPOSIUM_REMINDER: { label: "Symposium starts tomorrow", detail: "Day before the symposium.", vars: "participant_name", qr: false },
+  WORKSHOP_REMINDER: { label: "Workshop reminder", detail: "Day before each workshop.", vars: "participant_name, workshop_title, date, start_time, end_time, venue, status", qr: false },
+  CERTIFICATE_READY: { label: "E-certificate ready", detail: "Symposium and workshop certificates.", vars: "participant_name", qr: false },
 } as const;
 export type NotifyMessageKey = keyof typeof NOTIFY_MESSAGES;
 

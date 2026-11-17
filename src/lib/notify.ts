@@ -2,6 +2,7 @@ import "server-only";
 import { fromHeader, mailState, pickAccount } from "./mail-config";
 import { NOTIFY_MESSAGES, notifyConfig, type NotifyMessageKey } from "./notify-config";
 import { enqueue, envMailTransport, logOnly } from "./outbox";
+import { fmtDate, fmtTime } from "./utils";
 
 /** cid: shown inside the email as <img src="cid:…"> (e.g. the QR code) instead of as a separate attachment. */
 type Attachment = { filename: string; content: Buffer | Uint8Array; contentType?: string; cid?: string };
@@ -62,7 +63,7 @@ export const normalisePhone = (p: string) => {
  * message has a template ID; mediaUrl (a QR image) goes with it. xNotify delivers it by WhatsApp or SMS (16 Nov 2026:
  * the portal no longer sends SMS itself). m.text is kept only as a readable note in the log.
  */
-export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean } = {}) {
+export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean; vars?: Record<string, string> } = {}) {
   try {
     if (!phone) return;
     const to = normalisePhone(phone);
@@ -71,13 +72,21 @@ export async function sendMessage(key: NotifyMessageKey, phone: string | null | 
     const tid = cfg.templates[key]?.wa;
     if (!cfg.waEnabled || !tid || !(key in NOTIFY_MESSAGES)) return;
     await enqueue({ to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer, channel: "WHATSAPP",
-      body: `xNotify template ${tid}${m.mediaUrl ? " + QR image" : ""}${m.text ? `: ${m.text}` : ""}`, payload: { messageKey: key, templateId: tid, mediaUrl: m.mediaUrl, email: m.email, via: "XNOTIFY" } });
+      body: `xNotify template ${tid}${m.mediaUrl && NOTIFY_MESSAGES[key].qr ? " + QR image" : ""}${m.vars ? ` (${Object.entries(m.vars).map(([k, v]) => `${k}: ${v}`).join(", ")})` : m.text ? `: ${m.text}` : ""}`.slice(0, 1000),
+      // the portal sends its own emails, so no email address goes to xNotify (it would email the participant a second time)
+      payload: { messageKey: key, templateId: tid, mediaUrl: NOTIFY_MESSAGES[key].qr ? m.mediaUrl : undefined, vars: m.vars, via: "XNOTIFY" } });
   } catch (e) { console.error("[notify] could not queue", key, e); }
 }
 
-/** Kept for existing callers (reminders, certificates): the text is only a log note; xNotify sends the template. */
-export async function sendSms(to: string, message: string, key: NotifyMessageKey, ref?: string | null) {
-  return sendMessage(key, to, { text: message, ref });
+/** xNotify "symposium_workshop" template variables (document of 17 Nov 2026, template 2731). */
+export const workshopVars = (name: string, w: { title: string; startsAt: Date; endsAt: Date; hall?: string | null }, status: string) => ({
+  participant_name: name, workshop_title: w.title, date: fmtDate(w.startsAt, { day: "numeric", month: "long", year: "numeric" }),
+  start_time: fmtTime(w.startsAt), end_time: fmtTime(w.endsAt), venue: w.hall || "Liaquat National Hospital, Karachi", status,
+});
+
+/** Kept for existing callers (reminders, certificates): the text is only a log note; xNotify sends the template with `vars`. */
+export async function sendSms(to: string, message: string, key: NotifyMessageKey, ref?: string | null, vars?: Record<string, string>) {
+  return sendMessage(key, to, { text: message, ref, vars });
 }
 
 /** Branded HTML email wrapper. */
