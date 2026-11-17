@@ -116,7 +116,7 @@ export async function registrationPdf(r: RegForPdf, ev: { name: string; theme: s
   page.drawRectangle({ x: 0, y: 0, width: W, height: 70, color: rgb(0.95, 0.96, 0.99) });
   page.drawText(safe(`${ev.venue}  |  ${fmtDate(ev.startDate, { day: "numeric", month: "short" })} - ${fmtDate(ev.endDate)}`), { x: 40, y: 42, size: 8, font: f, color: GREY });
   page.drawText(safe(`Find your tickets: ${appUrl()}/my-registrations`), { x: 40, y: 28, size: 8, font: f, color: GREY });
-  if (!awaiting && (r.hasPass ?? true)) { await idCardPage(doc, r, ev, f, b); await idCardBack(doc, f, b); }
+  if (!awaiting && (r.hasPass ?? true)) { await idCardPage(doc, r, ev, f, b); await idCardBack(doc, r, f, b); }
   // one page per workshop ticket, each with its own QR (release 3, D4)
   if (!awaiting) for (const it of [...r.items].sort((x, z) => +x.session.startsAt - +z.session.startsAt)) await ticketPage(doc, r, it, f, b);
   return doc.save();
@@ -157,7 +157,7 @@ async function idCardPage(doc: PDFDocument, r: RegForPdf, ev: { name: string }, 
 
 /** Back of the ID card (4 x 6 in): the session feedback QR (Dashboard Instructions, revised 06-11-2026:
  *  "Remove Feedback QR code from dashboard, it will be added on the back of the attendee's registration ID card"). */
-async function idCardBack(doc: PDFDocument, f: PDFFont, b: PDFFont) {
+async function idCardBack(doc: PDFDocument, r: RegForPdf, f: PDFFont, b: PDFFont) {
   const W = 288, H = 432;
   const p = doc.addPage([W, H]);
   p.drawRectangle({ x: 0, y: H - 70, width: W, height: 70, color: NAVY });
@@ -165,7 +165,8 @@ async function idCardBack(doc: PDFDocument, f: PDFFont, b: PDFFont) {
   const c = (t: string, y: number, size: number, font: PDFFont, color = INK) => p.drawText(t, { x: (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color });
   c("ID CARD - BACK", H - 30, 9, b, rgb(0.75, 0.82, 1));
   c("Your feedback matters", H - 52, 13, b, rgb(1, 1, 1));
-  const q = await qrPng(doc, `${appUrl()}/feedback`);
+  // 17 Nov 2026: the participant's own feedback page (only their workshops), not the list of every session and workshop
+  const q = await qrPng(doc, `${appUrl()}/feedback?t=${encodeURIComponent(r.accessToken)}`);
   p.drawImage(q, { x: (W - 160) / 2, y: 150, width: 160, height: 160 });
   c("Session feedback", 132, 11, b, NAVY);
   c("Scan to rate the sessions and workshops", 114, 8.5, f, GREY);
