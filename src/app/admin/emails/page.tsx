@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { requirePerm } from "@/lib/auth";
-import { getEvent } from "@/lib/event";
+import { getEvent, eventDaysLabel } from "@/lib/event";
 import { PageTitle, Pager } from "@/components/admin/ui";
 import { allTemplates, ensureDefaultJobs, renderTemplate, runDueJobs, JOB_KINDS } from "@/lib/email";
 import { CATEGORIES, DEFAULT_TEMPLATES, MERGE_FIELDS, SAMPLE_VARS } from "@/lib/email-templates";
@@ -127,7 +127,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   const templates = await allTemplates();
   const sel = templates.find((t) => t.key === searchParams.t) ?? templates[0];
   const def = DEFAULT_TEMPLATES[sel.key];
-  const preview = renderTemplate(sel, { ...SAMPLE_VARS, event_name: ev.name, contact_email: ev.contactEmail });
+  const preview = renderTemplate(sel, { ...SAMPLE_VARS, event_name: ev.name, event_dates: eventDaysLabel(ev), event_theme: "Shaping the New Era of Healthcare", contact_email: ev.contactEmail });
   const mailboxes = await db.select({ id: s.mailAccounts.id, label: s.mailAccounts.label, fromName: s.mailAccounts.fromName, fromAddress: s.mailAccounts.fromAddress, isDefault: s.mailAccounts.isDefault, active: s.mailAccounts.active }).from(s.mailAccounts);
   const dflt = mailboxes.find((m) => m.isDefault && m.active) ?? mailboxes.find((m) => m.active);
   const editSender = can(u, "mail");

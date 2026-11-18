@@ -1,0 +1,10 @@
+const { chromium } = require('playwright'); const B='http://127.0.0.1:3100';
+(async()=>{ const b=await chromium.launch(); const c=await b.newContext({viewport:{width:1366,height:900}}); const p=await c.newPage(); const o=(...a)=>console.log(...a);
+ await p.goto(B+'/', {waitUntil:'domcontentloaded'}); o('X', await p.locator('footer a[aria-label="X"]').getAttribute('href').catch(()=>'none'));
+ await c.request.post(B+'/api/account/signin',{data:{email:'paytest@example.com',password:'Passw0rd!x'}});
+ await p.goto(B+'/workshops',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(1000); await p.getByRole('button',{name:'Add ticket'}).first().click({timeout:5000}).catch(()=>{}); await p.waitForTimeout(500);
+ await p.goto(B+'/checkout',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(1500);
+ await p.getByRole('button',{name:/Confirm and pay/}).click({timeout:5000}); await p.waitForTimeout(900);
+ o('missing box:', (await p.locator('text=To complete your registration').locator('..').innerText({timeout:3000}).catch(()=>'none')).replace(/\s+/g,' ').slice(0,250));
+ o('red fields', await p.locator('[data-miss="1"]').count()); await p.screenshot({path:'/tmp/fl/r-checkout.png'});
+ await b.close(); })();

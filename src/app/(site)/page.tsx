@@ -127,7 +127,7 @@ export default async function Home() {
         <div className="circuit absolute inset-0 opacity-60" />
         <div className="container-x relative">
           <SectionHead eyebrow="Pre-conference · limited seats" title={<>Pre-symposium <span className="text-holo">workshops</span></>}
-            sub="Simulation labs, AI tools and skills stations. Each workshop has a separate registration fee; no symposium registration required."
+            sub="Simulation labs, AI tools and skills stations. Each workshop has a separate registration fee. The symposium registration fees does not include pre-symposium workshops."
             action={<Link href="/workshops" className="btn-blue shrink-0">Workshops details and Registration <ArrowRight className="h-4 w-4" /></Link>} />
         </div>
       </section>
@@ -232,6 +232,13 @@ export default async function Home() {
               <div className="relative mt-8 flex flex-wrap gap-3">
                 <Link href="/abstracts" className="btn-primary">Submit an abstract</Link>
               </div>
+              {/* 18 Nov 2026: submission deadline in a block on the right (Event settings → Abstract deadline) */}
+              {ev.abstractDeadline && (
+                <div className="relative mt-8 rounded-2xl border border-lnh-sky/40 bg-lnh-sky/10 px-6 py-5 lg:absolute lg:right-12 lg:top-1/2 lg:mt-0 lg:-translate-y-1/2 lg:text-right">
+                  <p className="mono text-[11px] uppercase tracking-[0.25em] text-lnh-sky">Deadline for submission</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-white">{fmtDate(ev.abstractDeadline, { day: "numeric", month: "long", year: "numeric" })}</p>
+                </div>
+              )}
             </div>
           </Reveal>
         </div>
@@ -245,7 +252,7 @@ export default async function Home() {
             <div className="orb -right-10 -top-10 h-80 w-80 bg-lnh-red/50" />
             <p className="mono relative text-xs uppercase tracking-[0.3em] text-white/85">{!ev.registrationOpen ? "Registration opens soon" : early ? "Early-bird pass prices available" : "Registration open"}</p>
             <h2 className="h-display relative mx-auto mt-5 max-w-4xl text-[2.5rem] text-white sm:text-7xl">Be part of the new era</h2>
-            <p className="relative mx-auto mt-5 max-w-xl text-white/90">One Symposium Registration admits you to every session on all three days, with a banquet pass included. Add pre-symposium workshops and pay once.</p>
+            <p className="relative mx-auto mt-5 max-w-xl text-white/90">One registration gives you access to all three days of symposium sessions and the banquet. You can also select your preferred pre-symposium workshops and pay for everything together.</p>
             <div className="relative mt-10 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="btn-light px-8 py-4 text-base">Register <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/workshops" className="btn-ghost px-8 py-4 text-base">Explore Workshops</Link>

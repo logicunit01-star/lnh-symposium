@@ -6,12 +6,12 @@ import { AlertTriangle, CreditCard, Landmark, Lock, ShieldCheck, Smartphone, Tic
 import { useCart } from "@/components/cart/CartProvider";
 import { useSubmit } from "@/components/ui/useForm";
 import { Alert } from "@/components/ui/Field";
-import { cn, pkr, processingFee, COUNTRIES, SPECIALTIES } from "@/lib/utils";
+import { cn, pkr, processingFee, COUNTRIES, SPECIALTIES, TITLES } from "@/lib/utils";
 import { PROVINCES, maskCnic, DIAL } from "@/lib/reg-fields";
 import { PhoneInput, splitPhone, joinPhone } from "@/components/ui/PhoneInput";
 
 type Cat = { id: number; label: string; fee: number; note: string | null; designations: string[] };
-type Details = { gender: string; institution: string; specialty: string; whatsapp: string; cnic: string; address: string; city: string; province: string; country: string; qualification: string; employeeNo: string; pmdcNo: string };
+type Details = { title: string; gender: string; institution: string; specialty: string; whatsapp: string; cnic: string; address: string; city: string; province: string; country: string; qualification: string; employeeNo: string; pmdcNo: string };
 type Item = { title: string; kind: "WORKSHOP"; fee: number; left: number | null; when: string; tag: string | null };
 const METHODS = [
   { k: "card", I: CreditCard, t: "Cards", s: "Visa · Mastercard" },
@@ -45,7 +45,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
       }
       return { ...p, [k]: k === "cnic" && (p.country || "Pakistan") === "Pakistan" ? e.target.value.replace(/\D/g, "").slice(0, 13) : e.target.value };
     });
-  const detailsOk = !!det.gender && det.institution.trim().length >= 2 && (!det.cnic.trim() || (det.country || "Pakistan") !== "Pakistan" || /^\d{13}$/.test(det.cnic)) && det.address.trim().length >= 5 && det.city.trim().length >= 2;
+  const detailsOk = !!det.title && !!det.gender && det.institution.trim().length >= 2 && (!det.cnic.trim() || (det.country || "Pakistan") !== "Pakistan" || /^\d{13}$/.test(det.cnic)) && det.address.trim().length >= 5 && det.city.trim().length >= 2;
   const fe = (k: string) => fields[k] || fields[`details.${k}`];
 
   const lines = cart.map((c) => ({ id: c.id, cartTitle: c.title, live: catalog[c.id] }));
@@ -66,6 +66,25 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
   const total = subtotal + proc;
   const empty = !pass && lines.length === 0;
   const canPay = ready && !empty && !!categoryId && !!designation && (!pass || !!passCat) && detailsOk && agree && (valid.length === 0 || wsTerms) && invalid.length === 0;
+
+  // 18 Nov 2026: what is still missing, shown prominently under the button and highlighted at the field once the person tries to pay
+  const cnicBad = !!det.cnic.trim() && (det.country || "Pakistan") === "Pakistan" && !/^\d{13}$/.test(det.cnic);
+  const missing: [string, string][] = ([
+    [!designation, "designation", "Choose your designation"], [!det.title, "title", "Choose your title"], [!det.gender, "gender", "Choose your gender"],
+    [det.institution.trim().length < 2, "institution", "Enter your hospital / institution"], [cnicBad, "cnic", "Enter the CNIC as 13 digits, or leave it empty"],
+    [det.address.trim().length < 5, "address", "Enter your address"], [det.city.trim().length < 2, "city", "Enter your city"],
+    [invalid.length > 0, "invalid", "Remove the unavailable workshop(s)"], [valid.length > 0 && !wsTerms, "wsTerms", "Accept the workshop terms"],
+    [!agree, "agree", "Tick the confirmation box"],
+  ] as [boolean, string, string][]).filter(([m]) => m).map(([, k, t]) => [k, t]);
+  const [tried, setTried] = useState(false);
+  const miss = (k: string) => tried && missing.some(([m]) => m === k);
+  const Need = ({ k }: { k: string }) => (miss(k) ? <span className="err">{missing.find(([m]) => m === k)![1]}</span> : null);
+  const tryPay = () => {
+    if (canPay) return void pay();
+    setTried(true);
+    requestAnimationFrame(() => { const el = document.querySelector('[data-miss="1"]') as HTMLElement | null; el?.scrollIntoView({ behavior: "smooth", block: "center" }); (el?.querySelector("input, select, button") as HTMLElement | null)?.focus({ preventScroll: true }); });
+  };
+  const mark = (k: string) => ({ "data-miss": miss(k) ? "1" : undefined, className: miss(k) ? "field-invalid" : undefined });
 
   async function pay() {
     const r = await submit({ categoryId, designation, sessionIds: valid.map((l) => l.id), includePass: !!pass, banquetQty: extra, paymentMethod: "PayPro", details: { ...det, whatsapp: splitPhone(det.whatsapp).num.replace(/\D/g, "") ? det.whatsapp : "", cnic: (det.country || "Pakistan") === "Pakistan" ? maskCnic(det.cnic) : det.cnic } });
@@ -134,7 +153,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
           {!pass && (!held || !heldOk) && lines.length > 0 && (
             <div className="mt-5 rounded-2xl border border-white/15 p-4">
               <label className="block"><span className="label">Your designation <span className="text-lnh-red">*</span></span>
-                <select className="input" value={wsDesignation} onChange={(e) => setWsDesignation(e.target.value)}>
+                <select {...mark("designation")} className={cn("input", miss("designation") && "!border-rose-500")} value={wsDesignation} onChange={(e) => setWsDesignation(e.target.value)}>
                   <option value="">Choose…</option>
                   {pickList.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select></label>
@@ -149,18 +168,20 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
           <p className="eyebrow">Registration form details</p>
           <p className="mt-2 text-xs text-slate-400">As on the LNH symposium registration form. Saved to your account for next time.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="block"><span className="label">Gender <span className="text-lnh-red">*</span></span>
+            {/* 18 Nov 2026: the title (prefix) printed on the certificate can be corrected here (it was "Dr." for everyone by default) */}
+            <label {...mark("title")} className={cn("block", miss("title") && "field-invalid")}><span className="label">Title <span className="text-lnh-red">*</span></span><select className="input" value={det.title} onChange={setD("title")}><option value="">Choose…</option>{TITLES.map((t) => <option key={t}>{t}</option>)}</select>{fe("title") ? <span className="err">{fe("title")}</span> : <Need k="title" />}</label>
+            <div {...mark("gender")} className={cn("block", miss("gender") && "rounded-xl ring-2 ring-rose-500/60")}><span className="label">Gender <span className="text-lnh-red">*</span></span>
               <div className="flex gap-2" role="radiogroup" aria-label="Gender">{["Male", "Female"].map((g) => (
                 <button key={g} type="button" role="radio" aria-checked={det.gender === g} onClick={() => setDet((p) => ({ ...p, gender: g }))}
                   className={cn("min-h-[44px] flex-1 rounded-xl border px-4 text-sm transition", det.gender === g ? "border-lnh-sky bg-lnh-sky/10 font-semibold text-white" : "border-white/15 text-slate-200 hover:border-white/40")}>{g}</button>))}
-              </div>{fe("gender") && <span className="err">{fe("gender")}</span>}</div>
-            <label className="block"><span className="label">Hospital / institution <span className="text-lnh-red">*</span></span><input className="input" value={det.institution} onChange={setD("institution")} autoComplete="organization" />{fe("institution") && <span className="err">{fe("institution")}</span>}</label>
+              </div>{fe("gender") ? <span className="err">{fe("gender")}</span> : <Need k="gender" />}</div>
+            <label {...mark("institution")} className={cn("block", miss("institution") && "field-invalid")}><span className="label">Hospital / institution <span className="text-lnh-red">*</span></span><input className="input" value={det.institution} onChange={setD("institution")} autoComplete="organization" />{fe("institution") ? <span className="err">{fe("institution")}</span> : <Need k="institution" />}</label>
             <label className="block"><span className="label">Specialty</span><input className="input" list="specialties" value={det.specialty} onChange={setD("specialty")} /><datalist id="specialties">{SPECIALTIES.map((x) => <option key={x} value={x} />)}</datalist></label>
             <label className="block"><span className="label">Country</span><select className="input" value={det.country || "Pakistan"} onChange={setD("country")}>{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></label>
-            <label className="block"><span className="label">{(det.country || "Pakistan") === "Pakistan" ? "CNIC (13 digits, no dashes, optional)" : "Passport no. (optional)"}</span><input className="input mono" inputMode={(det.country || "Pakistan") === "Pakistan" ? "numeric" : "text"} placeholder={(det.country || "Pakistan") === "Pakistan" ? "4210112345671" : ""} value={det.cnic} onChange={setD("cnic")} />{fe("cnic") && <span className="err">{fe("cnic")}</span>}</label>
-            <label className="block sm:col-span-2"><span className="label">Address <span className="text-lnh-red">*</span></span><input className="input" value={det.address} onChange={setD("address")} autoComplete="street-address" />{fe("address") && <span className="err">{fe("address")}</span>}</label>
+            <label {...mark("cnic")} className={cn("block", miss("cnic") && "field-invalid")}><span className="label">{(det.country || "Pakistan") === "Pakistan" ? "CNIC (13 digits, no dashes, optional)" : "Passport no. (optional)"}</span><input className="input mono" inputMode={(det.country || "Pakistan") === "Pakistan" ? "numeric" : "text"} placeholder={(det.country || "Pakistan") === "Pakistan" ? "4210112345671" : ""} value={det.cnic} onChange={setD("cnic")} />{fe("cnic") && <span className="err">{fe("cnic")}</span>}</label>
+            <label {...mark("address")} className={cn("block sm:col-span-2", miss("address") && "field-invalid")}><span className="label">Address <span className="text-lnh-red">*</span></span><input className="input" value={det.address} onChange={setD("address")} autoComplete="street-address" />{fe("address") ? <span className="err">{fe("address")}</span> : <Need k="address" />}</label>
             <label className="block"><span className="label">Province</span>{(det.country || "Pakistan") === "Pakistan" ? <select className="input" value={det.province} onChange={setD("province")}><option value="">Choose…</option>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select> : <input className="input" value={det.province} onChange={setD("province")} />}</label>
-            <label className="block"><span className="label">City <span className="text-lnh-red">*</span></span><input className="input" value={det.city} onChange={setD("city")} />{fe("city") && <span className="err">{fe("city")}</span>}</label>
+            <label {...mark("city")} className={cn("block", miss("city") && "field-invalid")}><span className="label">City <span className="text-lnh-red">*</span></span><input className="input" value={det.city} onChange={setD("city")} />{fe("city") ? <span className="err">{fe("city")}</span> : <Need k="city" />}</label>
             <label className="block"><span className="label">WhatsApp no.</span><PhoneInput value={det.whatsapp} onChange={(v) => setDet((p) => ({ ...p, whatsapp: v }))} invalid={!!fe("whatsapp")} />{fe("whatsapp") && <span className="err">{fe("whatsapp")}</span>}</label>
             <label className="block"><span className="label">PMDC no. (medical doctors only)</span><input className="input" value={det.pmdcNo} onChange={setD("pmdcNo")} /></label>
             <label className="block"><span className="label">Highest academic qualification</span><input className="input" value={det.qualification} onChange={setD("qualification")} placeholder="e.g. MBBS, FCPS" /></label>
@@ -180,7 +201,7 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
               <li>Please bring record of your registration confirmation email and keep it with you all the time during the workshop.</li>
               <li>If you encounter any issues while submitting the form, please do not hesitate to reach out to <a href="mailto:workshop@symposium2027.lnh.edu.pk" className="text-lnh-sky underline">workshop@symposium2027.lnh.edu.pk</a></li>
             </ol>
-            <label className="mt-4 flex cursor-pointer gap-3 text-sm text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={wsTerms} onChange={(e) => setWsTerms(e.target.checked)} />I accept the terms listed above.</label>
+            <label {...mark("wsTerms")} className={cn("mt-4 flex cursor-pointer gap-3 rounded-lg text-sm text-slate-200", miss("wsTerms") && "p-2 ring-2 ring-rose-500/60")}><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={wsTerms} onChange={(e) => setWsTerms(e.target.checked)} />I accept the terms listed above.</label>
           </div>
         )}
 
@@ -213,9 +234,15 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
             <div className="flex items-baseline justify-between border-t border-white/10 pt-4"><span className="font-semibold uppercase tracking-wider text-white">Total</span><span className="font-display text-3xl font-bold text-lnh-rose">{pkr(total)}</span></div>
             <p className="mono pt-2 text-xs text-slate-400">{held ? `This order is added to your registration ${held.regNo}.` : "A registration number (SYM-YYYY-NNNNN) is issued when you confirm."}</p>
             {error && <Alert className="mt-3">{error}</Alert>}
-            <label className="mt-3 flex cursor-pointer gap-3 text-xs text-slate-200"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm that the above information provided is correct.</label>
-            <button onClick={pay} disabled={!canPay || loading} className="btn-primary mt-4 w-full py-4"><Lock className="h-4 w-4" />{loading ? "Creating registration…" : `Confirm and pay ${pkr(total)}`}</button>
-            {ready && !canPay && <p className="text-center text-xs text-slate-400">{!designation ? "Choose your designation" : !detailsOk ? "Complete the registration details (gender, institution, address, city; a CNIC, if entered, has 13 digits)" : invalid.length ? "Remove the unavailable workshop(s)" : valid.length && !wsTerms ? "Accept the workshop terms" : !agree ? "Tick the confirmation box" : ""}{(!designation || !detailsOk || invalid.length || !agree || (valid.length && !wsTerms)) ? " to continue." : ""}</p>}
+            <label {...mark("agree")} className={cn("mt-3 flex cursor-pointer gap-3 rounded-lg text-xs text-slate-200", miss("agree") && "p-2 ring-2 ring-rose-500/60")}><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B72025]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm that the above information provided is correct.</label>
+            <button onClick={tryPay} disabled={!ready || empty || loading} aria-describedby={!canPay ? "pay-missing" : undefined} className={cn("btn-primary mt-4 w-full py-4", !canPay && "opacity-60")}><Lock className="h-4 w-4" />{loading ? "Creating registration…" : `Confirm and pay ${pkr(total)}`}</button>
+            {ready && !canPay && missing.length > 0 && (
+              <div id="pay-missing" role="status" className="mt-3 rounded-xl border-2 border-amber-400/70 bg-amber-400/10 px-4 py-3 text-sm text-white">
+                <p className="font-semibold">To complete your registration:</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-5">{missing.map(([k, t]) => <li key={k}>{t}</li>)}</ul>
+                {!tried && <p className="mt-1 text-xs opacity-80">Press the button to see the fields that need attention.</p>}
+              </div>
+            )}
           </div>
         </div>
       </aside>

@@ -36,7 +36,7 @@ export const passwordRule = z.string().min(8, "At least 8 characters")
 
 /** Short sign-up (release 2): everything else is asked once at checkout and saved to the account. */
 export const signupInput = z.object({
-  title: z.enum(["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms."]),
+  title: z.enum(["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms.", "Mrs."], { errorMap: () => ({ message: "Choose your title" }) }),
   firstName: name50,
   lastName: name50,
   email: z.string().trim().toLowerCase().email("Enter a valid email"),

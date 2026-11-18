@@ -592,7 +592,7 @@ export const SAMPLE_VARS: MergeVars = {
   institution: "Liaquat National Hospital", contact_email: "symposium@lnh.edu.pk", certificate_no: "LNH27-C00012", enquiry_from: "Dr. Sara Ali <sara@example.com> 0300-1234567",
   message: "Is parking available for participants?", participants: "120",
   qr_html: '<p style="text-align:center"><span style="display:inline-block;width:180px;height:180px;line-height:180px;background:#eef2f9;border:1px dashed #9aa8c2;color:#5b6b8c;font-size:13px">QR code</span></p>',
-  contact_phone: "+92 21 111 456 456", workshop_time: "09:00 – 13:00", payment_status: "Paid", transaction_id: "LNHS2611140930AB12",
+  contact_phone: "021-34412679", workshop_time: "09:00 – 13:00", payment_status: "Paid", transaction_id: "LNHS2611140930AB12",
   confirm_by: "Friday 8 January 2027", schedule_update_by: "Friday 15 January 2027", registration_deadline: "Friday 15 January 2027",
   schedule_link: "https://symposium2027.lnh.edu.pk/agenda", registration_link: "https://symposium2027.lnh.edu.pk/register", sc_email: "Symposium.Scientific@lnh.edu.pk", reply_email: "registration@symposium2027.lnh.edu.pk",
   details_html: '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:14px"><tr><td style="padding:6px 0;color:#5b6b8c">Registration No.</td><td style="font-weight:700;font-size:18px">SYM-2027-00012</td></tr><tr><td style="padding:6px 0;color:#5b6b8c">Total fee</td><td><b>PKR 6,000</b></td></tr><tr><td style="padding:6px 0;color:#5b6b8c">Status</td><td><b style="color:#0b8a4c">CONFIRMED</b></td></tr></table>',

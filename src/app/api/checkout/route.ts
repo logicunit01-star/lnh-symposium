@@ -6,6 +6,7 @@ import { rateLimit, ipOf } from "@/lib/ratelimit";
 import { currentAccount } from "@/lib/account";
 import { createRegistration, registrationInput, CapacityError } from "@/lib/registration";
 import { normaliseCnic } from "@/lib/reg-fields";
+import { TITLES } from "@/lib/utils";
 
 const input = z.object({
   categoryId: z.coerce.number().int().positive(),
@@ -20,7 +21,7 @@ const input = z.object({
     province: z.string().max(60).default(""), country: z.string().max(60).default("Pakistan"), qualification: z.string().max(120).default(""), employeeNo: z.string().max(20).default(""),
     pmdcNo: z.string().max(30).default(""),
     // asked at checkout since the short sign-up (release 2)
-    gender: z.string().max(10).default(""), institution: z.string().max(160).default(""), specialty: z.string().max(80).default(""),
+    title: z.string().max(20).default(""), gender: z.string().max(10).default(""), institution: z.string().max(160).default(""), specialty: z.string().max(80).default(""),
   }),
 });
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
   if (!p.data.includePass && p.data.sessionIds.length === 0) return fail("Your order is empty.");
   const d = p.data.details;
   const reg = registrationInput.safeParse({
-    title: a.title, gender: d.gender || a.gender || "", firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone,
+    title: TITLES.includes(d.title) ? d.title : a.title, gender: d.gender || a.gender || "", firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone,
     whatsapp: d.whatsapp, cnic: d.cnic, address: d.address, city: d.city, province: d.province, country: d.country || "Pakistan", qualification: d.qualification,
     pmdcNo: d.pmdcNo || a.pmdcNo || "", specialty: d.specialty || a.specialty || "", designation: p.data.designation, employeeNo: d.employeeNo, institution: d.institution || a.institution || "",
     categoryId: p.data.categoryId, sessionIds: p.data.sessionIds, consent: true, includePass: p.data.includePass, banquetQty: p.data.banquetQty,
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
   await db.update(s.accounts).set({
     whatsapp: d.whatsapp || null, cnic: normaliseCnic(d.cnic, d.country), address: d.address, city: d.city, province: d.province || null, country: d.country || "Pakistan",
     qualification: d.qualification || null, employeeNo: d.employeeNo || null, pmdcNo: d.pmdcNo || a.pmdcNo,
-    gender: reg.data.gender, institution: reg.data.institution, specialty: reg.data.specialty || a.specialty,
+    title: reg.data.title, gender: reg.data.gender, institution: reg.data.institution, specialty: reg.data.specialty || a.specialty,
   }).where(eq(s.accounts.id, a.id));
   try {
     const r = await createRegistration(reg.data, { accountId: a.id });

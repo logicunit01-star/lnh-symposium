@@ -9,14 +9,15 @@ export function Logo({ variant = "full" }: { year?: number; variant?: "header" |
   if (variant === "header") {
     // Homepage changes (11.11.2026): the LNH logo as provided; night mode uses a version with white text and the red crescent
     return (
-      <Link href="/" className="group flex min-w-0 shrink-0 items-center" aria-label="9th LNH Symposium, Liaquat National Hospital: home">
+      // 18 Nov 2026: the logo links to the main LNH website; the night version has a white crescent
+      <a href="https://www.lnh.edu.pk/" target="_blank" rel="noopener" className="group flex min-w-0 shrink-0 items-center" aria-label="Liaquat National Hospital website (opens in a new tab)">
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/lnh-logo-2027.png" alt="Liaquat National Hospital" width={527} height={78} className="theme-light-only h-9 w-auto max-w-[58vw] object-contain object-left sm:h-11 lg:h-8 xl:h-12" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/lnh-logo-2027-night.png" alt="" aria-hidden="true" width={527} height={78} className="theme-dark-only h-9 w-auto max-w-[58vw] object-contain object-left sm:h-11 lg:h-8 xl:h-12" />
+          <img src="/brand/lnh-logo-2027-night-w.png" alt="" aria-hidden="true" width={527} height={78} className="theme-dark-only h-9 w-auto max-w-[58vw] object-contain object-left sm:h-11 lg:h-8 xl:h-12" />
         </>
-      </Link>
+      </a>
     );
   }
   return (

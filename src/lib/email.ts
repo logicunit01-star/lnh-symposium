@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, lte } from "drizzle-orm";
 import { db, schema as s } from "./db";
-import { getEvent } from "./event";
+import { eventDaysLabel, getEvent } from "./event";
 import { sendEmail, emailLayout } from "./notify";
 import { pickAccount } from "./mail-config";
 import { appUrl, fmtDateTime } from "./utils";
@@ -26,7 +26,8 @@ const subjectFill = (t: string, v: MergeVars) => t.replace(/\{\{\s*([a-z_]+)\s*\
 
 export function renderTemplate(t: Pick<Template, "subject" | "body" | "buttonLabel">, vars: MergeVars) {
   const subject = subjectFill(t.subject, vars);
-  const html = emailLayout(subject, bodyToHtml(t.body, vars), t.buttonLabel && vars.link ? { label: t.buttonLabel, href: String(vars.link) } : undefined);
+  const html = emailLayout(subject, bodyToHtml(t.body, vars), t.buttonLabel && vars.link ? { label: t.buttonLabel, href: String(vars.link) } : undefined,
+    { name: vars.event_name ? String(vars.event_name) : null, dates: vars.event_dates ? String(vars.event_dates) : null, theme: vars.event_theme ? String(vars.event_theme) : null });
   return { subject, html };
 }
 
@@ -60,7 +61,7 @@ export async function sendTemplate(key: TemplateKey, to: string, vars: MergeVars
   // {{reply_email}}: where a reply to this email goes (same order as the Reply-To header in sendEmail)
   const acc = await pickAccount(snd.accountId).catch(() => null);
   const reply_email = opts.replyTo || snd.replyTo || acc?.replyTo || acc?.fromAddress || ev.contactEmail;
-  const { subject, html } = renderTemplate(t, { event_name: ev.name, contact_email: ev.contactEmail, reply_email, ...vars });
+  const { subject, html } = renderTemplate(t, { event_name: ev.name, event_dates: eventDaysLabel(ev), event_theme: "Shaping the New Era of Healthcare", contact_email: ev.contactEmail, reply_email, ...vars });
   return sendEmail(to, subject, html, opts.attachments ?? [], {
     from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: opts.noCc ? null : snd.cc,
     replyTo: opts.replyTo || snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: opts.ref ?? null, priority: opts.priority,

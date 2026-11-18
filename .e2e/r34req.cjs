@@ -1,0 +1,22 @@
+const { chromium } = require('playwright'); const B='http://127.0.0.1:3100';
+(async()=>{ const b=await chromium.launch(); const c=await b.newContext({viewport:{width:1366,height:900}}); const p=await c.newPage(); const o=(k,v)=>console.log(k,'|',v);
+ await p.goto(B+'/'); await p.waitForTimeout(1200);
+ o('logo href', await p.locator('header a[aria-label^="Liaquat National Hospital website"]').first().getAttribute('href'));
+ o('hero line', await p.locator('text=/making healthcare faster, safer and more precise/').count());
+ o('workshop sub', await p.locator('text=/does not include pre-symposium workshops/').count());
+ o('cta text', await p.locator('text=/pay for everything together/').count());
+ o('deadline block', (await p.locator('text=/Deadline for submission/i').locator('..').innerText().catch(()=>'none')).replace(/\s+/g,' '));
+ o('footer phone', await p.locator('footer >> text=021-34412679').count(), 'X link', await p.locator('footer a[aria-label="X"]').getAttribute('href').catch(()=>'none'));
+ await p.locator('text=Call for abstracts').scrollIntoViewIfNeeded(); await p.screenshot({path:'/tmp/fl/r-abs.png'});
+ await p.goto(B+'/abstracts'); o('abstract chip', (await p.locator('.chip').first().innerText()).trim());
+ await p.goto(B+'/register'); await p.waitForTimeout(800); await p.screenshot({path:'/tmp/fl/r-reg.png'});
+ o('starting from', await p.locator('text=/starting from/').count());
+ await p.goto(B+'/'); await p.evaluate(()=>{document.documentElement.dataset.theme='dark'}); await p.waitForTimeout(400); await p.screenshot({path:'/tmp/fl/r-dark.png', clip:{x:0,y:0,width:500,height:80}});
+ // checkout missing fields
+ await c.request.post(B+'/api/account/signin',{data:{email:'paytest@example.com',password:'Passw0rd!x'}});
+ await p.goto(B+'/workshops'); await p.waitForTimeout(800); await p.getByRole('button',{name:/Add to order|Add/}).first().click().catch(()=>{}); await p.waitForTimeout(500);
+ await p.goto(B+'/checkout'); await p.waitForTimeout(1500); await p.evaluate(()=>{document.documentElement.dataset.theme='light'});
+ await p.getByRole('button',{name:/Confirm and pay/}).click(); await p.waitForTimeout(900);
+ o('missing box', (await p.locator('text=To complete your registration').locator('..').innerText().catch(()=>'none')).replace(/\s+/g,' ').slice(0,250));
+ o('red fields', await p.locator('[data-miss="1"]').count()); await p.screenshot({path:'/tmp/fl/r-checkout.png'});
+ await b.close(); })();

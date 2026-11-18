@@ -245,7 +245,9 @@ export async function broadcast(f: FormData) {
   // names typed by participants are escaped before they go into the email
   const batch = `BROADCAST-${Date.now().toString(36).toUpperCase()}`;
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const html = (r: { title: string | null; firstName: string; lastName: string }) => emailLayout(esc(subject), `<p>Dear ${esc(`${r.title ?? ""} ${r.firstName} ${r.lastName}`.trim())},</p>${body.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("")}`);
+  const evB = await (await import("@/lib/event")).getEvent(), { eventDaysLabel } = await import("@/lib/event");
+  const brand = { name: evB.name, dates: eventDaysLabel(evB), theme: "Shaping the New Era of Healthcare" };
+  const html = (r: { title: string | null; firstName: string; lastName: string }) => emailLayout(esc(subject), `<p>Dear ${esc(`${r.title ?? ""} ${r.firstName} ${r.lastName}`.trim())},</p>${body.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("")}`, undefined, brand);
   for (const r of list) {
     if (channels.includes("EMAIL")) await sendEmail(r.email, subject, html(r), [], { from: snd.from, fromName: snd.fromName, accountId: snd.accountId, cc: null, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: "BROADCAST", ref: batch, defer: true });
   }

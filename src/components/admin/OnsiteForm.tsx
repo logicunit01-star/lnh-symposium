@@ -7,7 +7,7 @@ import { PROVINCES, maskCnic } from "@/lib/reg-fields";
 
 type Cat = { id: number; label: string; fee: number; tier: string; designations: string[] };
 type Item = { id: string; title: string; when: string; fee: number; left: number | null; kind: string };
-const TITLES = ["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms."];
+const TITLES = ["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms.", "Mrs."];
 const maskPhone = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 11); return d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d; };
 
 function Go() { const { pending } = useFormStatus(); return <button disabled={pending} className="a-btn-red w-full py-3 text-base">{pending ? "Registering…" : "Register and issue pass"}</button>; }

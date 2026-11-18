@@ -146,10 +146,10 @@ function ResetStep({ otp, email, next, back }: { otp: { otpId: string; sentTo: s
 
 function SignUp({ email, next, back, onCode }: { email: string; next: string; back: React.ReactNode; onCode: (o: { otpId: string; sentTo: string; demoCode?: string }) => void }) {
   const { submit, loading, error, fields } = useSubmit<{ otpId: string; sentTo: { email: string; phone: string }; demoCode?: string }>("/api/account/signup");
-  const [f, setF] = useState({ title: "Dr.", firstName: "", lastName: "", phone: "", password: "" });
+  const [f, setF] = useState({ title: "", firstName: "", lastName: "", phone: "", password: "" });
   const [show, setShow] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: k === "phone" ? maskPhone(e.target.value) : e.target.value }));
-  const ok = RULES.every(([, t]) => t(f.password)) && f.firstName.trim() && f.lastName.trim() && (/^03\d{2}-\d{7}$/.test(f.phone) || INTL_RE.test(f.phone));
+  const ok = !!f.title && RULES.every(([, t]) => t(f.password)) && f.firstName.trim() && f.lastName.trim() && (/^03\d{2}-\d{7}$/.test(f.phone) || INTL_RE.test(f.phone));
   return (
     <form className="mx-auto max-w-lg space-y-5" noValidate onSubmit={async (e) => {
       e.preventDefault();
@@ -164,7 +164,7 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
       {error && <Alert>{error}</Alert>}
       {fields.email && <Alert>{fields.email}</Alert>}
       <div className="grid gap-4 sm:grid-cols-[120px_1fr_1fr]">
-        <Field label="Title" name="title" required error={fields.title}><select id="title" className="input" value={f.title} onChange={set("title")}>{TITLES.map((t) => <option key={t}>{t}</option>)}</select></Field>
+        <Field label="Title" name="title" required error={fields.title}><select id="title" required className="input" value={f.title} onChange={set("title")}><option value="">Choose…</option>{TITLES.map((t) => <option key={t}>{t}</option>)}</select></Field>
         <Field label="First name" name="firstName" required error={fields.firstName}><input id="firstName" maxLength={50} autoComplete="given-name" className="input" value={f.firstName} onChange={set("firstName")} autoFocus /></Field>
         <Field label="Last name" name="lastName" required error={fields.lastName}><input id="lastName" maxLength={50} autoComplete="family-name" className="input" value={f.lastName} onChange={set("lastName")} /></Field>
       </div>

@@ -1,4 +1,5 @@
 "use server";
+import { eventDaysLabel } from "@/lib/event";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -47,7 +48,7 @@ export async function testTemplate(key: string) {
   const { sendEmail } = await import("@/lib/notify");
   const ev = await getEvent();
   const t = await getTemplate(key as TemplateKey);
-  const { subject, html } = renderTemplate(t, { ...SAMPLE_VARS, event_name: ev.name, contact_email: ev.contactEmail });
+  const { subject, html } = renderTemplate(t, { ...SAMPLE_VARS, event_name: ev.name, event_dates: eventDaysLabel(ev), event_theme: "Shaping the New Era of Healthcare", contact_email: ev.contactEmail });
   const snd = await senderFor(key as TemplateKey, t);
   const st = await sendEmail(u.email, `[Sample] ${subject}`, html, [], { from: snd.from, fromName: snd.fromName, accountId: snd.accountId, replyTo: snd.replyTo, fallbackReplyTo: snd.fallbackReplyTo, templateKey: key, ref: "Sample" });
   redirect(`/admin/emails?t=${key}&tested=${st}`);

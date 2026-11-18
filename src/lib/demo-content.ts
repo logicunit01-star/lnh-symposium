@@ -21,7 +21,7 @@ export const EVENT_DEFAULTS = {
   name: "9th LNH Symposium 2027",
   theme: "Shaping the New Era of Healthcare",
   mainTheme: "Shaping the New Era of Healthcare: Convergence of AI, Robotics & Digitization",
-  tagline: "Where artificial intelligence, robotics and digital care meet the realities of cost and quality.",
+  tagline: "Exploring how emerging technologies are making healthcare faster, safer and more precise.", // LNH, 18 Nov 2026
   startDate: D("2027-01-29T08:30:00+05:00"),
   endDate: D("2027-01-31T17:00:00+05:00"),
   eventDays: ["2027-01-29", "2027-01-30", "2027-01-31"],
@@ -32,6 +32,7 @@ export const EVENT_DEFAULTS = {
   facebook: "https://www.facebook.com/share/1CJDxrqEDS/", youtube: "https://www.youtube.com/@lnhandmc",
   earlyBirdUntil: D("2026-12-05T23:59:59+05:00"), // 14.11.2026: early bird until 5 December
   contactEmail: "symposium2027@lnh.edu.pk", // 14.11.2026
+  contactPhone: "021-34412679", x: "https://x.com/lnhandmc", // LNH, 18 Nov 2026
   guestCode: crypto.randomUUID().replace(/-/g, "").slice(0, 12), // guest / volunteer invitation links (14.11.2026)
   // SC feedback (29 Oct 2026): abstracts open 15 Nov, close 15 Dec; decisions and invitations 31 Dec
   abstractOpen: D("2026-11-15T00:00:00+05:00"),

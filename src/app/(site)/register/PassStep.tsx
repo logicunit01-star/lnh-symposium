@@ -18,10 +18,11 @@ export function ProductCards({ fromFee, early }: { fromFee: number; early: boole
         {held ? (
           <p className="mt-2 text-sm text-slate-200">Yours: <b className="text-white">{held.regNo}</b> · {held.status === "PENDING" ? "payment pending" : "confirmed"}</p>
         ) : (
-          <ul className="mt-2 space-y-1 text-sm text-slate-200">
+          // 18 Nov 2026: bullet points, with the "starting from" fee
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200 marker:text-lnh-sky">
             <li>Access all sessions across the three symposium days.</li>
             <li>Includes one banquet entry</li>
-            <li>Fee according to your designation{early ? " (early-bird rates apply)" : ""}</li>
+            <li>{early ? "Early-bird registration starting from" : "Registration starting from"} <b className="text-white">{pkr(fromFee)}</b></li>
           </ul>
         )}
         <span className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-lnh-sky/60 px-4 text-sm font-semibold text-white group-hover:bg-lnh-sky/20">{held ? "View your registration" : "Register for the Symposium"}</span>
@@ -29,8 +30,8 @@ export function ProductCards({ fromFee, early }: { fromFee: number; early: boole
       <a href="/workshops" className="group rounded-3xl border-2 border-lnh-gold/60 bg-lnh-gold/[0.07] p-6 transition hover:bg-lnh-gold/[0.13]">
         <Wrench className="h-7 w-7 text-lnh-gold" />
         <p className="mt-3 font-display text-2xl font-bold text-white">Pre-Symposium Workshops</p>
-        <p className="mt-2 text-sm text-slate-200">Enhance your learning through specialised pre-symposium workshops.</p>
-        <ul className="mt-2 space-y-1 text-sm text-slate-200">
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200 marker:text-lnh-gold">
+          <li>Enhance your learning through specialised pre-symposium workshops.</li>
           <li>Register separately for each workshop</li>
           <li>Limited seats available</li>
           <li>No symposium registration required</li>

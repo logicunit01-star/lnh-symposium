@@ -29,7 +29,7 @@ export const randomToken = (bytes = 24) => {
 export const SESSION_TYPE_LABEL: Record<string, string> = {
   KEYNOTE: "Keynote", PLENARY: "Plenary", SCIENTIFIC: "Scientific", PANEL: "Panel", WORKSHOP: "Workshop", CEREMONY: "Ceremony", BREAK: "Break",
 };
-export const TITLES = ["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms."];
+export const TITLES = ["Prof.", "Assoc. Prof.", "Asst. Prof.", "Lecturer", "Dr.", "Mr.", "Ms.", "Mrs."];
 export const SPECIALTIES = [
   "Anaesthesiology", "Cardiology", "Community Medicine / Public Health", "Dentistry", "Dermatology", "Emergency Medicine", "Endocrinology",
   "ENT", "Family Medicine", "Gastroenterology", "General Surgery", "Gynaecology & Obstetrics", "Haematology", "Health Management / Administration",

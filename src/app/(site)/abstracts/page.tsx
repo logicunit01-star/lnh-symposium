@@ -36,7 +36,9 @@ export default async function Abstracts() {
       <PageHero eyebrow="Call for abstracts" title={<>Abstract <span className="text-grad">submission</span></>}
         sub="Submit your abstract online. It will be reviewed by the relevant speciality/department; you can follow its status here.">
         <div className="mt-8 flex flex-wrap gap-3">
-          {ev.abstractOpen && <span className="chip gap-2 py-2"><CalendarClock className="h-4 w-4" />Opens {fmtDate(ev.abstractOpen)}</span>}
+          {/* 18 Nov 2026: once the opening date has passed the chip says the submission is open */}
+          {w === "OPEN" ? <span className="chip gap-2 border-emerald-400/40 py-2 text-emerald-300"><CalendarClock className="h-4 w-4" />Submission open</span>
+            : ev.abstractOpen && w !== "CLOSED" && <span className="chip gap-2 py-2"><CalendarClock className="h-4 w-4" />Opens {fmtDate(ev.abstractOpen)}</span>}
           {ev.abstractDeadline && <span className="chip gap-2 border-lnh-red/40 py-2 text-lnh-rose"><CalendarClock className="h-4 w-4" />Deadline {fmtDate(ev.abstractDeadline)}</span>}
           {ev.programmeReleasedAt && <Link href="/abstracts/book" className="chip gap-2 py-2 text-lnh-sky"><BookOpen className="h-4 w-4" />e-Abstract book</Link>}
         </div>
