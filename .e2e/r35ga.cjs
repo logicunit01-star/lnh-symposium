@@ -1,0 +1,15 @@
+const { chromium } = require('playwright'); const B='http://127.0.0.1:3100';
+(async()=>{ const b=await chromium.launch(); const c=await b.newContext(); const p=await c.newPage(); const loaded=[];
+ await p.route('https://www.googletagmanager.com/**', r=>{ loaded.push(r.request().url()); r.fulfill({status:200, contentType:'application/javascript', body:'/* stub */'}); });
+ const csp=[]; p.on('console',m=>{ if(/Content Security Policy/i.test(m.text())) csp.push(m.text().slice(0,120)); });
+ await p.goto(B+'/'); await p.waitForTimeout(1200);
+ await p.click('a[href="/awards"]').catch(()=>{}); await p.goto(B+'/awards'); await p.waitForTimeout(800);
+ await p.goto(B+'/register/success/abcdefSECRETTOKEN?paid=1'); await p.waitForTimeout(800);
+ await p.goto(B+'/feedback?t=SECRET2'); await p.waitForTimeout(800);
+ const dl = await p.evaluate(()=>JSON.stringify(window.dataLayer||[]));
+ console.log('gtag.js requested:', loaded.map(u=>u.replace(/^https:\/\//,'')).join(', '));
+ console.log('dataLayer:', dl.slice(0,900));
+ console.log('token leaked:', /SECRET/.test(dl), '| CSP errors:', csp.length);
+ const a=await c.newPage(); await c.request.post(B+'/api/admin/login',{data:{email:'admin@lnh.edu.pk',password:'ChangeMe!2026'}}); await a.goto(B+'/admin'); await a.waitForTimeout(800);
+ console.log('admin tracked:', await a.evaluate(()=>!!window.dataLayer));
+ await b.close(); })();

@@ -3,6 +3,10 @@ import { Footer } from "@/components/site/Footer";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { FormGuard } from "@/components/ui/FormGuard";
+import { Analytics } from "@/components/site/Analytics";
+
+// GA4: GA_MEASUREMENT_ID in the server settings file, or the LNH ID on the live address only (test sites such as Vercel are not tracked)
+const GA_ID = process.env.GA_MEASUREMENT_ID ?? ((process.env.APP_URL ?? "").includes("symposium2027.lnh.edu.pk") ? "G-48XJMMBKHM" : "");
 import { getEvent } from "@/lib/event";
 import { currentAccountClaims } from "@/lib/account";
 import { delegateStatus } from "@/lib/registration";
@@ -20,6 +24,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <main className="min-h-screen">{children}</main>
       <Footer ev={ev} />
       <FormGuard />
+      <Analytics id={GA_ID} />
       <CartDrawer />
     </CartProvider>
     </div>

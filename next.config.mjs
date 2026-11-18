@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
-// Security headers (release 3, audit T4). The content security policy allows only this site, the YouTube (no-cookie) and Google Maps embeds.
+// Security headers (release 3, audit T4). The content security policy allows only this site, the YouTube (no-cookie) and Google Maps embeds,
+// and Google Analytics 4 (LNH Measurement ID, 18 Nov 2026).
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""),
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
   "frame-src 'self' blob: https://www.youtube-nocookie.com https://www.google.com https://maps.google.com",
   "frame-ancestors 'self'",
   "base-uri 'self'",
