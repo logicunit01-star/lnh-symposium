@@ -60,7 +60,11 @@ export function Footer({ ev }: { ev: EventSettings }) {
       <div className="border-t border-white/10">
         <div className="container-x flex flex-col items-center justify-between gap-2 py-6 text-xs text-slate-500 sm:flex-row">
           <p>© {year} {HOSPITAL.name}, {HOSPITAL.institute}. All rights reserved.</p>
-          <a href="https://www.lnh.edu.pk/privacy-policy/website" target="_blank" rel="noreferrer" className="shrink-0 hover:text-white">Privacy Policy</a>
+          <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a href="https://www.lnh.edu.pk/privacy-policy/website" target="_blank" rel="noreferrer" className="hover:text-white">Privacy Policy</a>
+            {/* 18 Nov 2026: developer credit */}
+            <span>Developed by <a href="https://logic-unit.com/" target="_blank" rel="noopener" className="font-semibold hover:text-white">Logic-Unit</a></span>
+          </div>
         </div>
       </div>
     </footer>
