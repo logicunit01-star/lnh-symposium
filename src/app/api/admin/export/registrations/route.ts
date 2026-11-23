@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     PMDC: r.pmdcNo, Specialty: r.specialty, Designation: r.designation, Institution: r.institution, City: r.city, Address: r.address,
     Category: r.category.label, ConferenceFee: r.conferenceFee, TotalFee: r.totalFee, EarlyBird: r.earlyBird ? "Yes" : "No",
     PaymentStatus: r.paymentStatus, PaymentMethod: r.paymentMethod, PaidAt: r.paidAt, CheckedIn: r.checkedInAt, Certificate: r.certificateNo,
-    Sessions: r.items.map((i) => i.session.title).join(" | "), RegisteredAt: r.createdAt,
+    Sessions: r.items.map((i) => i.session.title).join(" | "), WorkshopIDs: r.items.map((i) => i.session.workshopNo).filter(Boolean).join(" | "), RegisteredAt: r.createdAt,
     ...(sessionId ? { AttendedSession: r.items.find((i) => i.sessionId === sessionId)?.attendedAt ?? "" } : {}),
   }));
   return csvResponse(`registrations${sessionId ? "-session" : ""}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows));

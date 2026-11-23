@@ -2,7 +2,7 @@ import type { ProgrammeSession } from "./queries";
 import { fmtDate, fmtTime24, ymdPk } from "./utils";
 
 export type WorkshopDTO = {
-  id: string; slug: string; venueId: string | null; building: string | null; title: string; description: string | null; department: string | null; format: string | null; track: string | null;
+  id: string; code: string | null /* WS-0001 (23 Nov 2026) */; slug: string; venueId: string | null; building: string | null; title: string; description: string | null; department: string | null; format: string | null; track: string | null;
   date: string; dateLabel: string; timeLabel: string; hall: string | null; cme: number | null;
   capacity: number | null; left: number | null; fee: number; regularFee: number; facility: string | null;
   faculty: { name: string; degrees: string | null; designation: string | null; role: string }[];
@@ -12,7 +12,7 @@ export function toWorkshopDTO(s: ProgrammeSession, taken: Record<string, number>
   // Workshops have one price; early-bird pricing applies to the Symposium Pass only (D2)
   const fee = s.fee;
   return {
-    id: s.id, slug: s.slug, venueId: s.venueId, building: s.venue ? `${s.venue.building}${s.venue.floor ? `, ${s.venue.floor} floor` : ""}` : null, title: s.title, description: s.description, department: s.department, format: s.format, track: s.track,
+    id: s.id, code: s.workshopNo ?? null, slug: s.slug, venueId: s.venueId, building: s.venue ? `${s.venue.building}${s.venue.floor ? `, ${s.venue.floor} floor` : ""}` : null, title: s.title, description: s.description, department: s.department, format: s.format, track: s.track,
     date: ymdPk(s.startsAt),
     dateLabel: s.days > 1 ? `${fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short" })} – ${fmtDate(s.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}` : fmtDate(s.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
     timeLabel: `${fmtTime24(s.startsAt)}–${fmtTime24(s.endsAt)}${s.days > 1 ? ` daily (${s.days} days)` : ""}`, hall: s.mode === "ONLINE" ? "Online" : s.mode === "HYBRID" ? `${s.hall ?? ""} + online` : s.hall, cme: s.cmeHours,

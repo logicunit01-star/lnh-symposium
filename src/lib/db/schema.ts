@@ -220,6 +220,8 @@ export const sessions = pgTable("sessions", {
   id: id(),
   slug: text("slug").notNull().unique(),
   type: sessionTypeEnum("type").notNull(),
+  // 23 Nov 2026 (LNH): workshop ID WS-0001…, set by a database trigger when a workshop is created (migration 0033); not on certificates
+  workshopNo: text("workshop_no").unique(),
   title: text("title").notNull(),
   description: text("description"),
   flyerSummary: text("flyer_summary"), // 16 Nov 2026: up to 140 characters, shown on the flyer instead of the description

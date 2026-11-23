@@ -53,7 +53,7 @@ export default async function Daily({ searchParams }: { searchParams: { date?: s
           <tbody>{sheet.rows.map((r) => (
             <tr key={r.w.id}>
               <td className="whitespace-nowrap font-mono text-xs">{r.time}</td>
-              <td className="font-medium">{r.w.title}<p className="text-xs font-normal text-slate-400">{r.w.department}</p></td>
+              <td className="font-medium">{r.w.title}<p className="text-xs font-normal text-slate-400">{r.w.workshopNo ? `${r.w.workshopNo} · ` : ""}{r.w.department}</p></td>
               <td className="text-xs">{r.venue?.name ?? r.w.hall}{r.venue && <p className="text-slate-400">{r.venue.building}{r.venue.floor ? `, ${r.venue.floor}` : ""}{r.venue.onlineFacility ? ` · ${r.venue.onlineFacility}` : ""}</p>}</td>
               <td className="text-sm">{r.booked} / {r.w.capacity}</td>
               <td className="font-mono text-xs">{r.w.facilitators}/{r.w.volunteers}/{r.w.technicians}</td>

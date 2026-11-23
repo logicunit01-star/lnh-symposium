@@ -1,0 +1,12 @@
+import path from "node:path"; import Module from "node:module"; import { pathToFileURL } from "node:url";
+const stub = pathToFileURL(path.join(process.cwd(), "scripts/server-only-stub.cjs")).href;
+(Module as any).registerHooks({ resolve: (spec: string, ctx: unknown, next: any) => (spec === "server-only" ? { url: stub, shortCircuit: true } : next(spec, ctx)) });
+import fs from "node:fs"; if (fs.existsSync(".env")) process.loadEnvFile(".env");
+const { db } = await import(path.join(process.cwd(), "src/lib/db/index.ts")); const { sql } = await import("drizzle-orm");
+const r: any = await db.execute(sql`select workshop_no, title, type from sessions where type='WORKSHOP' or workshop_no is not null order by workshop_no`);
+console.log((r.rows ?? r).map((x: any) => `${x.workshop_no} ${x.title.slice(0, 30)}`).join("\n"));
+await db.execute(sql`insert into sessions (id, slug, type, title, starts_at, ends_at) values (gen_random_uuid(), 'ws-trigger-test', 'WORKSHOP', 'Trigger test', now(), now())`);
+await db.execute(sql`insert into sessions (id, slug, type, title, starts_at, ends_at) values (gen_random_uuid(), 'ks-trigger-test', 'KEYNOTE', 'Keynote test', now(), now())`);
+const t: any = await db.execute(sql`select slug, workshop_no from sessions where slug like '%trigger-test'`); console.log(t.rows ?? t);
+await db.execute(sql`delete from sessions where slug like '%trigger-test'`);
+process.exit(0);

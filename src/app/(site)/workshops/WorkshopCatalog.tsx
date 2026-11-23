@@ -35,7 +35,7 @@ export function WorkshopCatalog({ items, embedded = false }: { items: WorkshopDT
   const wk = weeks.find((w) => w.key === week);
   // One search box (Dashboard Findings, 9 Nov): every word must appear in the title, description, department, theme, venue or faculty
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const hay = (w: WorkshopDTO) => [w.title, w.description, w.department, w.track, w.hall, w.building, ...w.faculty.map((f) => f.name)].filter(Boolean).join(" ").toLowerCase();
+  const hay = (w: WorkshopDTO) => [w.code, w.title, w.description, w.department, w.track, w.hall, w.building, ...w.faculty.map((f) => f.name)].filter(Boolean).join(" ").toLowerCase();
   const shown = items.filter((w) =>
     (!wk || (w.date >= wk.from && w.date <= wk.to)) && (!day || w.date === day) && (!dept || w.department === dept) && (!fac || w.facility === fac) && (!words.length || matchesAll(hay(w), words)));
   const datesWith = new Set(items.map((w) => w.date));

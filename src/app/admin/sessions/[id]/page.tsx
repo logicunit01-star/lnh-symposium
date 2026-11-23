@@ -21,7 +21,7 @@ export default async function SessionDash({ params }: { params: { id: string } }
   const stats = await feedbackStats(x.id);
   return (
     <>
-      <PageTitle title={x.title} sub={`${SESSION_TYPE_LABEL[x.type]} · Day ${x.day}, ${fmtDate(x.startsAt, { weekday: "long", day: "numeric", month: "long" })} · ${fmtTime(x.startsAt)}–${fmtTime(x.endsAt)} · ${x.hall ?? ""}`}
+      <PageTitle title={x.title} sub={`${x.workshopNo ? `${x.workshopNo} · ` : ""}${SESSION_TYPE_LABEL[x.type]} · Day ${x.day}, ${fmtDate(x.startsAt, { weekday: "long", day: "numeric", month: "long" })} · ${fmtTime(x.startsAt)}–${fmtTime(x.endsAt)} · ${x.hall ?? ""}`}
         actions={<>
           {can(u, "registrations.export") && <a href={`/api/admin/export/registrations?session=${x.id}`} className="a-btn-ghost">Export participants</a>}
           {x.type === "WORKSHOP" ? (can(u, "workshops") && <Link href={`/admin/workshops/${x.id}`} className="a-btn-primary">Open in Workshop Programme</Link>)

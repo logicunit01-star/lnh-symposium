@@ -12,7 +12,7 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   const prog = words.length ? (await getProgramme()).filter((p) => p.type !== "BREAK") : [];
   const hits = prog.filter((p) => {
-    const hay = [p.title, p.description, p.department, p.track, p.hall, SESSION_TYPE_LABEL[p.type], ...p.speakers.map(({ speaker }) => speaker.name)].filter(Boolean).join(" ").toLowerCase();
+    const hay = [p.workshopNo, p.title, p.description, p.department, p.track, p.hall, SESSION_TYPE_LABEL[p.type], ...p.speakers.map(({ speaker }) => speaker.name)].filter(Boolean).join(" ").toLowerCase();
     return matchesAll(hay, words);
   });
   const ws = hits.filter((p) => p.type === "WORKSHOP"), ses = hits.filter((p) => p.type !== "WORKSHOP");

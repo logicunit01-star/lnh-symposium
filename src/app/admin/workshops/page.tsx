@@ -147,7 +147,7 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
           <tbody>
             {rows.map((r) => (
               <tr key={r.w.id} className={cn(r.clash && "[&>td:first-child]:border-l-4 [&>td:first-child]:border-l-lnh-red")}>
-                <td className="min-w-[220px]"><Link href={`/admin/workshops/${r.w.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{r.w.title}</Link>
+                <td className="min-w-[220px]">{r.w.workshopNo && <span className="block font-mono text-[11px] font-semibold text-slate-500">{r.w.workshopNo}</span>}<Link href={`/admin/workshops/${r.w.id}`} className="font-medium text-slate-800 hover:text-lnh-blue">{r.w.title}</Link>
                   <p className="text-xs text-slate-400">{r.w.department}{r.w.category ? ` · ${CATEGORY_LABEL[r.w.category]}` : ""}{r.w.themeWeek ? ` · Week ${r.w.themeWeek}` : ""}{r.clash ? " · " : ""}{r.clash && <b className="text-lnh-red">clash</b>}</p></td>
                 <td className="whitespace-nowrap font-mono text-xs">{fmtDate(r.w.startsAt, { day: "2-digit", month: "short", year: "numeric" })}<span className="block text-slate-500">{r.time}</span></td>
                 <td className="min-w-[120px] text-xs">{r.venue?.name ?? r.w.hall ?? "—"}</td>

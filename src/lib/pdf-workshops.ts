@@ -77,7 +77,7 @@ export async function workshopsListPdf(rows: WpRow[], o: { eventName: string; fi
   });
   c.y -= 52;
   const cols: { h: string; w: number; get: (r: WpRow, i: number) => string; bold?: boolean }[] = [
-    { h: "#", w: 20, get: (_, i) => String(i + 1) },
+    { h: "ID", w: 40, get: (r) => r.w.workshopNo ?? "" },
     { h: "Workshop / department", w: 190, get: (r) => `${r.w.title}\n${r.w.department ?? ""}${r.w.category ? ` · ${CATEGORY_LABEL[r.w.category]}` : ""}`, bold: true },
     { h: "Date", w: 92, get: dateText },
     { h: "Time (24h)", w: 58, get: (r) => r.time.replace("–", "-") },
@@ -123,7 +123,7 @@ export async function workshopsListPdf(rows: WpRow[], o: { eventName: string; fi
 /** One workshop: everything on its details page. */
 export async function workshopDetailPdf(r: WpRow, o: { eventName: string; departments: string[]; weekLabel?: string | null }) {
   const { w } = r;
-  const c = await start([595, 842], w.title.length > 60 ? `${w.title.slice(0, 58)}...` : w.title, `${o.eventName} · pre-symposium workshop · ${statusText(r)}`);
+  const c = await start([595, 842], w.title.length > 60 ? `${w.title.slice(0, 58)}...` : w.title, `${o.eventName} · pre-symposium workshop${w.workshopNo ? ` ${w.workshopNo}` : ""} · ${statusText(r)}`);
   const { M, W } = c, width = W - 2 * M;
   const need = (h: number) => { if (c.y - h < 40) newPage(c); };
   const heading = (t: string) => { need(30); c.y -= 8; c.page.drawText(safe(t).toUpperCase(), { x: M, y: c.y - 10, size: 9, font: c.bold, color: RED }); c.y -= 16; c.page.drawLine({ start: { x: M, y: c.y }, end: { x: W - M, y: c.y }, thickness: 0.6, color: LINE }); c.y -= 8; };
@@ -147,7 +147,7 @@ export async function workshopDetailPdf(r: WpRow, o: { eventName: string; depart
   };
   // full title (may be long)
   for (const ln of wrap(w.title, c.bold, 15, width)) { c.page.drawText(ln, { x: M, y: c.y - 15, size: 15, font: c.bold, color: NAVY }); c.y -= 19; }
-  para(`${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${o.weekLabel ? ` (${o.weekLabel})` : ""}` : ""}`, 9.5);
+  para(`${w.workshopNo ? `${w.workshopNo} · ` : ""}${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${o.weekLabel ? ` (${o.weekLabel})` : ""}` : ""}`, 9.5);
 
   heading("Schedule and venue");
   grid([

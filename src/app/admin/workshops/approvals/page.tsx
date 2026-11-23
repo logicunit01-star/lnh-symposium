@@ -27,7 +27,7 @@ export default async function Approvals() {
             <div>
               <div className="flex flex-wrap items-center gap-2"><WpStatus s={r.w.status} />{r.clash && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">Venue/time clash</span>}
                 <span className="text-xs text-slate-400">submitted {r.w.submittedAt ? fmtDateTime(r.w.submittedAt) : "—"}</span></div>
-              <h2 className="mt-2 font-display text-lg font-bold text-slate-900"><Link href={`/admin/workshops/${r.w.id}`} className="hover:text-lnh-blue">{r.w.title}</Link></h2>
+              <h2 className="mt-2 font-display text-lg font-bold text-slate-900">{r.w.workshopNo && <span className="mr-2 font-mono text-sm text-slate-500">{r.w.workshopNo}</span>}<Link href={`/admin/workshops/${r.w.id}`} className="hover:text-lnh-blue">{r.w.title}</Link></h2>
               <p className="text-sm text-slate-500">{r.w.department}{r.w.category ? ` · ${CATEGORY_LABEL[r.w.category]}` : ""}{r.w.leadFaculty ? ` · Lead: ${r.w.leadFaculty}` : ""}</p>
               <p className="mt-2 font-mono text-xs text-slate-600">{fmtDate(r.w.startsAt, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })} · {r.time} · {r.venue?.name ?? r.w.hall} · cap {r.w.capacity} · {pkr(r.w.fee)} · {r.w.cmeHours ?? "—"} CME</p>
               <p className="mt-1 text-xs text-slate-500">{r.w.facilitators} facilitators, {r.w.volunteers} volunteers, {r.w.technicians} technicians · {r.w.equipment.length} equipment lines</p>
@@ -54,7 +54,7 @@ export default async function Approvals() {
           <div className="a-card overflow-x-auto"><table className="a-table">
             <thead><tr><th>Workshop</th><th>Decision</th><th>When</th><th>Note</th></tr></thead>
             <tbody>{decided.map((r) => (
-              <tr key={r.w.id}><td><Link href={`/admin/workshops/${r.w.id}`} className="font-medium hover:text-lnh-blue">{r.w.title}</Link></td><td><WpStatus s={r.w.status} locked={r.w.locked} /></td>
+              <tr key={r.w.id}><td>{r.w.workshopNo && <span className="block font-mono text-[11px] text-slate-500">{r.w.workshopNo}</span>}<Link href={`/admin/workshops/${r.w.id}`} className="font-medium hover:text-lnh-blue">{r.w.title}</Link></td><td><WpStatus s={r.w.status} locked={r.w.locked} /></td>
                 <td className="whitespace-nowrap text-xs text-slate-500">{fmtDateTime(r.w.reviewedAt!)}</td><td className="text-xs text-slate-500">{r.w.reviewNote ?? "—"}</td></tr>
             ))}</tbody>
           </table></div>

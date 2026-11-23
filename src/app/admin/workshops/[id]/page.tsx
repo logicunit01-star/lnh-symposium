@@ -38,7 +38,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
   return (
     <>
       <p className="mb-2 text-sm"><Link href="/admin/workshops" className="text-lnh-blue hover:underline">← Workshop Programme</Link></p>
-      <PageTitle title={w.title} sub={`${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${weekLabel ? ` (${weekLabel})` : ""}` : ""}`}
+      <PageTitle title={w.title} sub={`${w.workshopNo ? `${w.workshopNo} · ` : ""}${w.department ?? ""}${w.category ? ` · ${CATEGORY_LABEL[w.category]}` : ""}${w.themeWeek ? ` · Week ${w.themeWeek}${weekLabel ? ` (${weekLabel})` : ""}` : ""}`}
         actions={<>
           {canEdit && <Link href={`/admin/workshops/${w.id}/edit`} className="a-btn-ghost"><Pencil className="h-4 w-4" />Edit</Link>}
           {/* 23 Nov 2026 (LNH): workshop details as PDF for the Chair */}

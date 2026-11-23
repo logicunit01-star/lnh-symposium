@@ -34,6 +34,7 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
           <div className="mt-4 flex flex-wrap gap-2">
             {w.department && <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${deptHue(w.department)}`}>{w.department}</span>}
             <span className="chip">Separate ticket · no pass needed</span>
+            {w.code && <span className="chip mono" title="Workshop ID">{w.code}</span>}
           </div>
           <h1 className="h-display mt-4 text-4xl text-white sm:text-5xl">{w.title}</h1>
           <ul className="mt-6 grid gap-3 text-slate-200 sm:grid-cols-2">
