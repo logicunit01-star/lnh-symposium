@@ -7,7 +7,7 @@ import type { NotifyConfig } from "./notify-config";
  * preferred_channel, pdf_url (public file, here the QR image) }. xNotify itself delivers by WhatsApp or SMS.
  * The response format is not documented: any 2xx answer without an error flag counts as sent.
  */
-export async function xnotifySend(cfg: NotifyConfig, m: { to: string; email?: string; templateId: string; mediaUrl?: string; vars?: Record<string, string> }) {
+export async function xnotifySend(cfg: NotifyConfig, m: { to: string; email?: string; templateId: string; mediaUrl?: string; vars?: Record<string, string>; noChannel?: boolean }) {
   if (!cfg.key) throw new Error("xNotify is not configured (API key in Admin → WhatsApp & SMS).");
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20_000);
   try {
@@ -15,8 +15,9 @@ export async function xnotifySend(cfg: NotifyConfig, m: { to: string; email?: st
       method: "POST", signal: ctl.signal, cache: "no-store",
       headers: { "Content-Type": "application/json", Accept: "application/json, text/plain, */*", "x-api-key": cfg.key },
       // 17 Nov 2026 documents: template variables in the body; no email (xNotify would email the participant too, and the portal
-      // already does); preferred_channel left out when empty so xNotify's Smart / Custom Routing chooses the channel
-      body: JSON.stringify({ to: m.to, message_template_id: Number(m.templateId), ...(cfg.waChannel?.trim() ? { preferred_channel: cfg.waChannel.trim() } : {}), ...(m.vars ?? {}), ...(m.mediaUrl ? { pdf_url: m.mediaUrl } : {}) }),
+      // already does); preferred_channel left out when empty so xNotify's Smart / Custom Routing chooses the channel,
+      // and never sent with the OTP (23 Nov 2026: SMS template 2780 decides its channel; body { to, message_template_id, otp })
+      body: JSON.stringify({ to: m.to, message_template_id: Number(m.templateId), ...(!m.noChannel && cfg.waChannel?.trim() ? { preferred_channel: cfg.waChannel.trim() } : {}), ...(m.vars ?? {}), ...(m.mediaUrl ? { pdf_url: m.mediaUrl } : {}) }),
     });
     const text = await r.text();
     let j: any = null; try { j = JSON.parse(text); } catch { /* not JSON */ }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db, schema as s } from "@/lib/db";
 import { ok, fail, zodFail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
-import { issueOtp, maskEmail, maskPhone, accessCodesAvailable } from "@/lib/otp";
+import { issueOtp, sentToText, accessCodesAvailable } from "@/lib/otp";
 
 const input = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address"), purpose: z.enum(["SIGNIN", "RESET"]) });
 
@@ -16,5 +16,5 @@ export async function POST(req: Request) {
   const [a] = await db.select({ id: s.accounts.id, email: s.accounts.email, phone: s.accounts.phone }).from(s.accounts).where(eq(s.accounts.email, p.data.email));
   if (!a) return fail("No account uses this email. Create one instead.", 404, { email: "No account with this email" });
   const otp = await issueOtp(p.data.purpose, a.email, { email: a.email, phone: a.phone }, { email: a.email, phone: a.phone, accountId: a.id });
-  return ok({ otpId: otp.id, sentTo: `${maskPhone(a.phone)} and ${maskEmail(a.email)}`, demoCode: otp.demoCode });
+  return ok({ otpId: otp.id, sentTo: await sentToText({ email: a.email, phone: a.phone }), demoCode: otp.demoCode });
 }

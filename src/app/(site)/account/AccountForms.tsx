@@ -145,7 +145,7 @@ function ResetStep({ otp, email, next, back }: { otp: { otpId: string; sentTo: s
 }
 
 function SignUp({ email, next, back, onCode }: { email: string; next: string; back: React.ReactNode; onCode: (o: { otpId: string; sentTo: string; demoCode?: string }) => void }) {
-  const { submit, loading, error, fields } = useSubmit<{ otpId: string; sentTo: { email: string; phone: string }; demoCode?: string }>("/api/account/signup");
+  const { submit, loading, error, fields } = useSubmit<{ otpId: string; sentTo: { email: string; text?: string }; demoCode?: string }>("/api/account/signup");
   const [f, setF] = useState({ title: "", firstName: "", lastName: "", phone: "", password: "" });
   const [show, setShow] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: k === "phone" ? maskPhone(e.target.value) : e.target.value }));
@@ -154,7 +154,7 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
     <form className="mx-auto max-w-lg space-y-5" noValidate onSubmit={async (e) => {
       e.preventDefault();
       const r = await submit({ ...f, email });
-      if (r?.otpId) onCode({ otpId: r.otpId, sentTo: r.sentTo.email, demoCode: r.demoCode });
+      if (r?.otpId) onCode({ otpId: r.otpId, sentTo: r.sentTo.text || r.sentTo.email, demoCode: r.demoCode });
     }}>
       <div>
         <h2 className="font-display text-2xl font-bold text-white">Create your account</h2>
@@ -178,7 +178,7 @@ function SignUp({ email, next, back, onCode }: { email: string; next: string; ba
         </div>
         <Strength pw={f.password} />
       </Field>
-      <p className="text-xs text-slate-300">Next, we email you a 6-digit code to verify the account.</p>
+      <p className="text-xs text-slate-300">Next, we send a 6-digit code to your email and mobile to verify the account.</p>
       <button className="btn-primary w-full" disabled={loading || !ok}>{loading ? "Sending code…" : "Create account"}</button>
       <div>{back}</div>
     </form>

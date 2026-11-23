@@ -5,8 +5,8 @@ import { openText } from "./secret-box";
 
 /**
  * Super Admin → WhatsApp / SMS (xNotify) (14.11.2026 Part C, simplified 16 Nov 2026): one xNotify API call per message
- * with its template ID; xNotify delivers it by WhatsApp or SMS. Templates have fixed text, so sign-in codes and
- * free-text news go by email only.
+ * with its template ID; xNotify delivers it by WhatsApp or SMS. Templates have fixed text, so free-text news goes by email
+ * only. One-time codes go by email and, when SIGN_IN_CODE has a template ID, also by SMS (LNH, 23 Nov 2026: template 2780).
  */
 export const XNOTIFY_LABEL = "xnotify-api-key";
 export const NOTIFY_MESSAGES = {
@@ -18,6 +18,8 @@ export const NOTIFY_MESSAGES = {
   SYMPOSIUM_REMINDER: { label: "Symposium starts tomorrow", detail: "Day before the symposium.", vars: "participant_name", qr: false },
   WORKSHOP_REMINDER: { label: "Workshop reminder", detail: "Day before each workshop.", vars: "participant_name, workshop_title, date, start_time, end_time, venue, status", qr: false },
   CERTIFICATE_READY: { label: "E-certificate ready", detail: "Symposium and workshop certificates.", vars: "participant_name", qr: false },
+  // LNH 23 Nov 2026: OTP by SMS as well as email; body { to, message_template_id: 2780, otp }
+  SIGN_IN_CODE: { label: "One-time code (OTP) by SMS", detail: "Sign-up, sign-in, password reset and My registrations codes, also sent by email. eOcean SMS template 2780. Not retried: a code lasts 5 minutes.", vars: "otp", qr: false },
 } as const;
 export type NotifyMessageKey = keyof typeof NOTIFY_MESSAGES;
 

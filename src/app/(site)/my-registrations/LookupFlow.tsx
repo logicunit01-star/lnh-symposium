@@ -44,7 +44,7 @@ export function LookupFlow() {
           <input id="lk-phone" inputMode="numeric" autoComplete="tel" placeholder="03XX-XXXXXXX" className="input mono pl-11" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} /></div>
       </Field>
       <button className="btn-primary w-full sm:w-auto" disabled={loading || phone.replace(/\D/g, "").length !== 11}>{loading ? "Sending code…" : "Send me a code"}</button>
-      <p className="text-xs text-slate-500">We email a one-time code to the address you registered with. Codes expire in 5 minutes.</p>
+      <p className="text-xs text-slate-500">We send a one-time code to the email and mobile number you registered with. Codes expire in 5 minutes.</p>
     </form>
   );
 }

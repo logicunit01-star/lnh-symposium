@@ -5,8 +5,9 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { FormGuard } from "@/components/ui/FormGuard";
 import { Analytics } from "@/components/site/Analytics";
 
-// GA4: GA_MEASUREMENT_ID in the server settings file, or the LNH ID on the live address only (test sites such as Vercel are not tracked)
-const GA_ID = process.env.GA_MEASUREMENT_ID ?? ((process.env.APP_URL ?? "").includes("symposium2027.lnh.edu.pk") ? "G-48XJMMBKHM" : "");
+// Google Tag Manager (23 Nov 2026, replaces the direct GA4 code): GTM_ID in the server settings file, or the LNH container on the
+// live address only (test sites such as Vercel are not tracked). GA4 (G-48XJMMBKHM) is set up by LNH inside the container.
+const GTM_ID = process.env.GTM_ID ?? ((process.env.APP_URL ?? "").includes("symposium2027.lnh.edu.pk") ? "GTM-W2W8D2H4" : "");
 import { getEvent } from "@/lib/event";
 import { currentAccountClaims } from "@/lib/account";
 import { delegateStatus } from "@/lib/registration";
@@ -24,7 +25,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <main className="min-h-screen">{children}</main>
       <Footer ev={ev} />
       <FormGuard />
-      <Analytics id={GA_ID} />
+      <Analytics id={GTM_ID} />
       <CartDrawer />
     </CartProvider>
     </div>

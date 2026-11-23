@@ -5,6 +5,8 @@ import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema as s } from "./db";
 import { mailState } from "./mail-config";
+import { sendMessage } from "./notify";
+import { notifyConfig } from "./notify-config";
 
 export const OTP_TTL_MS = 5 * 60_000;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -13,7 +15,7 @@ export const OTP_MAX_SENDS = 4;
 const hash = (id: string, code: string) => createHmac("sha256", (process.env.AUTH_SECRET || "dev-secret") + ":otp").update(`${id}:${code}`).digest("hex");
 const newCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
-/** Demo mode: when email delivery is not configured, the code is shown on screen. Codes go by email only (16 Nov 2026). */
+/** Demo mode: when email delivery is not configured, the code is shown on screen. Codes go by email, and by SMS when set up (23 Nov 2026). */
 export const otpDemoMode = async () => process.env.OTP_DEMO === "1" || (process.env.OTP_DEMO !== "0" && !(await codeDelivery()));
 /** Email delivery is configured: an active mailbox in Admin → Email settings (not "Log only") or SMTP_* in the server file. */
 export const codeDelivery = async () => {
@@ -33,12 +35,21 @@ export const maskEmail = (e: string) => e.replace(/^(.)(.*)(.@.*)$/, (_, a, b, c
 export const maskPhone = (p: string) => { const d = p.replace(/\D/g, ""); return d.length > 4 ? `${"*".repeat(d.length - 4)}${d.slice(-4)}` : d; };
 export const phoneDigits = (p: string) => { let d = p.replace(/\D/g, ""); if (d.startsWith("0092")) d = d.slice(2); if (d.startsWith("92")) d = "0" + d.slice(2); return d; };
 
-async function deliver(code: string, to: { email?: string; phone?: string }, purpose: string) {
+/** LNH 23 Nov 2026: codes also go by SMS (xNotify template 2780) when xNotify is on and the SIGN_IN_CODE template ID is saved. */
+export const smsCodesOn = async () => { const c = await notifyConfig().catch(() => null); return !!c?.waEnabled && !!c.key && !!c.templates.SIGN_IN_CODE?.wa; };
+
+async function deliver(code: string, to: { email?: string | null; phone?: string | null }, purpose: string) {
   const what = purpose === "SIGNUP" ? "verify your account" : purpose === "SIGNIN" ? "sign in to your account" : purpose === "RESET" ? "set a new password" : "view your registrations";
   if (to.email) await sendTemplate("SIGN_IN_CODE", to.email, { code, purpose: what }, { priority: 10 });
+  // body { to, message_template_id, otp }; never retried, and the log masks the code
+  if (to.phone) await sendMessage("SIGN_IN_CODE", to.phone, { vars: { otp: code }, priority: 10, secret: true, ref: `OTP ${purpose}` });
 }
 
-export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET", target: string, to: { email?: string; phone?: string }, payload?: unknown) {
+/** "your mobile ****1234 and m***@x.com" when SMS codes are on, else the email only. */
+export const sentToText = async (to: { email?: string | null; phone?: string | null }) =>
+  [to.phone && (await smsCodesOn()) ? maskPhone(to.phone) : null, to.email ? maskEmail(to.email) : null].filter(Boolean).join(" and ");
+
+export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET", target: string, to: { email?: string | null; phone?: string | null }, payload?: unknown) {
   const code = newCode();
   const [row] = await db.insert(s.otpCodes).values({ purpose, target, codeHash: "pending", payload: payload ?? null, expiresAt: new Date(Date.now() + OTP_TTL_MS) }).returning({ id: s.otpCodes.id });
   await db.update(s.otpCodes).set({ codeHash: hash(row.id, code) }).where(eq(s.otpCodes.id, row.id));
@@ -46,7 +57,7 @@ export async function issueOtp(purpose: "SIGNUP" | "LOOKUP" | "SIGNIN" | "RESET"
   return { id: row.id, demoCode: (await showsCode(purpose)) ? code : undefined };
 }
 
-export async function resendOtp(id: string, to: { email?: string; phone?: string }) {
+export async function resendOtp(id: string, to: { email?: string | null; phone?: string | null }) {
   const [row] = await db.select().from(s.otpCodes).where(and(eq(s.otpCodes.id, id), isNull(s.otpCodes.consumedAt)));
   if (!row) return { error: "This code request has ended. Start again." };
   if (row.sends >= OTP_MAX_SENDS) return { error: "Too many codes sent. Start again in a few minutes." };

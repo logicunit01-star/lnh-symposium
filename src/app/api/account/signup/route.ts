@@ -4,7 +4,7 @@ import { db, schema as s } from "@/lib/db";
 import { ok, fail, zodFail } from "@/lib/api";
 import { rateLimit, ipOf } from "@/lib/ratelimit";
 import { signupInput } from "@/lib/account";
-import { issueOtp, maskEmail, maskPhone } from "@/lib/otp";
+import { issueOtp, maskEmail, sentToText } from "@/lib/otp";
 
 /** Step 1 of sign-up (short form): validate, hold the details as "pending verification" and send a 6-digit code by email and SMS. */
 export async function POST(req: Request) {
@@ -17,5 +17,5 @@ export async function POST(req: Request) {
   const phone = d.phone.replace(/^(\d{4})-?(\d{7})$/, "$1-$2");
   const pending = { ...d, phone, passwordHash: await bcrypt.hash(password, 10) };
   const otp = await issueOtp("SIGNUP", d.email, { email: d.email, phone }, pending);
-  return ok({ pending: true, otpId: otp.id, sentTo: { email: maskEmail(d.email), phone: maskPhone(phone) }, demoCode: otp.demoCode });
+  return ok({ pending: true, otpId: otp.id, sentTo: { email: maskEmail(d.email), text: await sentToText({ email: d.email, phone }) }, demoCode: otp.demoCode });
 }

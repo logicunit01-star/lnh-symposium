@@ -69,7 +69,7 @@ async function deliver(row: Row): Promise<Result> {
     if (!p.templateId) return { ok: false, error: "No xNotify template for this message." };
     const cfg = await notifyConfig();
     if (!cfg.waEnabled) return { ok: false, error: "xNotify is switched off (Admin → WhatsApp & SMS)." };
-    const r = await xnotifySend(cfg, { to: row.to, templateId: p.templateId, mediaUrl: p.mediaUrl, vars: p.vars });
+    const r = await xnotifySend(cfg, { to: row.to, templateId: p.templateId, mediaUrl: p.mediaUrl, vars: p.vars, noChannel: !!p.secret });
     return { ok: true, ref: r.ref };
   } catch (e: any) {
     return { ok: false, error: String(e?.message || e).slice(0, 500) };
@@ -83,8 +83,10 @@ async function finish(row: Row, r: Result) {
     return "SENT";
   }
   const attempts = row.attempts + 1, max = (await notifyConfig()).maxAttempts;
-  const giveUp = attempts >= max;
-  await db.update(s.notificationLog).set({
+  // a one-time code is not retried (it lasts 5 minutes) and its value is not kept (23 Nov 2026)
+  const secret = !!row.payload?.secret;
+  const giveUp = secret || attempts >= max;
+  await db.update(s.notificationLog).set({ ...(secret ? { payload: null } : {}),
     status: giveUp ? "FAILED" : "QUEUED", attempts, error: r.error, lockedAt: null,
     nextAttemptAt: giveUp ? null : new Date(Date.now() + BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)] * 60_000),
   }).where(eq(s.notificationLog.id, row.id));

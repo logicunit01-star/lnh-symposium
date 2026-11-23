@@ -63,7 +63,7 @@ export const normalisePhone = (p: string) => {
  * message has a template ID; mediaUrl (a QR image) goes with it. xNotify delivers it by WhatsApp or SMS (16 Nov 2026:
  * the portal no longer sends SMS itself). m.text is kept only as a readable note in the log.
  */
-export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean; vars?: Record<string, string> } = {}) {
+export async function sendMessage(key: NotifyMessageKey, phone: string | null | undefined, m: { text?: string; mediaUrl?: string; email?: string; ref?: string | null; priority?: number; defer?: boolean; vars?: Record<string, string>; secret?: boolean } = {}) {
   try {
     if (!phone) return;
     const to = normalisePhone(phone);
@@ -71,10 +71,11 @@ export async function sendMessage(key: NotifyMessageKey, phone: string | null | 
     const cfg = await notifyConfig();
     const tid = cfg.templates[key]?.wa;
     if (!cfg.waEnabled || !tid || !(key in NOTIFY_MESSAGES)) return;
-    await enqueue({ to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer, channel: "WHATSAPP",
-      body: `xNotify template ${tid}${m.mediaUrl && NOTIFY_MESSAGES[key].qr ? " + QR image" : ""}${m.vars ? ` (${Object.entries(m.vars).map(([k, v]) => `${k}: ${v}`).join(", ")})` : m.text ? `: ${m.text}` : ""}`.slice(0, 1000),
+    const shown = m.secret ? Object.fromEntries(Object.entries(m.vars ?? {}).map(([k, v]) => [k, maskCodes(v)])) : m.vars; // the log never shows a code
+    await enqueue({ to, templateKey: key, ref: m.ref ?? null, priority: m.priority, defer: m.defer, channel: m.secret ? "SMS" : "WHATSAPP",
+      body: `xNotify template ${tid}${m.mediaUrl && NOTIFY_MESSAGES[key].qr ? " + QR image" : ""}${shown ? ` (${Object.entries(shown).map(([k, v]) => `${k}: ${v}`).join(", ")})` : m.text ? `: ${m.text}` : ""}`.slice(0, 1000),
       // the portal sends its own emails, so no email address goes to xNotify (it would email the participant a second time)
-      payload: { messageKey: key, templateId: tid, mediaUrl: NOTIFY_MESSAGES[key].qr ? m.mediaUrl : undefined, vars: m.vars, via: "XNOTIFY" } });
+      payload: { messageKey: key, templateId: tid, mediaUrl: NOTIFY_MESSAGES[key].qr ? m.mediaUrl : undefined, vars: m.vars, via: "XNOTIFY", ...(m.secret ? { secret: true } : {}) } });
   } catch (e) { console.error("[notify] could not queue", key, e); }
 }
 
