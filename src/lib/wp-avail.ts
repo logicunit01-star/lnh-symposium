@@ -20,7 +20,7 @@ export async function roomClash(venueId: string, startsAt: Date, endsAt: Date, e
 }
 
 /** For the form: is the chosen room free, which other rooms are free at that time, and on which dates this room is free at that time. */
-/** D1 (13 Nov): a 2- or 3-day workshop runs 09:00-17:00 on consecutive days (no Sunday inside); the room is held for the whole span. */
+/** D1 (13 Nov): a 2- or 3-day workshop runs 09:00-17:00 on consecutive days (Sundays allowed since 23 Nov 2026); the room is held for the whole span. */
 export const addDays = (ymd: string, n: number) => new Date(new Date(`${ymd}T12:00:00Z`).getTime() + n * 864e5).toISOString().slice(0, 10);
 export const spanHasSunday = (ymd: string, days: number) => Array.from({ length: days }, (_, i) => addDays(ymd, i)).some(isSunday);
 export const FULL_DAY = { start: "09:00", end: "17:00" };
@@ -37,13 +37,13 @@ export async function availability(q: { date: string; start: string; end: string
   const clash = q.venueId ? await roomClash(q.venueId, startsAt, endsAt, q.excludeId) : null;
   const seats = q.seats ?? 1;
   const otherVenues = venues.filter((v) => v.id !== q.venueId && v.capacity >= seats && freeAt(v.id, startsAt, endsAt));
-  // other dates in the workshop window (today onwards, no Sundays) when the chosen room is free at the same time
+  // other dates in the workshop window (today onwards; Sundays included since 23 Nov 2026) when the chosen room is free at the same time
   const from = [todayPk(), ev.workshopStart ? ymdPk(ev.workshopStart) : todayPk()].sort().at(-1)!;
   const to = ev.workshopEnd ? ymdPk(ev.workshopEnd) : from;
   const otherDates: string[] = [];
   if (q.venueId) for (let d = new Date(`${from}T12:00:00Z`); ymdPk(d) <= to && otherDates.length < 8; d = new Date(d.getTime() + 864e5)) {
     const y = d.toISOString().slice(0, 10);
-    if (y === q.date || spanHasSunday(y, days) || addDays(y, days - 1) > to) continue;
+    if (y === q.date || addDays(y, days - 1) > to) continue;
     if (freeAt(q.venueId, ...span(y))) otherDates.push(y);
   }
   // smallest rooms that still fit the seat cap first

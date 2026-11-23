@@ -27,7 +27,6 @@ const durLabel = (m: number) => m < 0 ? `${-m} full days (09:00–17:00 each day
 const addDays = (d: string, n: number) => new Date(new Date(`${d}T12:00:00Z`).getTime() + n * 864e5).toISOString().slice(0, 10);
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const toHM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-const isSun = (d: string) => !!d && new Date(`${d}T12:00:00Z`).getUTCDay() === 0;
 const longDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 type Avail = { clash: { title: string; from: string; to: string; status: string } | null; otherVenues: { id: string; name: string; building: string; capacity: number }[]; otherDates: string[] };
 
@@ -52,11 +51,11 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
   }, []);
   const [state, action] = useFormState<FormResult, FormData>(submitWorkshop, null);
   const [venueId, setVenueId] = useState(init.venueId ?? "");
-  const firstDay = (() => { const m = [window.today ?? "", window.from].filter(Boolean).sort().at(-1) ?? ""; if (!m) return ""; let d = new Date(`${m}T12:00:00Z`); if (d.getUTCDay() === 0) d = new Date(d.getTime() + 864e5); return d.toISOString().slice(0, 10); })();
+  const firstDay = (() => { const m = [window.today ?? "", window.from].filter(Boolean).sort().at(-1) ?? ""; if (!m) return ""; return m; })(); // 23 Nov 2026 (LNH): Sundays are allowed
   const [date, setDate] = useState(init.date ?? firstDay);
   const [cap, setCap] = useState<number>(init.capacity ?? 30);
   const v = venues.find((x) => x.id === venueId);
-  // Schedule rules (Dashboard Findings, 9 Nov): no past dates, no Sundays, hours follow the workshop duration,
+  // Schedule rules (Dashboard Findings, 9 Nov): no past dates, hours follow the workshop duration (Sundays allowed since 23 Nov 2026),
   // and the room check runs as soon as the date, time or room changes (first come, first served).
   const today = window.today ?? "";
   const minDate = [today, window.from].filter(Boolean).sort().at(-1) ?? "";
@@ -68,8 +67,7 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
   const end = days > 1 ? "17:00" : toHM(Math.min(24 * 60 - 5, toMin(start) + dur));
   const lastDay = date ? addDays(date, days - 1) : "";
   const keepsDate = !!init.id && date === init.date;
-  const dateErr = !date ? "" : !keepsDate && minDate && date < minDate ? (date < today ? "This date has passed. Choose a date from today onwards." : "Choose a date inside the workshop window.") : !keepsDate && isSun(date) ? "Sundays are not available. Choose another day."
-    : days > 1 && Array.from({ length: days - 1 }, (_, i) => addDays(date, i + 1)).some(isSun) ? `A ${days}-day workshop cannot include a Sunday. Choose another start date.`
+  const dateErr = !date ? "" : !keepsDate && minDate && date < minDate ? (date < today ? "This date has passed. Choose a date from today onwards." : "Choose a date inside the workshop window.")
     : days > 1 && window.to && lastDay > window.to ? `The last day (${longDate(lastDay)}) falls after the workshop window.` : "";
   const [avail, setAvail] = useState<Avail | null>(null);
   const [checking, setChecking] = useState(false);

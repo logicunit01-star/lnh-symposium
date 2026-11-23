@@ -10,7 +10,7 @@ import { getEvent } from "@/lib/event";
 import { themeWeekOf } from "@/lib/demo-content";
 import { sendEmail, emailLayout } from "@/lib/notify";
 import { appUrl, fmtDate, ymdPk } from "@/lib/utils";
-import { addDays, isSunday, roomClash, spanHasSunday, todayPk } from "@/lib/wp-avail";
+import { addDays, roomClash, todayPk } from "@/lib/wp-avail";
 
 export type FormResult = { error?: string; ok?: string } | null;
 
@@ -78,11 +78,9 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
   if (flyerSummary && flyerSummary.length > 140) return { error: "The flyer summary can be at most 140 characters." };
   if (!department) return { error: "Choose the owning department." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Pick the proposed date." };
-  // No past dates and no Sundays (Dashboard Findings, 9 Nov); an existing request may keep its own date
+  // No past dates (Dashboard Findings, 9 Nov); an existing request may keep its own date. Sundays allowed (LNH, 23 Nov 2026)
   const keepsDate = !!existing && ymdPk(existing.startsAt) === date;
   if (!keepsDate && date < todayPk()) return { error: "The date has passed. Choose a date from today onwards." };
-  if (!keepsDate && isSunday(date)) return { error: "Workshops cannot be held on a Sunday. Choose another day." };
-  if (days > 1 && spanHasSunday(date, days)) return { error: `A ${days}-day workshop cannot include a Sunday. Choose another start date.` };
   // D1: multi-day workshops run 09:00-17:00 on consecutive days; the record spans first day 09:00 to last day 17:00
   const [s0, e0] = days > 1 ? ["09:00", "17:00"] : [start, end];
   const startsAt = new Date(`${date}T${s0}:00+05:00`), endsAt = new Date(`${addDays(date, days - 1)}T${e0}:00+05:00`);

@@ -47,6 +47,9 @@ export const DAY_THEMES: Record<number, string> = { 1: "Artificial Intelligence"
 /** Home page wording editable in Admin → Event settings (16 Nov 2026). An empty field uses this built-in default. */
 export const HOME_TEXT = {
   day1: "Artificial Intelligence", day1Short: "AI", day2: "Robotics", day2Short: "Robotics", day3: "Digitization", day3Short: "Digitization",
+  // 23 Nov 2026 (LNH): the "One theme. Three frontiers." section has its own three names, separate from the day themes above
+  // (which the "At a glance" day cards and the agenda use)
+  frontier1: "AI", frontier2: "Robotics", frontier3: "Digitization",
   frontiersEyebrow: "Three days · three frontiers", frontiersTitle: "One theme.", frontiersHighlight: "Three frontiers.",
   frontiersSub: "Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care.",
   glanceEyebrow: "At a glance", glanceTitle: "Three Days of", glanceHighlight: "Insights & Innovation", // 20 Nov 2026

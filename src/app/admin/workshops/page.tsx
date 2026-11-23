@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, Hourglass, Layers, Ticket, Wallet } from "lucide-react";
+import { AlertTriangle, CalendarClock, Download, Hourglass, Layers, Ticket, Wallet } from "lucide-react";
 import { requirePerm, staffScope } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
@@ -43,7 +43,8 @@ export default async function WorkshopConsole({ searchParams }: { searchParams: 
     <>
       <PageTitle title="Workshop Programme"
         sub={sc.all ? "Committee console: registrations, capacity, income and the approval queue for the pre-symposium workshops. Updates live as people register."
-          : sc.departments.length ? `Department view: ${sc.departments.join(", ")}. You see only your department's workshops.` : "Department view: you are not linked to a department yet. Ask the Super Admin (Users & roles)."} />
+          : sc.departments.length ? `Department view: ${sc.departments.join(", ")}. You see only your department's workshops.` : "Department view: you are not linked to a department yet. Ask the Super Admin (Users & roles)."}
+        actions={<a href={`/api/admin/workshops/pdf${q({ asOf: undefined }).replace("/admin/workshops", "")}`} className="a-btn-ghost" title="The workshops in the current filter, with date, venue, director, registrations, fee and status"><Download className="h-4 w-4" />Export PDF</a>} />
       <WpTabs active="dash" pending={k.pendingNew + k.pendingRevision} canSubmit={can(u, "workshops.submit")} canVenues={can(u, "venues")} canCheckin={can(u, "checkin")} />
       {searchParams.denied && <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">You don’t have access to that section.</p>}
       {searchParams.deleted && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Request withdrawn.</p>}

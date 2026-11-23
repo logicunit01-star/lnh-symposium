@@ -110,10 +110,11 @@ export default async function Home() {
           <SectionHead eyebrow={ht.frontiersEyebrow} title={<>{ht.frontiersTitle} <span className="text-holo">{ht.frontiersHighlight}</span></>}
             sub={ht.frontiersSub}
             action={<Link href="/about" className="btn-ghost shrink-0">Learn more <ArrowRight className="h-4 w-4" /></Link>} />
-          {/* homepage changes 11.11.2026: icons with the heading only (no cards, dates or descriptions) */}
+          {/* homepage changes 11.11.2026: icons with the heading only (no cards, dates or descriptions);
+              23 Nov 2026: own names (Event settings "Themes section: name 1-3"), no longer the day themes */}
           <div className="grid gap-10 sm:grid-cols-3">
-            {pillars.map(({ I, name, accent }, i) => (
-              <Reveal key={name} delay={i * 120} className="flex flex-col items-center text-center">
+            {pillars.map(({ I, accent, day }) => ({ I, accent, name: ht[`frontier${day}` as "frontier1"] })).map(({ I, name, accent }, i) => (
+              <Reveal key={i} delay={i * 120} className="flex flex-col items-center text-center">
                 <span className="grid h-20 w-20 place-items-center rounded-3xl bg-ink/60 ring-1 ring-white/15"><I className={`h-10 w-10 ${accent}`} /></span>
                 <h3 className="h-display mt-6 text-3xl text-white sm:text-4xl">{name}</h3>
               </Reveal>

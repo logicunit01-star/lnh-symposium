@@ -74,7 +74,8 @@ export default async function Settings({ searchParams }: { searchParams: { reset
         </div>
         <div className="sm:col-span-2"><label className="a-label">Homepage teaser / promo videos (YouTube URLs, one per line; the first is the main video)</label><textarea name="videos" rows={3} defaultValue={ev.videos.join("\n")} className="a-input" /></div>
         <p className="sm:col-span-2 mt-2 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-wider text-slate-500">Home page headings and day themes (leave a field empty for the wording shown in grey)</p>
-        {([["day1", "Day 1 theme"], ["day1Short", "Day 1 short label (hero pill)"], ["day2", "Day 2 theme"], ["day2Short", "Day 2 short label"], ["day3", "Day 3 theme"], ["day3Short", "Day 3 short label"],
+        {([["day1", "Day 1 theme (At a glance day card, agenda)"], ["day1Short", "Day 1 short label (hero pill)"], ["day2", "Day 2 theme (At a glance day card, agenda)"], ["day2Short", "Day 2 short label (hero pill)"], ["day3", "Day 3 theme (At a glance day card, agenda)"], ["day3Short", "Day 3 short label (hero pill)"],
+          ["frontier1", "Themes section (One theme. Three frontiers.): name 1"], ["frontier2", "Themes section: name 2"], ["frontier3", "Themes section: name 3"],
           ["frontiersEyebrow", "Themes section: small line above"], ["frontiersTitle", "Themes section: heading"], ["frontiersHighlight", "Themes section: highlighted part of the heading"], ["glanceEyebrow", "Programme section: small line above"],
           ["glanceTitle", "Programme section: heading"], ["glanceHighlight", "Programme section: highlighted part"]] as [HomeTextKey, string][]).map(([k, l]) => (
           <div key={k}><label className="a-label">{l}</label><input name={`ht_${k}`} defaultValue={ev.homeText?.[k] ?? ""} placeholder={HOME_TEXT[k]} maxLength={300} className="a-input" /></div>
