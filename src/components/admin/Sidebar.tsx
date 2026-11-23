@@ -44,11 +44,12 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
   const [open, setOpen] = useState(false);
   const nav = (
     <nav className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 py-5">
+      {/* 23 Nov 2026 (LNH): the logo opens the admin dashboard */}
+      <Link href="/admin" className="flex items-center gap-3 px-5 py-5 hover:opacity-90" aria-label="Admin dashboard" onClick={() => setOpen(false)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/lnh-mark-light.png" alt="LNH" className="h-9 w-auto" />
         <div className="leading-tight"><p className="font-display text-sm font-bold text-white">9th LNH Symposium</p><p className="text-[10px] uppercase tracking-[0.2em] text-lnh-sky">Admin console</p></div>
-      </div>
+      </Link>
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
         {ITEMS.filter((i) => (Array.isArray(i.p) ? i.p : [i.p]).some((p) => can(user, p))).map(({ href, label, I }) => {
           const on = href === "/admin" || href === "/admin/dept" ? path === href : path.startsWith(href);

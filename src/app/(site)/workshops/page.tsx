@@ -3,6 +3,7 @@ import { getProgramme, seatsTaken } from "@/lib/queries";
 import { toWorkshopDTO } from "@/lib/workshops";
 import { NeuralField } from "@/components/ui/NeuralField";
 import { WorkshopCatalog } from "./WorkshopCatalog";
+import { ComingSoon, PreviewNote, staffPreview } from "@/components/site/ComingSoon";
 
 export const metadata = { title: "Pre-Symposium Workshops" };
 
@@ -10,6 +11,8 @@ export default async function Workshops() {
   const [ev, prog, taken] = await Promise.all([getEvent(), getProgramme({ types: ["WORKSHOP"] }), seatsTaken()]);
   const early = isEarlyBird(ev);
   const items = prog.map((w) => toWorkshopDTO(w, taken, early));
+  // 20 Nov 2026: "coming soon" until the workshops go live (Admin → Event settings); staff see a preview
+  const live = ev.workshopsLive, preview = !live && (await staffPreview());
   return (
     <>
       <section className="noise relative overflow-hidden pb-10 pt-36">
@@ -23,7 +26,8 @@ export default async function Workshops() {
           <p className="mt-6 max-w-2xl text-lg text-slate-300">Approved multi-disciplinary skills training before the symposium. Each workshop has a separate registration fee: no symposium registration required, and symposium registration does not include workshops.</p>
         </div>
       </section>
-      <WorkshopCatalog items={items} />
+      {live || preview ? <>{preview && <PreviewNote setting="Pre-symposium workshops are live" />}<WorkshopCatalog items={items} /></>
+        : <ComingSoon what="Pre-symposium workshops" text="The pre-symposium workshops and their registration will be announced here soon." />}
     </>
   );
 }

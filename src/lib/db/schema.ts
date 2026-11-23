@@ -61,6 +61,9 @@ export const event = pgTable("event", {
   galleryThumbUrl: text("gallery_thumb_url"),
   agendaLive: boolean("agenda_live").notNull().default(false),
   speakersLive: boolean("speakers_live").notNull().default(false),
+  // 20 Nov 2026: the workshops and e-certificate pages show "coming soon" until switched on (the agenda page follows agendaLive)
+  workshopsLive: boolean("workshops_live").notNull().default(false),
+  certificatesLive: boolean("certificates_live").notNull().default(false),
   // Workshop programme (pre-symposium)
   workshopStart: timestamp("workshop_start", { withTimezone: true }),
   workshopEnd: timestamp("workshop_end", { withTimezone: true }),

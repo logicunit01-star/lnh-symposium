@@ -187,7 +187,7 @@ export async function saveSettings(f: FormData) {
     homeText: Object.fromEntries(Object.keys(HOME_TEXT).map((k) => [k, (str(f, `ht_${k}`) || "").slice(0, 300)]).filter(([, v]) => v)),
     tickerItems: (str(f, "tickerItems") || "").split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 12),
     galleryUrl: str(f, "galleryUrl"), galleryThumbUrl: str(f, "galleryThumbUrl"),
-    agendaLive: bool(f, "agendaLive"), speakersLive: bool(f, "speakersLive"),
+    agendaLive: bool(f, "agendaLive"), speakersLive: bool(f, "speakersLive"), workshopsLive: bool(f, "workshopsLive"), certificatesLive: bool(f, "certificatesLive"),
     workshopStart: d("workshopStart"), workshopEnd: d("workshopEnd"),
     themeWeeks: (str(f, "themeWeeks") || "").split(/\n/).map((l) => l.match(/^\s*(\d{4}-\d{2}-\d{2})\s*[,|]\s*(.+?)\s*$/)).filter(Boolean).map((m) => ({ from: m![1], label: m![2] })),
     seatTarget: num(f, "seatTarget") ?? 3000, usdRate: num(f, "usdRate") ?? 280, seatHoldHours: Math.max(0, Math.min(720, num(f, "seatHoldHours") ?? 72)),

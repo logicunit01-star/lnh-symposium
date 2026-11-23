@@ -53,7 +53,8 @@ export function Footer({ ev }: { ev: EventSettings }) {
               src="https://www.google.com/maps?q=Liaquat+National+Hospital,+Stadium+Road,+Karachi&output=embed" />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {["Medical College", "Convention Centre", "College of Nursing", "School of Medical Technology", "Radiology", "RSDC"].map((h) => <a key={h} href="/venues" className="chip min-h-[32px] hover:text-white">{h}</a>)}
+            {/* 23 Nov 2026 (LNH): each chip opens the venue map with that venue selected */}
+            {([["Medical College", "medical-college"], ["Convention Centre", "convention-centre"], ["College of Nursing", "college-of-nursing"], ["School of Medical Technology", "medical-technology"], ["Radiology", "radiology"], ["RSDC", "rsdc"]] as const).map(([h, v]) => <a key={h} href={`/venues?v=${v}#guide`} className="chip min-h-[32px] hover:text-white">{h}</a>)}
           </div>
         </div>
       </div>

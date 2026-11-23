@@ -8,6 +8,7 @@ import { appUrl, pkr } from "@/lib/utils";
 import { AddTicket, OrderBar } from "@/components/cart/CartDrawer";
 import { CartPanel } from "@/components/cart/CartPanel";
 import { deptHue } from "@/components/site/dept-hue";
+import { ComingSoon, PreviewNote, staffPreview } from "@/components/site/ComingSoon";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const w = await getProgrammeItem(params.slug);
@@ -20,10 +21,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function WorkshopPage({ params }: { params: { slug: string } }) {
   const [ev, s, taken] = await Promise.all([getEvent(), getProgrammeItem(params.slug), seatsTaken()]);
   if (!s || s.type !== "WORKSHOP") notFound();
+  const preview = !ev.workshopsLive && (await staffPreview());
+  if (!ev.workshopsLive && !preview) return <section className="pt-36"><ComingSoon what="Pre-symposium workshops" text="The pre-symposium workshops and their registration will be announced here soon." /></section>;
   const w = toWorkshopDTO(s, taken, isEarlyBird(ev));
   const full = w.left === 0;
   return (
     <section className="relative overflow-hidden pb-28 pt-36 lg:pb-10">
+      {preview && <PreviewNote setting="Pre-symposium workshops are live" />}
       <div className="container-x grid gap-8 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-8">
           <Link href="/workshops" className="inline-flex min-h-[44px] items-center gap-1.5 text-sm text-slate-300 hover:text-white"><ArrowLeft className="h-4 w-4" />All workshops</Link>

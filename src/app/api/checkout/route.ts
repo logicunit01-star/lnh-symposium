@@ -7,6 +7,8 @@ import { currentAccount } from "@/lib/account";
 import { createRegistration, registrationInput, CapacityError } from "@/lib/registration";
 import { normaliseCnic } from "@/lib/reg-fields";
 import { TITLES } from "@/lib/utils";
+import { getEvent } from "@/lib/event";
+import { currentUser } from "@/lib/auth";
 
 const input = z.object({
   categoryId: z.coerce.number().int().positive(),
@@ -33,6 +35,8 @@ export async function POST(req: Request) {
   const p = input.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return zodFail(p.error);
   if (!p.data.includePass && p.data.sessionIds.length === 0) return fail("Your order is empty.");
+  // 20 Nov 2026: workshop tickets only once the workshops are live (staff may test before)
+  if (p.data.sessionIds.length && !(await getEvent()).workshopsLive && !(await currentUser().catch(() => null))) return fail("Workshop registration opens soon. Please remove the workshop tickets from your order for now.", 409);
   const d = p.data.details;
   const reg = registrationInput.safeParse({
     title: TITLES.includes(d.title) ? d.title : a.title, gender: d.gender || a.gender || "", firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone,

@@ -128,7 +128,7 @@ export default async function Home() {
         <div className="container-x relative">
           <SectionHead eyebrow="Pre-conference · limited seats" title={<>Pre-symposium <span className="text-holo">workshops</span></>}
             sub="Simulation labs, AI tools and skills stations. Each workshop has a separate registration fee. The symposium registration fees does not include pre-symposium workshops."
-            action={<Link href="/workshops" className="btn-blue shrink-0">Workshops details and Registration <ArrowRight className="h-4 w-4" /></Link>} />
+            action={<Link href="/workshops" className="btn-blue shrink-0">{ev.workshopsLive ? "Workshops details and Registration" : "Workshops: coming soon"} <ArrowRight className="h-4 w-4" /></Link>} />
         </div>
       </section>
 
@@ -156,12 +156,13 @@ export default async function Home() {
       </section>}
 
       {/* ================= AGENDA PREVIEW ================= */}
-      <section className="relative overflow-hidden border-y border-white/10 py-28">
+      <section className={`relative overflow-hidden border-y border-white/10 ${ev.agendaLive ? "py-28" : "py-20"}`}>
         <div className="grid-lines absolute inset-0 opacity-50" />
         <div className="container-x relative">
-          <SectionHead eyebrow={ht.glanceEyebrow} title={<>{ht.glanceTitle} <span className="text-holo">{ht.glanceHighlight}</span></>}
-            action={<Link href="/agenda" className="btn-blue shrink-0">View full agenda <ArrowRight className="h-4 w-4" /></Link>} />
-          <div className="grid gap-4 lg:grid-cols-3">
+          <SectionHead className={ev.agendaLive ? undefined : "!mb-0"} eyebrow={ht.glanceEyebrow} title={<>{ht.glanceTitle} <span className="text-holo">{ht.glanceHighlight}</span></>}
+            action={<Link href="/agenda" className="btn-blue shrink-0">Explore the Agenda <ArrowRight className="h-4 w-4" /></Link>} />
+          {/* 20 Nov 2026: the day cards appear once the agenda is live (Admin → Event settings) */}
+          {ev.agendaLive && <div className="grid gap-4 lg:grid-cols-3">
             {[1, 2, 3].map((d, i) => {
               const items = programme.filter((p) => p.day === d && p.type !== "BREAK");
               const date = days[d - 1];
@@ -188,7 +189,7 @@ export default async function Home() {
                 </Reveal>
               );
             })}
-          </div>
+          </div>}
         </div>
       </section>
 

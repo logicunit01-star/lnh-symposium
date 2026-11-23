@@ -225,6 +225,13 @@
       "when": 1795781269503,
       "tag": "0031_lnh_changes_18nov",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795867669503,
+      "tag": "0032_lnh_changes_20nov",
+      "breakpoints": true
     }
   ]
 }

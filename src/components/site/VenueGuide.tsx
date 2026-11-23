@@ -20,8 +20,9 @@ const BLOCKS: { x: number; y: number; w: number; h: number; label: string; key?:
 ];
 
 /** Static guide map of the 5 scientific session venues (SC feedback, 29 Oct 2026): a pin per venue; tap a pin for venue details and that day's sessions. */
-export function VenueGuide({ venues, days, released }: { venues: GuideVenue[]; days: { key: string; label: string }[]; released: boolean }) {
-  const [sel, setSel] = useState(venues[0]?.key ?? "");
+export function VenueGuide({ venues, days, released, initial }: { venues: GuideVenue[]; days: { key: string; label: string }[]; released: boolean; initial?: string }) {
+  // 23 Nov 2026 (LNH): the venue chips in the footer open the map with their venue selected (/venues?v=…)
+  const [sel, setSel] = useState(venues.some((x) => x.key === initial) ? initial! : venues[0]?.key ?? "");
   const [day, setDay] = useState(days[0]?.key ?? "");
   const v = venues.find((x) => x.key === sel);
   const list = v?.sessions[day] ?? [];

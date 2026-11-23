@@ -6,6 +6,7 @@ import { AgendaTabs } from "./AgendaTabs";
 import { AgendaTools, ItineraryItem } from "./AgendaTools";
 import { SessionCard } from "@/components/site/SessionCard";
 import { cn, fmtDate, fmtTime, SESSION_TYPE_LABEL } from "@/lib/utils";
+import { ComingSoon, PreviewNote, staffPreview } from "@/components/site/ComingSoon";
 
 export const metadata = { title: "Agenda", description: "Day-by-day programme of the 9th LNH Symposium: keynotes, plenaries, scientific sessions, panels and pre-conference workshops." };
 const TYPES = ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "CEREMONY", "WORKSHOP"];
@@ -13,6 +14,9 @@ const TYPES = ["KEYNOTE", "PLENARY", "SCIENTIFIC", "PANEL", "CEREMONY", "WORKSHO
 /** Agenda (release 3): sessions grouped by start time, parallel halls side by side; filters by type and hall (audit P1, P3, P4). */
 export default async function Agenda({ searchParams }: { searchParams: { type?: string; hall?: string; day?: string } }) {
   const [ev, all, taken] = await Promise.all([getEvent(), getProgramme(), seatsTaken()]);
+  // 20 Nov 2026: "coming soon" until the agenda is live (Admin → Event settings); staff see a preview
+  const preview = !ev.agendaLive && (await staffPreview());
+  if (!ev.agendaLive && !preview) return <><PageHero eyebrow="Agenda / schedule" title={<>The full <span className="text-grad">programme</span></>} sub="Pre-conference workshops followed by three symposium days. All times are Pakistan Standard Time (PKT)." /><ComingSoon what="Agenda" text="The symposium agenda will be published here once the Scientific Committee finalises the programme." /></>;
   const early = isEarlyBird(ev);
   const type = TYPES.includes(String(searchParams.type).toUpperCase()) ? String(searchParams.type).toUpperCase() : "";
   const hall = searchParams.hall ?? "";
@@ -44,6 +48,7 @@ export default async function Agenda({ searchParams }: { searchParams: { type?: 
   return (
     <>
       <PageHero eyebrow="Agenda / schedule" title={<>The full <span className="text-grad">programme</span></>} sub="Pre-conference workshops followed by three symposium days on AI, Robotics and Digitization. All times are Pakistan Standard Time (PKT); the programme is subject to change. Your Symposium Registration covers every symposium session; workshops are separate tickets." />
+      {preview && <PreviewNote setting="Agenda is live" />}
       <div className="container-x">
         {/* filters */}
         <nav aria-label="Filter the agenda" className="mb-8 flex flex-wrap items-center gap-2">

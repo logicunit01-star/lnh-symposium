@@ -80,9 +80,11 @@ export default async function Settings({ searchParams }: { searchParams: { reset
           <div key={k}><label className="a-label">{l}</label><input name={`ht_${k}`} defaultValue={ev.homeText?.[k] ?? ""} placeholder={HOME_TEXT[k]} maxLength={300} className="a-input" /></div>
         ))}
         <div className="sm:col-span-2"><label className="a-label">Themes section: text under the heading</label><textarea name="ht_frontiersSub" rows={2} defaultValue={ev.homeText?.frontiersSub ?? ""} placeholder={HOME_TEXT.frontiersSub} maxLength={300} className="a-input" /></div>
-        <div className="sm:col-span-2"><label className="a-label">Homepage ticker (one message per line)</label><textarea name="tickerItems" rows={3} defaultValue={(ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT).join("\n")} className="a-input" /></div>
+        <div className="sm:col-span-2"><label className="a-label">Homepage ticker (one message per line)</label><textarea name="tickerItems" rows={4} defaultValue={(ev.tickerItems.length ? ev.tickerItems : TICKER_DEFAULT).join("\n")} className="a-input" /></div>
         <F n="galleryUrl" l="Previous symposium gallery link" v={ev.galleryUrl ?? GALLERY_DEFAULT} /><F n="galleryThumbUrl" l="Gallery thumbnail image URL (optional)" v={ev.galleryThumbUrl} />
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="agendaLive" defaultChecked={ev.agendaLive} /> Agenda is live (shows "View Agenda" in the homepage hero)</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="agendaLive" defaultChecked={ev.agendaLive} /> Agenda is live (the Agenda page, the day cards on the homepage and "View Agenda" in the hero; otherwise "coming soon")</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="workshopsLive" defaultChecked={ev.workshopsLive} /> Pre-symposium workshops are live (the Workshops pages and workshop tickets; otherwise "coming soon")</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="certificatesLive" defaultChecked={ev.certificatesLive} /> E-certificates are available (the E-certificates page; otherwise "coming soon")</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="speakersLive" defaultChecked={ev.speakersLive} /> Speakers are live (shows "Explore Speakers" and the speakers section on the homepage)</label>
         <div className="sm:col-span-2"><button className="a-btn-primary">Save settings</button></div>
       </form>

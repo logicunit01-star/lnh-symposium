@@ -3,7 +3,7 @@ import { cache } from "react";
 import { db, schema as s } from "./db";
 
 /** Homepage defaults (homepage changes 11.11.2026) until the admin edits them in Event Settings. */
-export const TICKER_DEFAULT = ["Registrations are open", "Avail early bird discount", "Register now"];
+export const TICKER_DEFAULT = ["Avail Early-Bird Registration Discount", "Register Now", "Submit Your Abstract Online", "Pre-Symposium Workshops Coming Soon"]; // 20 Nov 2026
 export const GALLERY_DEFAULT = "https://www.lnh.edu.pk/gallery/symposium-2025-gallery";
 
 export const getEvent = cache(async () => {
@@ -49,7 +49,7 @@ export const HOME_TEXT = {
   day1: "Artificial Intelligence", day1Short: "AI", day2: "Robotics", day2Short: "Robotics", day3: "Digitization", day3Short: "Digitization",
   frontiersEyebrow: "Three days · three frontiers", frontiersTitle: "One theme.", frontiersHighlight: "Three frontiers.",
   frontiersSub: "Shaping the new era of healthcare, explored through the technologies reshaping how hospitals diagnose, operate and deliver care.",
-  glanceEyebrow: "At a glance", glanceTitle: "Three days on", glanceHighlight: "the frontier",
+  glanceEyebrow: "At a glance", glanceTitle: "Three Days of", glanceHighlight: "Insights & Innovation", // 20 Nov 2026
 } as const;
 export type HomeTextKey = keyof typeof HOME_TEXT;
 export const homeText = (e: { homeText?: Partial<Record<string, string>> | null }) =>
