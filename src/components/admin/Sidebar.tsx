@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { AtSign, MessageSquareText, CreditCard, UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck } from "lucide-react";
+import { AtSign, MessageSquareText, CreditCard, UserCheck, LayoutDashboard, Users, ScanLine, CalendarRange, FileText, Star, Mic2, Settings, UserCog, Inbox, Bell, LogOut, Menu, X, ExternalLink, ClipboardCheck, MapPinned, UserPlus, Building2, Presentation, LayoutGrid, Send, Image as ImageIcon, UtensilsCrossed, Mail, HandHeart, BadgeCheck, BookOpen } from "lucide-react";
 import { can, DEPT_ROLE_LABEL, ROLE_LABEL, type Perm } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +63,8 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: s
         })}
       </ul>
       <div className="border-t border-white/10 p-4">
+        {/* 23 Nov 2026: the user guide, for every login */}
+        <Link href="/admin/manual" onClick={() => setOpen(false)} className={cn("mb-2 flex items-center gap-2 text-xs hover:text-white", path.startsWith("/admin/manual") ? "font-semibold text-white" : "text-slate-400")}><BookOpen className="h-3.5 w-3.5" />Training Manual</Link>
         <Link href="/" target="_blank" className="mb-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white"><ExternalLink className="h-3.5 w-3.5" />View website</Link>
         <p className="truncate text-sm font-semibold text-white">{user.name}</p>
         <p className="truncate text-xs text-slate-400">{user.role === "DEPARTMENT" && user.depts.length ? "Department staff" : ROLE_LABEL[user.role] ?? user.role}</p>
