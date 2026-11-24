@@ -6,7 +6,7 @@ import { AlertTriangle, CreditCard, Landmark, Lock, ShieldCheck, Smartphone, Tic
 import { useCart } from "@/components/cart/CartProvider";
 import { useSubmit } from "@/components/ui/useForm";
 import { Alert } from "@/components/ui/Field";
-import { cn, pkr, processingFee, COUNTRIES, SPECIALTIES, TITLES } from "@/lib/utils";
+import { cn, pkr, processingFee, COUNTRIES, TITLES } from "@/lib/utils";
 import { PROVINCES, maskCnic, DIAL } from "@/lib/reg-fields";
 import { PhoneInput, splitPhone, joinPhone } from "@/components/ui/PhoneInput";
 
@@ -176,7 +176,8 @@ export function CheckoutClient({ welcome = false, contact, catalog, categories, 
                   className={cn("min-h-[44px] flex-1 rounded-xl border px-4 text-sm transition", det.gender === g ? "border-lnh-sky bg-lnh-sky/10 font-semibold text-white" : "border-white/15 text-slate-200 hover:border-white/40")}>{g}</button>))}
               </div>{fe("gender") ? <span className="err">{fe("gender")}</span> : <Need k="gender" />}</div>
             <label {...mark("institution")} className={cn("block", miss("institution") && "field-invalid")}><span className="label">Hospital / institution <span className="text-lnh-red">*</span></span><input className="input" value={det.institution} onChange={setD("institution")} autoComplete="organization" />{fe("institution") ? <span className="err">{fe("institution")}</span> : <Need k="institution" />}</label>
-            <label className="block"><span className="label">Specialty</span><input className="input" list="specialties" value={det.specialty} onChange={setD("specialty")} /><datalist id="specialties">{SPECIALTIES.map((x) => <option key={x} value={x} />)}</datalist></label>
+            {/* 24 Nov 2026 (LNH): a plain text field instead of the specialty list */}
+            <label className="block"><span className="label">Specialty</span><input className="input" type="text" maxLength={80} autoComplete="off" placeholder="e.g. Cardiology" value={det.specialty} onChange={setD("specialty")} /></label>
             <label className="block"><span className="label">Country</span><select className="input" value={det.country || "Pakistan"} onChange={setD("country")}>{COUNTRIES.map((c) => <option key={c}>{c}</option>)}</select></label>
             <label {...mark("cnic")} className={cn("block", miss("cnic") && "field-invalid")}><span className="label">{(det.country || "Pakistan") === "Pakistan" ? "CNIC (13 digits, no dashes, optional)" : "Passport no. (optional)"}</span><input className="input mono" inputMode={(det.country || "Pakistan") === "Pakistan" ? "numeric" : "text"} placeholder={(det.country || "Pakistan") === "Pakistan" ? "4210112345671" : ""} value={det.cnic} onChange={setD("cnic")} />{fe("cnic") && <span className="err">{fe("cnic")}</span>}</label>
             <label {...mark("address")} className={cn("block sm:col-span-2", miss("address") && "field-invalid")}><span className="label">Address <span className="text-lnh-red">*</span></span><input className="input" value={det.address} onChange={setD("address")} autoComplete="street-address" />{fe("address") ? <span className="err">{fe("address")}</span> : <Need k="address" />}</label>
