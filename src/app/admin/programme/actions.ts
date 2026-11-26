@@ -5,14 +5,14 @@ import { redirect } from "next/navigation";
 import { and, eq, ne } from "drizzle-orm";
 import { db, schema as s } from "@/lib/db";
 import { currentUser, requirePerm } from "@/lib/auth";
-import { can, deptsWith } from "@/lib/permissions";
+import { can, deptsWith, FLYER_LOCK_EDITORS } from "@/lib/permissions";
 import { getEvent } from "@/lib/event";
 import { logAbstract } from "@/lib/abstracts";
-import { dayNumber, editRule, flyerLocked, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes, snapshotOriginal } from "@/lib/programme";
+import { dayNumber, editRule, flyerLocked, revisionOpen, savePeople, sessionPrefillInput, sessionProposalInput, slotOf, slotTimes, snapshotOriginal } from "@/lib/programme";
 import { deptPeople, notifyDept } from "@/lib/dept-notify";
 import { currentDept } from "@/lib/dept";
 import { sendEmail, emailLayout } from "@/lib/notify";
-import { appUrl } from "@/lib/utils";
+import { appUrl, fmtDateTime } from "@/lib/utils";
 import { formatToType, isSpecialFormat, SPECIAL_DEPT, slotLabel } from "@/lib/scientific";
 
 export type ProposalResult = { error?: string; fields?: Record<string, string> } | null;
@@ -42,6 +42,15 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
   if (isDept) raw.department = dept;
   else if (isSpecialFormat(raw?.sessionFormat)) raw.department = SPECIAL_DEPT;
   if (!isDept && raw?.prefill && !isSpecialFormat(raw?.sessionFormat)) return savePrefill(u, raw, String(f.get("id") || "") || null);
+  return saveCore(u, isDept, dept, raw, editId, null);
+}
+
+/**
+ * The save itself. apply = the Scientific Committee approving a department's returned changes (26 Nov 2026): the stored
+ * draft is written to the live session with the committee's authority (no lock check) and nothing is redirected.
+ * A department save on a session that was sent back is kept as a draft (revision) and does not change the live session.
+ */
+async function saveCore(u: { sub: string; name: string; role: string }, isDept: boolean, dept: string | null, raw: any, idIn: string | null, apply: { note: string } | null): Promise<ProposalResult> {
   const p = sessionProposalInput.safeParse(raw);
   if (!p.success) { const fields: Record<string, string> = {}; p.error.issues.forEach((i) => { fields[i.path.join(".")] ??= i.message; }); return { error: "Please complete the highlighted fields.", fields }; }
   const d = p.data;
@@ -53,20 +62,23 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     const fixed = ev.sessionSlots.filter((x) => x.special === d.sessionFormat).map((x) => x.key);
     if (!fixed.length) return { error: `No ${d.sessionFormat.toLowerCase()} slot is defined in Event Settings.` };
     d.preferredSlots = fixed;
-  } else if (!isDept && !d.preferredSlots.length && !f.get("id")) {
+  } else if (!isDept && !d.preferredSlots.length && !idIn) {
     return { error: "Please complete the highlighted fields.", fields: { preferredSlots: "Choose at least one day and time slot" } };
   } else if (d.preferredSlots.some((k) => ev.sessionSlots.find((x) => x.key === k)?.special)) {
     return { error: "The plenary and debate slots are reserved for the committee's sessions.", fields: { preferredSlots: "Choose one of the speciality session slots" } };
   }
   // Session title is optional (Dashboard Instructions, revised 06-11-2026)
   if (!d.title) d.title = special ? (d.sessionFormat === "DEBATE" ? "Debate session" : "Plenary session") : `${d.department} session`;
-  const id = String(f.get("id") || "") || null;
+  const id = idIn;
   let existing: typeof s.sessions.$inferSelect | undefined;
+  let reopened = false;
   if (id) {
     [existing] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
     if (!existing?.proposal) return { error: "Session not found." };
-    const block = editRule({ role: u.role, isDept, ownDept: existing.department === dept, lockAt: ev.sciLockAt, locked: existing.locked, flyerLocked: flyerLocked(existing) });
-    if (block) return { error: block };
+    // sent back to the HOD for changes: the department may edit (as a draft) until the deadline
+    reopened = isDept && existing.department === dept && revisionOpen(existing);
+    const block = apply || reopened ? null : editRule({ role: u.role, isDept, ownDept: existing.department === dept, lockAt: ev.sciLockAt, locked: existing.locked, flyerLocked: flyerLocked(existing) });
+    if (block) return { error: isDept && existing.revisionStatus && !revisionOpen(existing) ? "The time to make changes has ended. Please ask the Scientific Committee to send the session back again." : block };
   } else if (ev.sciLockAt && new Date() > ev.sciLockAt && !["SC_CHAIR", "SCIENTIFIC_COMMITTEE", "SUPER_ADMIN"].includes(u.role)) return { error: "The agenda deadline has passed. Only the Scientific Committee can add sessions now." };
 
   // Presenters may reference accepted oral abstracts by ID
@@ -80,6 +92,15 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
       abstractId = ab.id;
     }
     presenters.push({ ...pr, abstractId });
+  }
+  // a session sent back to the HOD: keep the changes as a draft; the live session and the website change on SC approval
+  if (reopened && existing) {
+    await db.update(s.sessions).set({ revisionData: raw, revisionStatus: "SUBMITTED", revisionAt: new Date(), revisionBy: u.name }).where(eq(s.sessions.id, existing.id));
+    await log(existing.id, u, existing.status, existing.status, "Changes submitted by the department for Scientific Committee approval");
+    const to = ev.scEmail || ev.contactEmail;
+    if (to) await sendTemplate("AGENDA_CHANGES_SUBMITTED", to, { name: "Scientific Committee", session_name: existing.title, department: existing.department ?? "", note: existing.revisionNote ?? "", link: `${appUrl()}/admin/programme/${existing.id}` }, { ref: existing.title }).catch(() => {});
+    revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
+    redirect("/admin/dept/sessions?saved=changes");
   }
   const first = slotOf(ev.sessionSlots, existing?.slotKey ?? d.preferredSlots[0]);
   const times = first ? slotTimes(first) : { startsAt: new Date(`${ev.eventDays[0] ?? "2027-01-29"}T08:30:00+05:00`), endsAt: new Date(`${ev.eventDays[0] ?? "2027-01-29"}T10:30:00+05:00`) };
@@ -96,7 +117,7 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     const afterDeadline = !!ev.sciLockAt && new Date() > ev.sciLockAt;
     await db.update(s.sessions).set({ ...data, ...(completing ? { status: "SUBMITTED", submittedAt: new Date() } : {}) }).where(eq(s.sessions.id, existing.id));
     await log(existing.id, u, existing.status, completing ? "SUBMITTED" : existing.status,
-      completing ? "Programme details completed" : flyerLocked(existing) ? "Changed by the Scientific Sessions Chairperson after flyer approval" : afterDeadline && !isDept ? "Edited by the Scientific Committee after the deadline" : "Agenda edited");
+      apply ? `Department's changes approved by the Scientific Committee${apply.note ? `: ${apply.note}` : ""}` : completing ? "Programme details completed" : flyerLocked(existing) ? "Changed by the Scientific Sessions Chairperson after flyer approval" : afterDeadline && !isDept ? "Edited by the Scientific Committee after the deadline" : "Agenda edited");
   } else {
     firstSubmit = true;
     const slug = `sci-${d.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -120,7 +141,64 @@ export async function saveProposal(_: ProposalResult, f: FormData): Promise<Prop
     await notifyDept(d.department, "AGENDA_SUBMITTED", { session_name: d.title, department: d.department, status: "Submitted, awaiting Scientific Committee review", link: `${appUrl()}/admin/dept/sessions` }).catch(() => {});
   }
   revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
+  if (apply) return null;
   redirect(isDept ? `/admin/dept/sessions?saved=1` : `/admin/programme/${sid}?saved=1`);
+}
+
+/**
+ * 26 Nov 2026 (LNH): the Scientific Committee sends a session (also an approved one on the website) back to the department
+ * HOD for changes, with a note and an edit deadline. The website keeps the approved version meanwhile.
+ */
+export async function returnToDept(id: string, f: FormData) {
+  const u = await requirePerm("programme.edit");
+  const note = String(f.get("note") || "").trim().slice(0, 1000);
+  const days = Math.min(30, Math.max(1, Number(f.get("days")) || 3));
+  if (!note) redirect(`/admin/programme/${id}?err=note`);
+  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  if (!ses?.proposal || !ses.department || isSpecialFormat(ses.sessionFormat)) redirect(`/admin/programme/${id}?err=return`);
+  if (flyerLocked(ses) && !FLYER_LOCK_EDITORS.includes(u.role)) redirect(`/admin/programme/${id}?err=locked`);
+  const until = new Date(Date.now() + days * 864e5);
+  await db.update(s.sessions).set({ revisionStatus: "RETURNED", revisionNote: note, editGrantUntil: until, revisionAt: new Date(), revisionBy: u.name }).where(eq(s.sessions.id, id));
+  await log(id, u, ses.status, ses.status, `Sent back to the department for changes until ${fmtDateTime(until)}: ${note}`);
+  await notifyDept(ses.department, "AGENDA_RETURNED", { session_name: ses.title, department: ses.department, note, status: `Please make the changes and submit them by ${fmtDateTime(until)} (Pakistan time).`, link: `${appUrl()}/admin/dept/sessions?edit=${id}` }).catch(() => {});
+  revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
+  redirect(`/admin/programme/${id}?saved=returned`);
+}
+
+/** Approve the department's changes: they go live, and the regenerated flyer goes to the HOD for final approval again. */
+export async function acceptRevision(id: string, f: FormData) {
+  const u = await requirePerm("programme.approve");
+  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  if (!ses?.revisionData || ses.revisionStatus !== "SUBMITTED" || !ses.department) redirect(`/admin/programme/${id}?err=norevision`);
+  const note = String(f.get("note") || "").trim().slice(0, 1000);
+  const r = await saveCore(u, false, null, { ...ses.revisionData, department: ses.department }, id, { note });
+  if (r?.error) redirect(`/admin/programme/${id}?err=revision&msg=${encodeURIComponent(r.error)}`);
+  const special = isSpecialFormat(ses.sessionFormat);
+  const [now] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  await db.update(s.sessions).set({ revisionStatus: null, revisionData: null, revisionNote: null, editGrantUntil: null, reviewedAt: new Date(), reviewedById: u.sub,
+    ...(!special && now.status === "APPROVED" ? { flyerStatus: "PENDING", flyerNote: null } : {}) }).where(eq(s.sessions.id, id));
+  if (!special && now.status === "APPROVED") {
+    const ev = await getEvent();
+    const sl = slotOf(ev.sessionSlots, now.slotKey);
+    const vars = { session_name: now.title, department: ses.department, session_date: sl ? slotLabel(sl).split(" · ")[0] : "", session_time: sl ? `${sl.start}–${sl.end}` : "", venue: now.hall, status: "Your changes were approved by the Scientific Committee" };
+    await notifyDept(ses.department, "AGENDA_APPROVED", { ...vars, link: `${appUrl()}/admin/dept/sessions` }).catch(() => {});
+    await log(id, u, null, "FLYER_PENDING", "Updated session flyer sent to the HOD for final approval");
+    await notifyDept(ses.department, "SESSION_FLYER_READY", { ...vars, link: `${appUrl()}/admin/dept/flyers?s=${id}` }).catch(() => {});
+  }
+  revalidatePath("/", "layout");
+  redirect(`/admin/programme/${id}?saved=accepted`);
+}
+
+/** Withdraw the request (nothing changes on the website); any draft the department made is dropped. */
+export async function discardRevision(id: string, f: FormData) {
+  const u = await requirePerm("programme.edit");
+  const [ses] = await db.select().from(s.sessions).where(eq(s.sessions.id, id));
+  if (!ses?.revisionStatus) redirect(`/admin/programme/${id}`);
+  const note = String(f.get("note") || "").trim().slice(0, 1000);
+  await db.update(s.sessions).set({ revisionStatus: null, revisionData: null, revisionNote: null, editGrantUntil: null }).where(eq(s.sessions.id, id));
+  await log(id, u, ses.status, ses.status, `${ses.revisionStatus === "SUBMITTED" ? "Department's changes not accepted" : "Request for changes withdrawn"}; the approved version stays${note ? `: ${note}` : ""}`);
+  revalidatePath("/admin/programme", "layout"); revalidatePath("/admin/dept/sessions");
+  redirect(`/admin/programme/${id}?saved=discarded`);
 }
 
 /** Scientific Committee allots a slot and a room. */

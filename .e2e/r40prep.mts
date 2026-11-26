@@ -1,0 +1,22 @@
+// 26 Nov 2026: test data for "send back to the HOD" (an approved department session + a HOD login)
+import path from "node:path"; import Module from "node:module"; import { pathToFileURL } from "node:url"; import fs from "node:fs";
+const stub = pathToFileURL(path.join(process.cwd(), "scripts/server-only-stub.cjs")).href;
+(Module as any).registerHooks({ resolve: (spec: string, ctx: unknown, next: any) => (spec === "server-only" ? { url: stub, shortCircuit: true } : next(spec, ctx)) });
+if (fs.existsSync(".env")) process.loadEnvFile(".env");
+const { db } = await import(path.join(process.cwd(), "src/lib/db/index.ts")); const { sql } = await import("drizzle-orm");
+const bcrypt = (await import("bcryptjs")).default;
+const q = async (x: any) => { const r: any = await db.execute(x); return r.rows ?? r; };
+let [ses] = await q(sql`select id, title, department, status, flyer_status from sessions where proposal and department is not null and session_format not in ('PLENARY','DEBATE') order by created_at limit 1`);
+console.log("session", ses);
+await q(sql`update sessions set status='APPROVED', flyer_status='APPROVED', revision_status=null, revision_data=null, revision_note=null, edit_grant_until=null where id=${ses.id}`);
+await q(sql`update event set programme_released_at = coalesce(programme_released_at, now())`);
+const email = "hod.test@lnh.local.test";
+const [u] = await q(sql`select id from users where email=${email}`);
+const hash = await bcrypt.hash("HodTest!2026x", 10);
+const uid = u?.id ?? crypto.randomUUID();
+if (!u) await q(sql`insert into users (id, name, email, password_hash, role) values (${uid}, 'Test HOD', ${email}, ${hash}, 'DEPARTMENT')`);
+else await q(sql`update users set password_hash=${hash}, active=true, signed_out_at=null where id=${uid}`);
+await q(sql`delete from user_departments where user_id=${uid}`);
+await q(sql`insert into user_departments (user_id, department, role) values (${uid}, ${ses.department}, 'HEAD')`);
+fs.writeFileSync("/tmp/r40.json", JSON.stringify({ id: ses.id, title: ses.title, dept: ses.department, email, pw: "HodTest!2026x" }));
+process.exit(0);

@@ -275,7 +275,14 @@ export const sessions = pgTable("sessions", {
   preferredSlots: jsonb("preferred_slots").$type<string[]>().notNull().default([]),
   expectedAudience: integer("expected_audience"),
   slotKey: text("slot_key"), // allotted slot
-  editGrantUntil: timestamp("edit_grant_until", { withTimezone: true }), // SC Chair authorised a post-lock change
+  editGrantUntil: timestamp("edit_grant_until", { withTimezone: true }), // SC authorised a post-lock change: the HOD's edit deadline
+  // 26 Nov 2026: sent back to the HOD after approval. RETURNED = HOD editing; SUBMITTED = HOD's changes await the SC.
+  // revisionData = the HOD's form as a draft; the live record (and the website) change only when the SC approves it.
+  revisionStatus: text("revision_status"),
+  revisionNote: text("revision_note"),
+  revisionData: jsonb("revision_data").$type<Record<string, unknown>>(),
+  revisionAt: timestamp("revision_at", { withTimezone: true }),
+  revisionBy: text("revision_by"),
   // Marketing review of the generated workshop flyer: PENDING | APPROVED | CHANGES
   flyerStatus: text("flyer_status"),
   flyerNote: text("flyer_note"),

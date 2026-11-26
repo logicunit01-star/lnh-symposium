@@ -32,7 +32,7 @@ export const sessionProposalInput = z.object({
   presenters: z.array(presenter).max(20),
 }).superRefine((d, ctx) => {
   const special = d.sessionFormat === "PLENARY" || d.sessionFormat === "DEBATE";
-  const need: ["chair" | "coChair" | "moderator", boolean][] = [["chair", !special], ["coChair", !special], ["moderator", true]];
+  const need: ["chair" | "coChair" | "moderator", boolean][] = [["chair", !special], ["coChair", false], ["moderator", true]]; // co-chair optional for every session (LNH, 26 Nov 2026)
   for (const [k, required] of need) {
     const v = d[k];
     if (!required && !v.name && !v.phone && !v.email) continue;
@@ -77,6 +77,24 @@ export function editRule(opts: { role: string; isDept: boolean; ownDept: boolean
     : "Locked after the agenda deadline. Only the Scientific Committee can edit and finalise sessions.";
 }
 export const flyerLocked = (x: { type: string; proposal: boolean; flyerStatus: string | null }) => x.proposal && x.type !== "WORKSHOP" && x.flyerStatus === "APPROVED";
+
+/** 26 Nov 2026: a session the Scientific Committee sent back to the HOD; the HOD may edit (as a draft) until the deadline. */
+export const revisionOpen = (x: { revisionStatus?: string | null; editGrantUntil?: Date | null }, now = new Date()) =>
+  (x.revisionStatus === "RETURNED" || x.revisionStatus === "SUBMITTED") && (!x.editGrantUntil || x.editGrantUntil > now);
+
+/** The department form in readable lines, to show the HOD's proposed changes beside the approved version. */
+type Person = { name?: string; topic?: string; timeSlot?: string; designation?: string; affiliation?: string; abstractRef?: string };
+export function describeProposal(x: Record<string, any>, formats: Record<string, string>): [string, string][] {
+  const one = (p?: Person) => (p?.name ? p.name : "");
+  const many = (l?: Person[]) => (l ?? []).filter((p) => p?.name).map((p) => [p.timeSlot, p.name, p.abstractRef, p.topic ? `“${p.topic}”` : "", [p.designation, p.affiliation].filter(Boolean).join(", ")].filter(Boolean).join(" · ")).join("\n");
+  return [
+    ["Session title", x.title ?? ""],
+    ["Session type", `${formats[x.sessionFormat ?? ""] ?? x.sessionFormat ?? ""}${x.formatOther ? ` (${x.formatOther})` : ""}`],
+    ["Expected audience", String(x.expectedAudience ?? "")],
+    ["Chairperson", one(x.chair)], ["Co-chairperson", one(x.coChair)], ["Moderator", one(x.moderator)],
+    ["Panelists", many(x.panelists)], ["Speakers", many(x.speakers)], ["Presenters", many(x.presenters)],
+  ];
+}
 
 /** The department's agenda exactly as submitted, kept unchanged for the record (SC feedback). */
 export async function snapshotOriginal(sessionId: string, by: string) {

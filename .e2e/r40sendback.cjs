@@ -1,0 +1,26 @@
+// 26 Nov 2026: Scientific Committee sends an approved session back to the HOD; HOD edits (draft); SC approves. Server on 3100.
+const { chromium } = require('playwright'); const fs = require('fs'); const B = 'http://127.0.0.1:3100';
+const T = JSON.parse(fs.readFileSync('/tmp/r40.json', 'utf8'));
+(async () => { const b = await chromium.launch(); const o = (...a) => console.log(...a);
+  const sc = await b.newContext({ viewport: { width: 1366, height: 1000 } }); await sc.request.post(B + '/api/admin/login', { data: { email: 'admin@lnh.edu.pk', password: 'ChangeMe!2026' } });
+  const p = await sc.newPage(); await p.goto(B + '/admin/programme/' + T.id);
+  await p.locator('textarea[name=note][placeholder*="What should the department change"]').fill('Please add the second speaker and shorten the title.');
+  await p.locator('select[name=days]').selectOption('5'); await p.getByRole('button', { name: 'Send back to the HOD' }).click(); await p.waitForURL(/saved=returned/);
+  o('1 SC:', (await p.locator('text=Sent back to the department').first().innerText()).slice(0, 120));
+  const hod = await b.newContext({ viewport: { width: 1366, height: 1000 } }); await hod.request.post(B + '/api/admin/login', { data: { email: T.email, password: T.pw } });
+  const h = await hod.newPage(); await h.goto(B + '/admin/dept/sessions');
+  o('2 HOD list:', (await h.locator('text=Changes requested by the Scientific Committee').first().innerText()).slice(0, 140), '| button:', await h.getByRole('link', { name: 'Make changes' }).count());
+  await h.getByRole('link', { name: 'Make changes' }).first().click(); await h.waitForLoadState('networkidle');
+  o('3 HOD form banner:', await h.locator('text=The Scientific Committee has asked for changes').count(), '| save button:', await h.getByRole('button', { name: 'Save programme details' }).count());
+  const title = h.locator('label:has-text("Session title") + input, label:has-text("Session title") ~ input').first();
+  await title.fill('AI in the cath lab and the clinic'); await h.getByRole('button', { name: 'Save programme details' }).click(); await h.waitForURL(/saved=changes/, { timeout: 15000 }).catch(() => {});
+  o('4 HOD after save:', h.url().replace(B, ''), '|', (await h.locator('.bg-emerald-50').first().innerText().catch(() => '')).slice(0, 110));
+  const pub = await (await b.newContext()).newPage(); await pub.goto(B + '/programme/scientific'); const live1 = await pub.locator('text=AI in the cath lab and the clinic').count();
+  await p.goto(B + '/admin/programme/' + T.id); o('5 SC review table:', (await p.locator('table.a-table').first().innerText()).replace(/\s+/g, ' ').slice(0, 200), '| public still old title:', live1 > 0);
+  await p.screenshot({ path: '/tmp/fl/sb-review.png' });
+  await p.getByRole('button', { name: 'Approve changes' }).click(); await p.waitForURL(/saved=accepted/);
+  o('6 SC after approve:', (await p.locator('.bg-emerald-50').first().innerText()).slice(0, 120), '| title now:', await p.locator('h1').first().innerText());
+  await pub.goto(B + '/programme/scientific'); o('7 public new title:', await pub.locator('text=AI in the cath lab').count() > 0, '| old gone:', await pub.locator('text=AI in the cath lab and the clinic').count() === 0);
+  o('8 history:', (await p.locator('text=Changes submitted by the department').count()) > 0, (await p.locator("text=Department's changes approved").count()) > 0, (await p.locator('text=Updated session flyer sent to the HOD').count()) > 0);
+  await h.goto(B + '/admin/dept/sessions'); o('9 HOD list after:', await h.locator('text=Changes requested').count(), '| edit link:', (await h.locator('a[href*="edit="]').first().innerText()));
+  await b.close(); })();

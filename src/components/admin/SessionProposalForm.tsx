@@ -53,8 +53,8 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
   const PersonRow = ({ label, k, optional }: { label: string; k: "chair" | "coChair" | "moderator"; optional?: boolean }) => (
     <div className="grid gap-3 sm:grid-cols-3">
       <div><label className="a-label">{label} {optional ? <span className="font-normal text-slate-400">(optional)</span> : "*"}</label><input disabled={dis} value={d[k].name} onChange={(e) => set({ [k]: { ...d[k], name: e.target.value } } as any)} className="a-input" />{err(`${k}.name`)}</div>
-      <div><label className="a-label">WhatsApp / contact no. *</label><input disabled={dis} value={d[k].phone} onChange={(e) => set({ [k]: { ...d[k], phone: e.target.value } } as any)} className="a-input font-mono" />{err(`${k}.phone`)}</div>
-      <div><label className="a-label">Email *</label><input disabled={dis} type="email" value={d[k].email} onChange={(e) => set({ [k]: { ...d[k], email: e.target.value } } as any)} className="a-input" />{err(`${k}.email`)}</div>
+      <div><label className="a-label">WhatsApp / contact no.{optional ? "" : " *"}</label><input disabled={dis} value={d[k].phone} onChange={(e) => set({ [k]: { ...d[k], phone: e.target.value } } as any)} className="a-input font-mono" />{err(`${k}.phone`)}</div>
+      <div><label className="a-label">Email{optional ? "" : " *"}</label><input disabled={dis} type="email" value={d[k].email} onChange={(e) => set({ [k]: { ...d[k], email: e.target.value } } as any)} className="a-input" />{err(`${k}.email`)}</div>
     </div>
   );
   const GuestList = ({ k, label }: { k: "panelists" | "speakers"; label: string }) => (
@@ -135,7 +135,7 @@ export function SessionProposalForm({ slots, departments, fixedDept, templates, 
       <section className="a-card space-y-4 p-6">
         <p className="font-display text-base font-bold">7–9 · {special ? "Moderator, Chairperson and Co-Chairperson" : "Chairperson, Co-Chairperson and Moderator"}</p>
         {PersonRow({ label: "Chairperson", k: "chair", optional: special })}
-        {PersonRow({ label: "Co-Chairperson", k: "coChair", optional: special })}
+        {PersonRow({ label: "Co-Chairperson", k: "coChair", optional: true })}
         {PersonRow({ label: "Moderator (from LNH)", k: "moderator" })}
       </section>
 

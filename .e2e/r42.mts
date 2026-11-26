@@ -1,0 +1,10 @@
+import path from "node:path"; import Module from "node:module"; import { pathToFileURL } from "node:url"; import fs from "node:fs";
+const stub = pathToFileURL(path.join(process.cwd(), "scripts/server-only-stub.cjs")).href;
+(Module as any).registerHooks({ resolve: (spec: string, ctx: unknown, next: any) => (spec === "server-only" ? { url: stub, shortCircuit: true } : next(spec, ctx)) });
+if (fs.existsSync(".env")) process.loadEnvFile(".env");
+const { db } = await import(path.join(process.cwd(), "src/lib/db/index.ts")); const { sql } = await import("drizzle-orm");
+const T = JSON.parse(fs.readFileSync("/tmp/r40.json", "utf8"));
+const arg = process.argv[2];
+await db.execute(arg === "reject" ? sql`update sessions set status='REJECTED', review_note='Overlaps with the cardiology plenary', reviewed_at=now() where id=${T.id}` : sql`update sessions set status='APPROVED', review_note=null where id=${T.id}`);
+await db.execute(sql`update event set programme_released_at = null`);
+process.exit(0);

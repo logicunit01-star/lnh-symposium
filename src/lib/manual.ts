@@ -328,8 +328,8 @@ export const MANUAL: ManualChapter[] = [
       },
       {
         id: "wp-daily", title: "Daily requirements", perm: "workshops", where: "Workshop Programme → Daily",
-        summary: "One consolidated sheet per day for the Duty Officer, Skill Lab and stores: workshops, rooms, times, people and equipment.",
-        keywords: "daily requirements sheet duty officer skill lab stores equipment",
+        summary: "One consolidated sheet per day for the Duty Officer, Skill Lab and stores: workshops, rooms, times, people and equipment. Pick a day, or enter From and To dates for a range: each workshop day in it gets its own sheet (its own printed page), with totals for the range on top.",
+        keywords: "daily requirements sheet duty officer skill lab stores equipment date range from to print",
       },
       {
         id: "venues", title: "Venues & Map", perm: "venues", where: "Venues & Map",
@@ -372,6 +372,22 @@ export const MANUAL: ManualChapter[] = [
           "The Scientific Committee can also enter every session itself in Scientific Programme → New session, without the department.",
         ],
         keywords: "session agenda department submit chair speaker presenter template deadline lock original",
+      },
+      {
+        id: "send-back", title: "Sending a session back to the HOD for changes", perm: ["programme.edit", "dept.sessions"], where: "Scientific Programme → open a session → Send back to the HOD for changes",
+        summary: "The Scientific Committee can return any department session to its HOD for changes, also after it is approved and on the website. The website keeps showing the approved version until the committee approves the HOD's changes.",
+        steps: [
+          "Scientific Committee: open the session, write what should change, choose the time for changes (1 to 14 days) and press Send back to the HOD. The HOD is emailed with the note and the deadline.",
+          "HOD: the session shows \"Changes requested\" in Session Agenda. Press Make changes, edit the form and submit before the deadline. The changes are saved as a draft; the website does not change yet. Until the deadline the HOD can adjust them again.",
+          "Scientific Committee: an email says the changes are in, and the session shows \"Changes to review\" with a table of what changed (now on the website / proposed).",
+          "Approve changes (SC Chair or Super Admin): the changes go live, and the regenerated flyer goes to the HOD for final approval again. Or Don't accept, keeping the approved version, or Send back again with a new note.",
+        ],
+        tips: [
+          "While the request is open, the committee can withdraw it; nothing changes on the website.",
+          "A session whose flyer the HOD already approved can be sent back only by the SC Chair or Super Admin.",
+          "Every step is written to the session's history.",
+        ],
+        keywords: "send back return HOD changes edit after approval revision draft re-approve resubmit",
       },
       {
         id: "dept-flyers", title: "Session flyers (HOD approval)", perm: "dept.flyers", where: "Session Flyers",

@@ -101,7 +101,7 @@ export default async function Programme({ searchParams }: { searchParams: { day?
               <td className="text-xs">{SESSION_FORMATS[p.sessionFormat ?? ""]}</td>
               <td className="text-xs">{p.preferredSlots.map((k) => { const x = slotOf(ev.sessionSlots, k); return x ? slotLabel(x) : k; }).join(" / ")}</td>
               <td className="text-sm">{p.expectedAudience}</td>
-              <td><WpStatus s={p.status} /></td>
+              <td><WpStatus s={p.status} />{p.revisionStatus && <span className={cn("mt-1 block w-fit rounded-full px-2 py-0.5 text-[11px] font-bold", p.revisionStatus === "SUBMITTED" ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800")}>{p.revisionStatus === "SUBMITTED" ? "Changes to review" : "With HOD for changes"}</span>}</td>
             </tr>
           ))}</tbody>
         </table>

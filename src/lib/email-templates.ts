@@ -61,12 +61,12 @@ export const TEMPLATE_KEYS = [
   "WORKSHOP_REQUEST_APPROVED", "WORKSHOP_REQUEST_REJECTED", "WORKSHOP_FLYER_APPROVED", "WAITLIST_SEAT_FREE", "WORKSHOP_CANCELLED",
   "CERTIFICATE_READY", "WORKSHOP_CERTIFICATE", "WORKSHOP_FEEDBACK_REQUEST",
   "ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_ACCEPTED_POSTER", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER",
-  "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "SESSION_DETAILS_REQUEST",
+  "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "SESSION_DETAILS_REQUEST", "AGENDA_RETURNED", "AGENDA_CHANGES_SUBMITTED",
   "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER",
   "CONTACT_ENQUIRY", "BROADCAST",
 ] as const;
 /** The Scientific Committee templates (29 Oct 2026) keep the CC address from Event Settings unless a CC is set on the template. */
-export const SC_KEYS: TemplateKey[] = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_ACCEPTED_POSTER", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"];
+export const SC_KEYS: TemplateKey[] = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_ACCEPTED_POSTER", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "AGENDA_RETURNED", "AGENDA_CHANGES_SUBMITTED", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"];
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDef> = {
@@ -275,6 +275,30 @@ Status: {{status}}
 
 The session flyer will be sent to you for final approval.`,
     buttonLabel: "View your agenda",
+  },
+  AGENDA_RETURNED: {
+    category: "Scientific programme (departments)", name: "Session sent back to the HOD for changes", audience: "Department HOD", when: "When the Scientific Committee sends an approved session back for changes",
+    subject: "{{event_name}}: changes requested · {{session_name}}",
+    body: `Dear {{name}},
+
+The Scientific Committee has sent the scientific session **"{{session_name}}"** ({{department}}) back to you for changes.
+
+Changes requested: {{note}}
+
+{{status}}
+
+The website keeps showing the approved version until the Scientific Committee approves your changes.`,
+    buttonLabel: "Edit the session",
+  },
+  AGENDA_CHANGES_SUBMITTED: {
+    category: "Scientific programme (departments)", name: "Department's changes ready for review", audience: "Scientific Committee email (Event Settings)", when: "When the HOD submits changes to a session that was sent back",
+    subject: "{{event_name}}: changes submitted · {{session_name}}",
+    body: `The department of {{department}} has submitted changes to the scientific session **"{{session_name}}"**.
+
+Your note was: {{note}}
+
+Please review the changes and approve them, send them back again, or discard them. Until then the website shows the approved version.`,
+    buttonLabel: "Review the changes",
   },
   SESSION_FLYER_READY: {
     category: "Scientific programme (departments)", name: "Session flyer ready for HOD approval", audience: "Department HOD", when: "When the flyer is generated after content approval",

@@ -131,7 +131,7 @@ export default async function Emails({ searchParams }: { searchParams: { tab?: s
   const mailboxes = await db.select({ id: s.mailAccounts.id, label: s.mailAccounts.label, fromName: s.mailAccounts.fromName, fromAddress: s.mailAccounts.fromAddress, isDefault: s.mailAccounts.isDefault, active: s.mailAccounts.active }).from(s.mailAccounts);
   const dflt = mailboxes.find((m) => m.isDefault && m.active) ?? mailboxes.find((m) => m.active);
   const editSender = can(u, "mail");
-  const SC = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"].includes(sel.key);
+  const SC = ["ABSTRACT_RECEIVED", "ABSTRACT_ACCEPTED", "ABSTRACT_REJECTED", "INVITE_SPEAKER", "INVITE_CHAIR", "INVITE_REMINDER", "AGENDA_SUBMITTED", "AGENDA_APPROVED", "SESSION_FLYER_READY", "AGENDA_RETURNED", "AGENDA_CHANGES_SUBMITTED", "WORKSHOP_REMINDER", "SYMPOSIUM_REMINDER"].includes(sel.key);
   return (
     <>
       {head}
