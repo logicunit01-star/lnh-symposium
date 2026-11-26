@@ -40,7 +40,7 @@ export const signupInput = z.object({
   firstName: name50,
   lastName: name50,
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
-  phone: z.string().trim().refine((v) => /^03\d{2}-?\d{7}$/.test(v) || INTL_RE.test(v), "Use 03XX-XXXXXXX, or choose the country code for a number abroad"),
+  phone: z.string().trim().refine((v) => /^03\d{2}-?\d{7}$/.test(v) || INTL_RE.test(v), "Enter the mobile number after +92 as 3XX-XXXXXXX, or choose the country code for a number abroad"),
   password: passwordRule,
 });
 

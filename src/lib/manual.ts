@@ -162,7 +162,7 @@ export const MANUAL: ManualChapter[] = [
         steps: [
           "Sign up with the short form; a code is sent by email, and by SMS when SMS codes are set up (xNotify template for \"One-time code (OTP) by SMS\").",
           "Enter the code within 5 minutes. After 5 wrong attempts a new code is needed; at most 4 codes per request.",
-          "Mobile numbers: Pakistan as 03XX-XXXXXXX; other countries choose the country code (e.g. +971) and type the number.",
+          "Mobile numbers: the country code is chosen first (+92 by default), then the number without its leading 0: for Pakistan 3XX-XXXXXXX (a 0 typed first is dropped, and the number must start with 3); for other countries the local number (e.g. +971 then 501234567).",
         ],
         tips: ["Codes are never shown in the portal's logs. If a code does not arrive, check the Email settings delivery mode and the WhatsApp / SMS message log."],
         keywords: "sign up signup account OTP code SMS email verify password reset mobile country code",

@@ -25,7 +25,7 @@ export const basicInfo = z.object({
   firstName: z.string().trim().min(1, "Required").max(60),
   lastName: z.string().trim().min(1, "Required").max(60),
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
-  phone: z.string().trim().refine(phoneOk, "Use 03XX-XXXXXXX, or choose the country code for a number abroad"),
+  phone: z.string().trim().refine(phoneOk, "Enter the mobile number after +92 as 3XX-XXXXXXX, or choose the country code for a number abroad"),
   whatsapp: z.string().trim().max(20).optional().or(z.literal("")).refine((v) => !v || phoneOk(v) || PHONE_RE.test(v) || /^\+?\d[\d\s-]{7,18}$/.test(v), "Enter a valid WhatsApp number"),
   address: z.string().trim().min(5, "Required").max(250),
   country: z.string().trim().max(60).optional().or(z.literal("")),
