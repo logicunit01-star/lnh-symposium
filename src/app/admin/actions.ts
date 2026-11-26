@@ -121,7 +121,7 @@ export async function saveSession(id: string | null, f: FormData) {
     type: str(f, "type") as any, title, description: str(f, "description"), track: str(f, "track"), day,
     startsAt: at(str(f, "start")!), endsAt: at(str(f, "end")!), hall: str(f, "hall"), capacity: num(f, "capacity"),
     fee: num(f, "fee") ?? 0, earlyFee: num(f, "earlyFee"), registrable: bool(f, "registrable"),
-    department: str(f, "department"), format: str(f, "format"), status: str(f, "status") || "APPROVED", feedbackOpen: bool(f, "feedbackOpen"), cmeHours: num(f, "cmeHours"),
+    department: str(f, "department"), format: str(f, "format"), status: str(f, "status") || "APPROVED", feedbackOpen: bool(f, "feedbackOpen"), // CME hours no longer used (27 Nov 2026)
   };
   let sid = id;
   if (id) await db.update(s.sessions).set(data).where(eq(s.sessions.id, id));

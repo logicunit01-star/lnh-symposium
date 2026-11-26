@@ -130,7 +130,7 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
       <section className="a-card p-6">
         <h2 className="mb-4 font-display text-base font-bold text-slate-900">2 · Schedule and venue</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div><L hint="(Monday to Saturday)">Proposed date</L><input type="date" name="date" required min={keepsDate ? undefined : minDate || undefined} max={window.to || undefined} value={date} onChange={(e) => setDate(e.target.value)} className={`a-input ${dateErr ? "border-rose-400" : ""}`} aria-invalid={!!dateErr} aria-describedby="date-help" />
+          <div><L>Proposed date</L><input type="date" name="date" required min={keepsDate ? undefined : minDate || undefined} max={window.to || undefined} value={date} onChange={(e) => setDate(e.target.value)} className={`a-input ${dateErr ? "border-rose-400" : ""}`} aria-invalid={!!dateErr} aria-describedby="date-help" />
             <p id="date-help" className={`mt-1 text-xs ${dateErr ? "font-semibold text-rose-600" : "text-slate-500"}`}>{dateErr || (week ? <>Theme week {week} · {weeks[week - 1]?.label}</> : "Outside the theme weeks")}</p></div>
           <div><L>Duration</L>
             <select name="duration" value={dur} onChange={(e) => { const d = Number(e.target.value); setDur(d); if (d < 0) setStart("09:00"); else if (toMin(start) + d > 24 * 60) setStart(toHM(24 * 60 - d)); }} className="a-input">{durs.map((d) => <option key={d} value={d}>{durLabel(d)}</option>)}</select>
@@ -173,11 +173,11 @@ export function WorkshopForm({ venues, weeks, window, fixedDepartment, departmen
                 <div><p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500"><Building2 className="h-3.5 w-3.5" />Location</p><p className="mt-1 font-medium text-slate-800">{v.building}{v.floor ? `, ${v.floor} floor` : ""}</p>{v.directions && <p className="mt-1 text-xs text-slate-500">{v.directions}</p>}</div>
               </div>
             ) : <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-400">Choose a room to see its capacity, online facility and location.</p>}</>}
-            <div className="grid gap-4 sm:grid-cols-4">
+            {/* 27 Nov 2026 (LNH): CME hours no longer asked for */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <div><L>Seat cap</L><input type="number" name="capacity" min={1} max={online ? undefined : v?.capacity} required value={cap} onChange={(e) => setCap(Number(e.target.value))} className="a-input" /></div>
               <div><L>Fee (PKR)</L><input type="number" name="fee" min={0} step={100} defaultValue={init.fee ?? 2000} className="a-input" /></div>
               
-              <div><L>CME hours</L><select name="cmeHours" defaultValue={String(init.cmeHours ?? 3)} className="a-input">{[1, 2, 3, 3.5, 4, 5, 6, 7, 8].map((x) => <option key={x} value={x}>{x}</option>)}</select></div>
             </div>
           </div>
           <div className="rounded-xl border border-slate-200 p-2">

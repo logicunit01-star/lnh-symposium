@@ -221,7 +221,7 @@ export async function certificatePdf(p: { name: string; certificateNo: string; e
     const lines = wrap(safe("Including: " + p.items.join("; ")), f, 10, 600).slice(0, 3);
     lines.forEach((l, i) => center(l, 258 - i * 14, 10, f, GREY));
   }
-  if (p.cme) center(`CME credit hours: ${p.cme}`, 210, 10, b, BLUE);
+  // CME credit hours are no longer printed (LNH, 27 Nov 2026)
   const sig = (x: number, label: string) => {
     page.drawLine({ start: { x, y: 130 }, end: { x: x + 170, y: 130 }, thickness: 0.8, color: INK });
     page.drawText(label, { x: x + (170 - f.widthOfTextAtSize(label, 9)) / 2, y: 116, size: 9, font: f, color: GREY });
@@ -412,7 +412,6 @@ export async function workshopFlyerPdf(w: FlyerInput, ev: FlyerEvent) {
         : ["Date", fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })],
       ["Time", `${fmtTime24(w.startsAt)} - ${fmtTime24(w.endsAt)}`, (w.days ?? 1) > 1 ? "Each day, Pakistan time" : "Pakistan time"],
       w.mode === "ONLINE" ? ["Venue", "Online", "Link sent to registered participants"] : ["Venue", w.hall ?? "-", w.mode === "HYBRID" ? `${w.building ? `${w.building} · ` : ""}also online` : w.building ?? undefined],
-      ["CME", w.cmeHours != null ? `${w.cmeHours} contact hours` : "-"],
       ["Fee", pkr(w.fee), "No symposium registration needed"],
       ["Seats", w.capacity != null ? `${w.capacity} only` : "Open", w.left != null ? `${w.left} left at print time` : undefined],
     ],

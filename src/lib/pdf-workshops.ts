@@ -153,7 +153,7 @@ export async function workshopDetailPdf(r: WpRow, o: { eventName: string; depart
   grid([
     [w.days > 1 ? "Dates" : "Date", `${dateText(r)}${w.days > 1 ? ` (${w.days} full days)` : ""}`], ["Time (24h)", r.time.replace("–", "-")], ["Venue", venueText(r)],
     ["Mode", { ONSITE: "Onsite", ONLINE: "Online", HYBRID: "Hybrid" }[w.mode] ?? w.mode], ["Seat cap", w.capacity], ["Fee", pkr(w.fee)],
-    ["CME hours", w.cmeHours], ["Format", w.format], ["Target audience", w.targetAudience],
+    ["Format", w.format], ["Target audience", w.targetAudience],
     ["Organising person", w.organiser], ["Contributing departments", o.departments.join(", ")], ["Submitted", w.submittedAt ? fmtDateTime(w.submittedAt) : null],
     ...(w.onlineLink ? [["Online link", w.onlineLink] as [string, string]] : []),
   ]);

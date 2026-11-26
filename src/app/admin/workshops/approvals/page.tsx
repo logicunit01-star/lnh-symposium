@@ -29,7 +29,7 @@ export default async function Approvals() {
                 <span className="text-xs text-slate-400">submitted {r.w.submittedAt ? fmtDateTime(r.w.submittedAt) : "—"}</span></div>
               <h2 className="mt-2 font-display text-lg font-bold text-slate-900">{r.w.workshopNo && <span className="mr-2 font-mono text-sm text-slate-500">{r.w.workshopNo}</span>}<Link href={`/admin/workshops/${r.w.id}`} className="hover:text-lnh-blue">{r.w.title}</Link></h2>
               <p className="text-sm text-slate-500">{r.w.department}{r.w.category ? ` · ${CATEGORY_LABEL[r.w.category]}` : ""}{r.w.leadFaculty ? ` · Lead: ${r.w.leadFaculty}` : ""}</p>
-              <p className="mt-2 font-mono text-xs text-slate-600">{fmtDate(r.w.startsAt, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })} · {r.time} · {r.venue?.name ?? r.w.hall} · cap {r.w.capacity} · {pkr(r.w.fee)} · {r.w.cmeHours ?? "—"} CME</p>
+              <p className="mt-2 font-mono text-xs text-slate-600">{fmtDate(r.w.startsAt, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })} · {r.time} · {r.venue?.name ?? r.w.hall} · cap {r.w.capacity} · {pkr(r.w.fee)}</p>
               <p className="mt-1 text-xs text-slate-500">{r.w.facilitators} facilitators, {r.w.volunteers} volunteers, {r.w.technicians} technicians · {r.w.equipment.length} equipment lines</p>
               {r.w.description && <p className="mt-2 line-clamp-2 text-sm text-slate-600">{r.w.description}</p>}
             </div>

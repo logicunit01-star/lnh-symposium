@@ -118,7 +118,7 @@ export const MANUAL: ManualChapter[] = [
       },
       {
         id: "workshop-catalogue", title: "Workshop catalogue",
-        summary: "Lists approved workshops by theme week and date, with search, a calendar and filters. Each card shows the department, workshop ID (WS-0001), Workshop Director, date, time, venue, CME hours, seats left and fee, with Add ticket. Each workshop also has its own shareable page and flyer.",
+        summary: "Lists approved workshops by theme week and date, with search, a calendar and filters. Each card shows the department, workshop ID (WS-0001), Workshop Director, date, time, venue, seats left and fee, with Add ticket. Each workshop also has its own shareable page and flyer.",
         tips: [
           "Shows \"Coming soon\" until \"Pre-symposium workshops are live\" is ticked; workshop tickets cannot be bought until then.",
           "A full workshop offers a waiting list.",
@@ -298,15 +298,15 @@ export const MANUAL: ManualChapter[] = [
         fields: [
           ["Title and flyer summary", "Title up to 100 characters (best under 70 for the flyer); flyer summary up to 140."],
           ["Department and category", "Owning department, contributing departments, category A (multidisciplinary) or B (departmental)."],
-          ["Date, start time and duration", "No past dates; inside the workshop window (Event settings). Sundays are allowed. 2- or 3-day workshops run 09:00-17:00 each day."],
+          ["Date, start time and duration", "No past dates; inside the workshop window (Event settings). Any day of the week, Sundays included. 2- or 3-day workshops run 09:00-17:00 each day."],
           ["Venue and seat cap", "The room check runs as you choose; a clash shows other free rooms and other free dates. The seat cap cannot exceed the room."],
           ["Mode", "Onsite, Online (with link) or Hybrid."],
-          ["Fee and CME hours", "Workshop fee (one price) and CME hours."],
+          ["Fee", "Workshop fee (one price). CME hours are no longer asked for (27 Nov 2026)."],
           ["Workshop Director and facilitators", "Name, degrees, contact, short profile, facilitator names."],
           ["Content", "Description, educational objectives, preliminary programme, target audience, format."],
           ["People and equipment", "Numbers of facilitators, volunteers, technicians; equipment items with quantity and source."],
         ],
-        keywords: "form a request new workshop director date sunday venue room clash capacity fee cme equipment facilitators",
+        keywords: "form a request new workshop director date sunday venue room clash capacity fee equipment facilitators",
       },
       {
         id: "wp-approvals", title: "Approvals queue", perm: "workshops.review", where: "Workshop Programme → Approvals",

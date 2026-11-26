@@ -33,7 +33,6 @@ export async function SessionForm({ session, assigned = [] }: { session?: Sessio
       <div><label className="a-label">Capacity (blank = unlimited)</label><input name="capacity" type="number" min={0} defaultValue={x?.capacity ?? ""} className="a-input" /></div>
       <div><label className="a-label">Fee (PKR, additional)</label><input name="fee" type="number" min={0} defaultValue={x?.fee ?? 0} className="a-input" /></div>
       <div><label className="a-label">Early-bird fee (PKR)</label><input name="earlyFee" type="number" min={0} defaultValue={x?.earlyFee ?? ""} className="a-input" /></div>
-      <div><label className="a-label">CME hours</label><input name="cmeHours" type="number" step="0.5" min={0} defaultValue={x?.cmeHours ?? ""} className="a-input" /></div>
       <div className="flex items-end gap-6 pb-2 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" name="registrable" defaultChecked={x?.registrable ?? true} /> Requires registration</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="feedbackOpen" defaultChecked={x?.feedbackOpen ?? true} /> Feedback open</label>

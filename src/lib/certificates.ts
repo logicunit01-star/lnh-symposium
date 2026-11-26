@@ -34,11 +34,10 @@ export async function certificateFor(token: string) {
   if (!r?.certificateNo) return null;
   const ev = await getEvent();
   const attended = r.items.filter((i) => i.session.type === "WORKSHOP" && (i.attendedAt || !r.checkedInAt));
-  const cme = attended.reduce((a, i) => a + (i.session.cmeHours ?? 0), 0);
   const pdf = await certificatePdf({
     name: `${r.title} ${r.firstName} ${r.lastName}`, certificateNo: r.certificateNo, eventName: ev.name, theme: ev.theme,
     dates: `${fmtDate(ev.startDate, { day: "numeric", month: "long" })} - ${fmtDate(ev.endDate)}`,
-    items: attended.map((i) => `Workshop: ${i.session.title}`), cme: cme || undefined,
+    items: attended.map((i) => `Workshop: ${i.session.title}`), // no CME line (27 Nov 2026)
   });
   return { pdf, no: r.certificateNo };
 }
@@ -75,7 +74,7 @@ export async function workshopCertificateFor(itemId: string, token: string) {
   const dates = w.days > 1 ? `${fmtDate(w.startsAt, { day: "numeric", month: "long" })} - ${fmtDate(w.endsAt)}` : fmtDate(w.startsAt);
   const pdf = await certificatePdf({
     name: `${r.title} ${r.firstName} ${r.lastName}`, certificateNo: it.certNo, eventName: ev.name, theme: ev.theme, dates,
-    items: [`Workshop: ${w.title}`], cme: w.cmeHours ?? undefined,
+    items: [`Workshop: ${w.title}`],
   });
   return { pdf, no: it.certNo };
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Award, CalendarDays, Clock, Download, MapPin, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, Download, MapPin, Users } from "lucide-react";
 import { getEvent, isEarlyBird } from "@/lib/event";
 import { getProgrammeItem, seatsTaken } from "@/lib/queries";
 import { toWorkshopDTO } from "@/lib/workshops";
@@ -41,7 +41,6 @@ export default async function WorkshopPage({ params }: { params: { slug: string 
             <li className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-lnh-sky" />{w.dateLabel}</li>
             <li className="flex items-center gap-2"><Clock className="h-5 w-5 text-lnh-sky" />{w.timeLabel} PKT</li>
             {w.hall && <li className="flex items-center gap-2"><MapPin className="h-5 w-5 text-lnh-sky" />{w.venueId ? <a href="/venues#guide" className="underline">{w.hall}</a> : w.hall}{w.building ? `, ${w.building}` : ""}</li>}
-            {w.cme != null && <li className="flex items-center gap-2"><Award className="h-5 w-5 text-lnh-gold" />{w.cme} CME hours</li>}
             {w.capacity != null && <li className="flex items-center gap-2"><Users className="h-5 w-5 text-lnh-sky" />{full ? "Fully booked" : `${w.left} of ${w.capacity} seats left`}</li>}
           </ul>
           {w.description && <div className="prose-lnh mt-8 max-w-3xl"><p>{w.description}</p></div>}

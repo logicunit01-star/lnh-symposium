@@ -114,7 +114,7 @@ export async function submitWorkshop(_: FormResult, f: FormData): Promise<FormRe
     title, description: str(f, "description"), flyerSummary: flyerSummary ?? null, department, format: str(f, "format"),
     category: str(f, "category") === "A" ? "A" : "B", themeWeek: themeWeekOf(date, ev.themeWeeks),
     startsAt, endsAt, venueId, hall: venue ? venue.name : "Online", capacity, days, mode, onlineLink,
-    organiser, objectives, targetAudience, prelimProgramme: str(f, "prelimProgramme"), facilitatorNames, fee, earlyFee, cmeHours: str(f, "cmeHours") ? Number(str(f, "cmeHours")) : null,
+    organiser, objectives, targetAudience, prelimProgramme: str(f, "prelimProgramme"), facilitatorNames, fee, earlyFee, // CME hours no longer collected (27 Nov 2026); existing values are left as they are
     leadFaculty: str(f, "leadFaculty"), facultyDegrees: str(f, "facultyDegrees"), facultyContact: contact, facultyProfile: str(f, "facultyProfile"),
     facilitators: facilitatorNames.length, volunteers: int(f, "volunteers"), technicians: int(f, "technicians"),
     equipment: parseEquipment(str(f, "equipment")),

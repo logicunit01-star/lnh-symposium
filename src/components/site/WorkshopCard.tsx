@@ -1,5 +1,5 @@
 "use client";
-import { Award, CalendarDays, Clock, MapPin, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
 import type { WorkshopDTO } from "@/lib/workshops";
 import { AddTicket } from "@/components/cart/CartDrawer";
 import { WaitlistButton } from "./WaitlistButton";
@@ -33,7 +33,6 @@ export function WorkshopCard({ w, compact }: { w: WorkshopDTO; compact?: boolean
         <li className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-lnh-sky" />{w.dateLabel}</li>
         <li className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-lnh-sky" />{w.timeLabel}</li>
         <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-lnh-sky" />{w.venueId ? <a href="/venues#guide" title={w.building ?? "Show on campus map"} className="underline decoration-white/20 underline-offset-2 hover:text-lnh-sky">{w.hall}</a> : w.hall}</li>
-        {w.cme != null && <li className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5 text-lnh-gold" />{w.cme} CME hours</li>}
       </ul>
       {w.capacity != null && (
         <div className="mt-4">

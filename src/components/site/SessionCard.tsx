@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, MapPin, Users, Award, Ticket } from "lucide-react";
+import { Clock, MapPin, Users, Ticket } from "lucide-react";
 import type { ProgrammeSession } from "@/lib/queries";
 import { cn, fmtDate, fmtTime, pkr, SESSION_TYPE_LABEL } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
@@ -26,7 +26,6 @@ export function SessionCard({ s, taken, early, showDate, cta, href }: { s: Progr
       <div className="flex flex-wrap items-center gap-2">
         <span className={cn("rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest", TYPE_STYLE[s.type])}>{SESSION_TYPE_LABEL[s.type]}</span>
         {s.track && <span className="chip">{s.track}</span>}
-        {s.cmeHours ? <span className="chip gap-1"><Award className="h-3 w-3" />{s.cmeHours} CME</span> : null}
       </div>
       <h3 className="mt-4 font-display text-xl font-semibold leading-snug text-white">{href ? <Link href={href} className="hover:text-lnh-sky hover:underline">{s.title}</Link> : s.title}</h3>
       {s.description && <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-400">{s.description}</p>}

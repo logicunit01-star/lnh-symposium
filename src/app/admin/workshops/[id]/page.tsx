@@ -73,7 +73,7 @@ export default async function WorkshopDetail({ params, searchParams }: { params:
               <F l={w.days > 1 ? "Dates" : "Date"} v={w.days > 1 ? `${fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "short" })} to ${fmtDate(w.endsAt, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} (${w.days} full days)` : fmtDate(w.startsAt, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} />
               <F l="Time (24h)" v={<span className="font-mono">{row.time}</span>} />
               <F l="Venue" v={w.mode === "ONLINE" ? "Online" : venue ? `${venue.name}, ${venue.building}` : w.hall} />
-              <F l="Seat cap" v={w.capacity} /><F l="Fee" v={pkr(w.fee)} /><F l="CME hours" v={w.cmeHours} />
+              <F l="Seat cap" v={w.capacity} /><F l="Fee" v={pkr(w.fee)} />
               <F l="Format" v={w.format} /><F l="Contributing departments" v={(await db.select({ d: s.sessionDepartments.department }).from(s.sessionDepartments).where(eq(s.sessionDepartments.sessionId, w.id))).map((x) => x.d).join(", ") || null} /><F l="Submitted" v={w.submittedAt ? fmtDateTime(w.submittedAt) : null} />
               <F l="Mode" v={{ ONSITE: "Onsite", ONLINE: "Online", HYBRID: "Hybrid" }[w.mode] ?? w.mode} /><F l="Organising person" v={w.organiser} /><F l="Target audience" v={w.targetAudience} />
               {w.onlineLink && <F l="Online link" v={<a href={w.onlineLink} className="break-all text-lnh-blue hover:underline" target="_blank" rel="noreferrer">{w.onlineLink}</a>} />}
